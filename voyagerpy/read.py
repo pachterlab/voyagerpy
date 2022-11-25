@@ -36,7 +36,7 @@ def read_img_data(path:PathLike,adata,res="high"):
         )
     return adata
     
-    adata.uns
+
     
     
 
