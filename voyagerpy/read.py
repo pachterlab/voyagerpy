@@ -8,12 +8,13 @@ import h5py
 from matplotlib.pyplot import imread
 from anndata import AnnData
 from anndata import read_mtx
+from typing import Optional, Union
 import traceback
 #import numpy as np
 import pandas as pd
 
 
-def read_img_data(path:PathLike,adata,res="high"):
+def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high") -> AnnData:
     path = Path(path)
     
     if(exists(path / "spatial" / "tissue_hires_image.png") and exists(path / "spatial" / "scalefactors_json.json")):
@@ -40,7 +41,7 @@ def read_img_data(path:PathLike,adata,res="high"):
     
     
 
-def _read_10x_h5(path:PathLike):
+def _read_10x_h5(path: PathLike) -> Optional[AnnData]:
     """
     Parameters
     ----------
@@ -91,7 +92,7 @@ def _read_10x_h5(path:PathLike):
         traceback.print_exc()
         return None
     return adata
-def _read_10x_mtx(path:PathLike):
+def _read_10x_mtx(path: PathLike) -> AnnData:
     path = Path(path)
     
     genes = pd.read_csv(path / 'features.tsv.gz', header=None, sep='\t')
@@ -105,7 +106,7 @@ def _read_10x_mtx(path:PathLike):
                                                                 feature_types = genes[2].to_numpy()))
     return adata
 
-def read_10x_visium(path : PathLike,datatype=None,raw = True,prefix=None):
+def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = True, prefix: Optional[str] = None) -> AnnData:
     """
     
     Parameters

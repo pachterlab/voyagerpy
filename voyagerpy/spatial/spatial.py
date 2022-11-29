@@ -6,7 +6,7 @@ import numpy as np
 from anndata import AnnData
 
 
-from typing import Optional, Union, Mapping,Sequence, Collection, Iterable, List    
+from typing import Any, Optional, Union, Mapping,Sequence, Collection, Iterable, List, Tuple
 
 # from matplotlib.axes import Axes
 # from matplotlib import pyplot as plt
@@ -37,7 +37,7 @@ from .. import utils as utl
 
 #create spatial functions with shapely
 
-def get_approx_tissue_boundary(adata:AnnData,size="hires",paddingx = 0,paddingy=0):
+def get_approx_tissue_boundary(adata: AnnData, size: str = "hires", paddingx: int = 0, paddingy: int = 0) -> Tuple[int, int, int, int]:
     if(size == "hires"):
         scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
     else:
@@ -53,13 +53,14 @@ def get_approx_tissue_boundary(adata:AnnData,size="hires",paddingx = 0,paddingy=
         top = top-paddingy
         bot = bot + paddingy
     
-    return [top,bot,left,right]
+    return top,bot,left,right
 
 
+Contour = Any
+# %%
 
-#%%
 
-def get_tissue_contour_score(cntr,adata,size="hires"):
+def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires") -> float:
     if(size == "hires"):
         scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
     if(size == "lowres"):
@@ -93,7 +94,7 @@ def get_tissue_contour_score(cntr,adata,size="hires"):
     #print(J)
     return J
             
-def detect_tissue_threshold(adata,size="hires",low=200,high=255):
+def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200, high: int = 255) -> Tuple[int, Optional[Contour]]:
 
     
     bgr_img = cvtColor(adata.uns["spatial"]["img"][size], COLOR_RGB2BGR)
@@ -153,7 +154,12 @@ def detect_tissue_threshold(adata,size="hires",low=200,high=255):
     
 
 
-def get_tissue_boundary(adata:AnnData,threshold_low=222,size = "hires",strictness=None,inplace=False,detect_treshold = False):
+def get_tissue_boundary(
+        adata: AnnData, threshold_low: int = 222, size: str = "hires",
+        strictness: Optional[int] = None,
+        inplace: bool = False,
+        detect_treshold: bool = False
+) -> Polygon:
     if(size == "hires"):
         scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
         res = "hires"
@@ -251,7 +257,7 @@ def get_tissue_boundary(adata:AnnData,threshold_low=222,size = "hires",strictnes
     return polygon#,out
 
     #create outline of tissue sample  
-def get_geom(adata:AnnData,inplace="True"):
+def get_geom(adata: AnnData, inplace: bool = True) -> AnnData:
     
     if("geom" not in adata.uns["spatial"]):
         adata.uns["spatial"]["geom"] = {}
@@ -283,7 +289,7 @@ def get_geom(adata:AnnData,inplace="True"):
 
 #%%
 
-def get_spot_coords(adata:AnnData,tissue = True):
+def get_spot_coords(adata: AnnData, tissue: bool = True) -> np.ndarray:
     
     if(utl.is_highres(adata)):
         h_sc = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
