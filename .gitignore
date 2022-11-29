@@ -9,6 +9,9 @@ __pycache__/
 #MAC meta file
 **/.DS_Store
 
+# Custom local files
+local/
+
 # Distribution / packaging
 .Python
 build/
