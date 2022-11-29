@@ -33,3 +33,6 @@ classifiers = ["Single-Cell", "Spatial", "voyager",
 
 [tool.setuptools]
 packages = ["voyagerpy", "voyagerpy.metrics", "voyagerpy.plotting", "voyagerpy.spatial", "voyagerpy.utils"]
+
+[tool.black]
+line-length = 140
