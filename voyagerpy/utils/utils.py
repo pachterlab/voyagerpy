@@ -3,7 +3,7 @@
 from anndata import AnnData
 import numpy as np
 
-def is_highres(adata):
+def is_highres(adata: AnnData) -> bool:
     if("hires" in adata.uns["spatial"]["img"]):
         return True
     if("lowres" in adata.uns["spatial"]["img"]):
@@ -14,7 +14,7 @@ def is_highres(adata):
 
 
     
-def calculate_metrics(adata:AnnData):
+def calculate_metrics(adata: AnnData) -> AnnData:
     adata.var_names_make_unique()
     #forcells
     #n_genes_by_counts

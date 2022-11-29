@@ -12,9 +12,10 @@ import numpy as np
 from anndata import AnnData
 
 
-from typing import Optional, Union, Mapping,Sequence, Collection, Iterable, List, Tuple    
+from typing import Any, Optional, Union, Mapping,Sequence, Collection, Iterable, List, Tuple    
 
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 
 import seaborn as sns
@@ -33,22 +34,22 @@ from .. import spatial as spt
     
     
 def plot_spatial_features(
-        adata:AnnData,
+        adata: AnnData,
         features: Union[str, Sequence[str]],
-        ncol = None,
-        barcode_geom:str = None,
-        annot_geom = None,
-        tissue=True,
-        colorbar=False,
-        color = None,
-        cmap = "Blues",
-        geom_style : Optional[dict] = {},
-        annot_style : Optional[dict] = {},
+        ncol: Optional[int] = None,
+        barcode_geom: Optional[str] = None,
+        annot_geom: Optional[str] = None,
+        tissue: bool = True,
+        colorbar: bool = False,
+        color: Optional[str] = None,
+        cmap: Optional[str] = "Blues",
+        geom_style: Optional[dict] = {},
+        annot_style: Optional[dict] = {},
         ax: Optional[Axes] = None,
-        subplot_kwds : Optional[dict] = {},
-        legend_kwds : Optional[dict] = {},
+        subplot_kwds: Optional[dict] = {},
+        legend_kwds: Optional[dict] = {},
         **kwds,
-):
+) -> Tuple[Union[np.ndarray, Any], Figure]:
     sns.set_theme()
     
     #check input
