@@ -46,7 +46,7 @@ def plot_spatial_features(
     subplot_kwds: Optional[dict] = {},
     legend_kwds: Optional[dict] = {},
     **kwds,
-) -> Tuple[Union[np.ndarray, Any], Figure]:
+) -> Union[np.ndarray, Any]:
 
     sns.set_theme()
     if isinstance(features, list):
