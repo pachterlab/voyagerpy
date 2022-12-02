@@ -20,7 +20,9 @@ from typing import (
 import geopandas as gpd
 import numpy as np
 import seaborn as sns
+
 from anndata import AnnData
+from copy import deepcopy
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -134,7 +136,7 @@ def plot_spatial_features(
     y = 0
 
     for i in range(len(feat_ls)):
-        legend_kwds_ = legend_kwds
+        legend_kwds_ = deepcopy(legend_kwds)
 
         if tissue:
 
