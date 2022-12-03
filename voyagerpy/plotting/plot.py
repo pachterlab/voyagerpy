@@ -54,12 +54,15 @@ def plot_spatial_features(
     sns.set_theme()
     if isinstance(features, list):
         feat_ls = features
-    if isinstance(features, str):
+    elif isinstance(features, str):
         feat_ls = [features]
+    else:
+        raise TypeError("features must be a string or a list of strings")
+
     # check input
     if ("geometry" not in adata.obs) or "geom" not in adata.uns["spatial"]:
         adata = spt.get_geom(adata)
-    for i in features:
+    for i in feat_ls:
         if i not in adata.obs and i not in adata.var.index:
             raise ValueError(f"Cannot find {i!r} in adata.obs or gene names")
     # copy observation dataframe so we can edit it without changing the inputs
