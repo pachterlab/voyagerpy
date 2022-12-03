@@ -10,6 +10,7 @@ Created on Fri Nov 25 14:08:42 2022
 from math import ceil
 from typing import (
     Any,
+    Dict,
     Collection,
     Optional,
     Sequence,
@@ -42,11 +43,11 @@ def plot_spatial_features(
     color: Optional[str] = None,
     cmap: Optional[str] = "Blues",
     categ_type: Union[str, Collection[str]] = {},
-    geom_style: Optional[dict] = {},
-    annot_style: Optional[dict] = {},
+    geom_style: Optional[Dict] = {},
+    annot_style: Optional[Dict] = {},
     _ax: Optional[Axes] = None,
-    subplot_kwds: Optional[dict] = {},
-    legend_kwds: Optional[dict] = {},
+    subplot_kwds: Optional[Dict] = {},
+    legend_kwds: Optional[Dict] = {},
     **kwds,
 ) -> Union[np.ndarray, Any]:
 
