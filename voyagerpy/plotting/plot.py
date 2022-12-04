@@ -28,8 +28,43 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas import options
+
 options.mode.chained_assignment = None  # default='warn'
 from voyagerpy import spatial as spt
+
+
+def plot_coldata(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6) -> Any:
+
+    import matplotlib as mpl
+    from cycler import cycler
+
+    mpl.rcParams["axes.prop_cycle"] = cycler(
+        "color", ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    )
+    mpl.rcParams["lines.markersize"] = 3
+    mpl.rcParams["legend.frameon"] = False
+    mpl.rcParams["legend.shadow"] = False
+    fig, ax = plt.subplots()
+
+    kwargs = {"alpha": alpha}
+    if colour_by is not None:
+
+        color_vals = sorted(set(adata.obs[colour_by].to_list()))
+        is_binary = len(color_vals) == 2
+        is_binary = is_binary and (color_vals == [0, 1] or color_vals == [False, True])
+
+        for val in color_vals:
+            subdata = adata.obs[adata.obs[colour_by] == val]
+            label = str(bool(val)).upper() if is_binary else val
+            ax.scatter(subdata[x], subdata[y], **kwargs, label=label)
+
+        ax.legend(loc=(1.04, 0.5), title=colour_by)
+
+    else:
+        ax.scatter(adata.obs[x], adata.obs[y], **kwargs)
+
+    # fig.set_label("hello")
+    # fig.legend(loc=(0.6, 0.5))
 
 
 def plot_spatial_features(
