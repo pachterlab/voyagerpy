@@ -140,11 +140,11 @@ def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200,
 
 def get_tissue_boundary(
     adata: AnnData,
-    threshold_low: int,
+    threshold_low: int = None,
     size: str = "hires",
     strictness: Optional[int] = None,
     inplace: bool = False,
-    detect_treshold: bool = False,
+    # detect_threshold: bool = False,
 ) -> Polygon:
     if size == "hires":
         scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]  # noqa: F841
@@ -171,32 +171,29 @@ def get_tissue_boundary(
 
     # thresh
     # thresh = cv2.inRange(h, 140, 179);
-
-    imgray = cvtColor(bgr_img, COLOR_BGR2GRAY)
-    ret, thresh = threshold(imgray, threshold_low, 255, 0)
-
-    # contours
-    contours, contours2 = findContours(thresh, RETR_TREE, CHAIN_APPROX_SIMPLE)
-
-    # filter contours by size
-
-    big_cntrs = []
-    # marked = bgr_img.copy();
-    for contour in contours:
-        area = contourArea(contour)
-        if area > 10000:
-            # print(area);
-            big_cntrs.append(contour)
-
-    # for all contours check if all points are within countour and all points outside it
-
-    score = 0
-    best_cntr: Optional[np.ndarray] = None
-    for i in range(len(big_cntrs)):
-        new_score = get_tissue_contour_score(big_cntrs[i], adata)
-        if new_score > score:
-            score = new_score
-            best_cntr = big_cntrs[i]
+    if threshold_low is not None:
+        imgray = cvtColor(bgr_img, COLOR_BGR2GRAY)
+        ret, thresh = threshold(imgray, threshold_low, 255, 0)
+        # contours
+        contours, contours2 = findContours(thresh, RETR_TREE, CHAIN_APPROX_SIMPLE)
+        # filter contours by size
+        big_cntrs = []
+        # marked = bgr_img.copy();
+        for contour in contours:
+            area = contourArea(contour)
+            if area > 10000:
+                # print(area);
+                big_cntrs.append(contour)
+        # for all contours check if all points are within countour and all points outside it
+        score = 0
+        best_cntr: Optional[np.ndarray] = None
+        for i in range(len(big_cntrs)):
+            new_score = get_tissue_contour_score(big_cntrs[i], adata)
+            if new_score > score:
+                score = new_score
+                best_cntr = big_cntrs[i]
+    else:
+        thrsh, best_cntr = detect_tissue_threshold(adata, size=size)
 
         # not_tissue_barcodes = adata.obs[adata.obs["in_tissue"] == 0]
 
@@ -250,10 +247,7 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True) -> Ann
     adata.obs = gpd.GeoDataFrame(adata.obs, geometry=adata.obs.spot_poly)  # type: ignore
 
     # add boundary and tissue poly to geom
-    if threshold is None:
-        thrsh, tissue_poly = detect_tissue_threshold(adata)
-    else:
-        tissue_poly = get_tissue_boundary(adata, threshold)
+    tissue_poly = get_tissue_boundary(adata, threshold)
     adata.uns["spatial"]["geom"]["tissue_poly"] = tissue_poly
     adata.uns["spatial"]["geom"]["tissue_boundary"] = gpd.GeoSeries(tissue_poly).boundary
 
