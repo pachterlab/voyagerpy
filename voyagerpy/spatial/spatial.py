@@ -140,7 +140,7 @@ def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200,
 
 def get_tissue_boundary(
     adata: AnnData,
-    threshold_low: int = 222,
+    threshold_low: int,
     size: str = "hires",
     strictness: Optional[int] = None,
     inplace: bool = False,
@@ -234,7 +234,7 @@ def get_tissue_boundary(
     # create outline of tissue sample
 
 
-def get_geom(adata: AnnData, inplace: bool = True) -> AnnData:
+def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True) -> AnnData:
 
     if "geom" not in adata.uns["spatial"]:
         adata.uns["spatial"]["geom"] = {}
@@ -250,18 +250,12 @@ def get_geom(adata: AnnData, inplace: bool = True) -> AnnData:
     adata.obs = gpd.GeoDataFrame(adata.obs, geometry=adata.obs.spot_poly)  # type: ignore
 
     # add boundary and tissue poly to geom
-
-    tissue_poly = get_tissue_boundary(adata)
+    if threshold is None:
+        thrsh, tissue_poly = detect_tissue_threshold(adata)
+    else:
+        tissue_poly = get_tissue_boundary(adata, threshold)
     adata.uns["spatial"]["geom"]["tissue_poly"] = tissue_poly
     adata.uns["spatial"]["geom"]["tissue_boundary"] = gpd.GeoSeries(tissue_poly).boundary
-    # if(os.path.exists(path+spatial_path)):
-
-    # else:
-    #     raise ValueError(
-    #         "Cannot read file tissue_positions.csv"
-    #     )
-
-    # total feature counts in spots under tissue
 
     return adata
 

@@ -191,9 +191,6 @@ def plot_spatial_features(
 
         if color is not None:
             cmap = None
-        # change default behaviour in seaborn and have no
-        # color for edges of polygons
-        geom_style.setdefault("edgecolor", "none")
 
         obs.plot(
             feat_ls[i],
