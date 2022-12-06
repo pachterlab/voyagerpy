@@ -20,7 +20,6 @@ from typing import (
 
 import geopandas as gpd
 import numpy as np
-import seaborn as sns
 
 from anndata import AnnData
 from copy import deepcopy
@@ -28,8 +27,11 @@ from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pandas import options
+
 options.mode.chained_assignment = None  # default='warn'
 from voyagerpy import spatial as spt
+
+plt.style.use("ggplot")
 
 
 def plot_spatial_features(
@@ -51,7 +53,6 @@ def plot_spatial_features(
     **kwds,
 ) -> Union[np.ndarray, Any]:
 
-    sns.set_theme()
     if isinstance(features, list):
         feat_ls = features
     elif isinstance(features, str):
@@ -82,9 +83,7 @@ def plot_spatial_features(
 
     # Check if too many subplots
     if len(feat_ls) > 6:
-        raise ValueError(
-            "Too many features to plot, reduce the number of features"
-        )
+        raise ValueError("Too many features to plot, reduce the number of features")
     if ncol is not None:
         if ncol > 3:
             raise ValueError("Too many columns for subplots")
@@ -123,9 +122,7 @@ def plot_spatial_features(
 
             else:
                 _figsize = (10, 10)
-            fig, axs = plt.subplots(
-                nrows=nrows, ncols=ncols, figsize=_figsize, **subplot_kwds
-            )
+            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=_figsize, **subplot_kwds)
             if plt_nr == 5:
                 axs[-1, -1].axis("off")
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
@@ -147,12 +144,7 @@ def plot_spatial_features(
             # if gene value
             if feat_ls[i] in adata.var.index:
                 # col = adata.var[features]
-                col = (
-                    adata[adata.obs["in_tissue"] == 1, feat_ls[i]]
-                    .X.todense()
-                    .reshape((adata[adata.obs["in_tissue"] == 1, :].shape[0]))
-                    .T
-                )
+                col = adata[adata.obs["in_tissue"] == 1, feat_ls[i]].X.todense().reshape((adata[adata.obs["in_tissue"] == 1, :].shape[0])).T
 
                 col = np.array(col.ravel()).T
                 obs[feat_ls[i]] = col
@@ -163,12 +155,7 @@ def plot_spatial_features(
 
             if feat_ls[i] in adata.var.index:
                 # col = adata.var[features]
-                col = (
-                    adata[:, feat_ls[i]]
-                    .X.todense()
-                    .reshape((adata.shape[0]))
-                    .T
-                )
+                col = adata[:, feat_ls[i]].X.todense().reshape((adata.shape[0])).T
                 obs[feat_ls[i]] = col
             if feat_ls[i] in obs.columns:
                 pass
@@ -185,10 +172,7 @@ def plot_spatial_features(
         # correct legend if feature is categorical and make sure title is in there
         if len(legend_kwds_) == 0:
 
-            if (
-                feat_ls[i] in adata.var.index
-                or adata.obs[feat_ls[i]].dtype != "category"
-            ):
+            if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
                 legend_kwds_ = {
                     "label": feat_ls[i],
                     "orientation": "vertical",
@@ -197,10 +181,7 @@ def plot_spatial_features(
             else:
                 legend_kwds_ = {"title": feat_ls[i]}
         else:
-            if (
-                feat_ls[i] in adata.var.index
-                or adata.obs[feat_ls[i]].dtype != "category"
-            ):
+            if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
                 legend_kwds_.setdefault("label", feat_ls[i])
                 legend_kwds_.setdefault("orientation", "vertical")
                 legend_kwds_.setdefault("shrink", 0.3)
@@ -229,13 +210,10 @@ def plot_spatial_features(
 
                 # check annot_style is dict with correct values
                 plg = adata.uns["spatial"]["geom"][annot_geom]
-                if annot_style is not None:
+                if len(annot_style) != 0:
                     gpd.GeoSeries(plg).plot(ax=ax, **annot_style, **kwds)
                 else:
-
-                    gpd.GeoSeries(plg).plot(
-                        color="blue", ax=ax, alpha=0.2, **kwds
-                    )
+                    gpd.GeoSeries(plg).plot(color="blue", ax=ax, alpha=0.2, **kwds)
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
