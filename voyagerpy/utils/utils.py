@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from typing import Dict
+
 import numpy as np
 from anndata import AnnData
 
@@ -31,3 +33,25 @@ def calculate_metrics(adata: AnnData) -> AnnData:
     # barcodes per feature
     adata.var["total_counts"] = np.array(adata.X.sum(axis=0)).reshape((adata.X.shape[1]))  # type: ignore
     return adata
+
+
+def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
+    if 'sum' not in adata.obs.keys() or force:
+        adata.obs['sum'] = adata.X.sum(axis=1)
+
+    if 'detected' not in adata.obs.keys() or force:
+        adata.obs['detected'] = (adata.X > 0).sum(axis=1)
+
+    for key, arr in subsets.items():
+        sum_key = f'subsets_{key}_sum'
+        det_key = f'subsets_{key}_detected'
+        prc_key = f'subsets_{key}_percent'
+
+        if sum_key not in adata.obs.keys() or force:
+            adata.obs[sum_key] = adata.X.dot(arr)
+
+        if det_key not in adata.obs.keys() or force:
+            adata.obs[det_key] = (adata.X > 0).dot(arr)
+
+        if prc_key not in adata.obs.keys() or force:
+            adata.obs[prc_key] = adata.obs[sum_key] / adata.obs['sum']
