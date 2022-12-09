@@ -10,6 +10,7 @@ from voyagerpy.spatial.spatial import (
     get_tissue_contour_score,
 )
 
+from voyagerpy.spatial import graphs
 __all__ = [
     "detect_tissue_threshold",
     "get_approx_tissue_boundary",
