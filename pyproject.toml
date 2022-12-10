@@ -1,0 +1,41 @@
+[build-system]
+requires = [
+	"anndata>=0.6.22",
+	"geopandas>=0.12",
+	"matplotlib>=3.6",
+	"numpy>=1.23",
+	"scipy>=1.9",
+	"seaborn>=0.12",
+	"setuptools>=61.0",
+	"shapely>=1.8.5",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "VoyagerPy"
+version = "0.0.0"
+authors = [
+	{name="Sindri Emmanuel Antonsson", email="sea7@hi.is"},
+	{name="Petur Helgi Einarsson", email="peturhelgi@gmail.com"},
+	{name="Pall Melsted", email="pmelsted@hi.is"}
+]
+description="Python library for Voyager, the geo-spatialist"
+readme="README.md"
+requires-python = ">=3.5"
+classifiers = ["Single-Cell", "Spatial", "voyager",
+	"Programming Language :: Python :: 3",
+	"Operating System :: OS Independent",
+	"Licence :: IDK"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/baroona/voayagerpy"
+
+[tool.setuptools]
+packages = ["voyagerpy", "voyagerpy.metrics", "voyagerpy.plotting", "voyagerpy.spatial", "voyagerpy.utils"]
+
+[tool.black]
+line-length = 140
+
+[tool.flake8]
+profile = black
