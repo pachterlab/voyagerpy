@@ -16,13 +16,17 @@ from matplotlib.pyplot import imread
 def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high") -> AnnData:
     path = Path(path)
 
-    if (path / "spatial" / "tissue_hires_image.png").exists() and (path / "spatial" / "scalefactors_json.json").exists():
-        if res == "high":
-            readpath = path / "spatial" / "tissue_hires_image.png"
-            loc = "hires"
-        else:
-            readpath = path / "spatial" / "tissue_lowres_image.png"
-            loc = "lowres"
+    loc = 'hires' if res == 'high' else 'lowres'
+    spatial_path = path / 'spatial'
+    readpath = spatial_path / f'tissue_{loc}_image.png'
+
+    if readpath.exists() and (spatial_path / "scalefactors_json.json").exists():
+        # if res == "high":
+        #     readpath = path / "spatial" / "tissue_hires_image.png"
+        #     loc = "hires"
+        # else:
+        #     readpath = path / "spatial" / "tissue_lowres_image.png"
+        #     loc = "lowres"
         image = imread(str(readpath))
         # adata.uns = {}
         adata.uns["spatial"] = {}
