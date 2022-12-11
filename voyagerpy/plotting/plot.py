@@ -23,6 +23,8 @@ import numpy as np
 
 from anndata import AnnData
 from copy import deepcopy
+from matplotlib import cm
+from matplotlib import colors
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -42,12 +44,15 @@ def plot_spatial_features(
     annot_geom: Optional[str] = None,
     tissue: bool = True,
     colorbar: bool = False,
-    color: Optional[str] = None,
     cmap: Optional[str] = "Blues",
     categ_type: Union[str, Collection[str]] = {},
     geom_style: Optional[Dict] = {},
     annot_style: Optional[Dict] = {},
+    alpha: float = 0.2,
+    divergent: bool = False,
+    color: Optional[str] = None,
     _ax: Optional[Axes] = None,
+    legend: bool = True,
     subplot_kwds: Optional[Dict] = {},
     legend_kwds: Optional[Dict] = {},
     **kwds,
@@ -91,6 +96,9 @@ def plot_spatial_features(
     # only work with spots in tissue
     if tissue:
         obs = obs[obs["in_tissue"] == 1]
+    # use a divergent colormap
+    if divergent:
+        cmap = "Spectral"
 
     # create the subplots with right cols and rows
     if _ax is None:
@@ -138,7 +146,7 @@ def plot_spatial_features(
 
     for i in range(len(feat_ls)):
         legend_kwds_ = deepcopy(legend_kwds)
-
+        _legend = legend
         if tissue:
 
             # if gene value
@@ -169,26 +177,32 @@ def plot_spatial_features(
         if ncols == 1 and nrows == 1:
             ax = axs
 
-        # correct legend if feature is categorical and make sure title is in there
-        if len(legend_kwds_) == 0:
-
-            if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
-                legend_kwds_ = {
-                    "label": feat_ls[i],
-                    "orientation": "vertical",
-                    "shrink": 0.3,
-                }
-            else:
-                legend_kwds_ = {"title": feat_ls[i]}
+        if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
+            legend_kwds_.setdefault("label", feat_ls[i])
+            legend_kwds_.setdefault("orientation", "vertical")
+            legend_kwds_.setdefault("shrink", 0.4)
         else:
-            if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
-                legend_kwds_.setdefault("label", feat_ls[i])
-                legend_kwds_.setdefault("orientation", "vertical")
-                legend_kwds_.setdefault("shrink", 0.3)
-            else:
-
-                legend_kwds_.setdefault("title", feat_ls[i])
-
+            #  colorbar for discrete categories if pandas column is categorical
+            _legend = False
+            catnr = adata.obs[feat_ls[i]].unique().shape[0]
+            bounds = list(range(catnr + 1))
+            norm = colors.BoundaryNorm(bounds, cm.get_cmap(cmap).N)
+            ticks = list(range(catnr))
+            ticks = [x + 0.5 for x in ticks]
+            cbar = fig.colorbar(
+                cm.ScalarMappable(cmap=cm.get_cmap(cmap), norm=norm),
+                ax=ax,
+                # extend="both",
+                extendfrac="auto",
+                ticks=ticks,
+                spacing="uniform",
+                orientation="vertical",
+                # label=catname,
+                shrink=0.5,
+            )
+            dd = list(adata.obs[feat_ls[i]].cat.categories)
+            cc = cbar.ax.set_yticklabels(dd)
+            cbar.ax.set_title(feat_ls[i])
         if color is not None:
             cmap = None
 
@@ -196,7 +210,7 @@ def plot_spatial_features(
             feat_ls[i],
             ax=ax,
             color=color,
-            legend=True,
+            legend=_legend,
             cmap=cmap,
             legend_kwds=legend_kwds_,
             **geom_style,
@@ -210,7 +224,7 @@ def plot_spatial_features(
                 if len(annot_style) != 0:
                     gpd.GeoSeries(plg).plot(ax=ax, **annot_style, **kwds)
                 else:
-                    gpd.GeoSeries(plg).plot(color="blue", ax=ax, alpha=0.2, **kwds)
+                    gpd.GeoSeries(plg).plot(color="blue", ax=ax, alpha=alpha, **kwds)
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
@@ -225,8 +239,7 @@ def plot_spatial_features(
         fig = ax.get_figure()
     axs = fig.get_axes()
     for i in range(len(axs)):
-        if axs[i].properties()["label"] == "<colorbar>":
-
+        if axs[i].properties()["label"] == "<colorbar>" and axs[i].properties()["ylabel"] != "":
             axs[i].set_title(axs[i].properties()["ylabel"], ha="left")
             axs[i].set_ylabel("")
 
