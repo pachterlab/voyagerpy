@@ -49,6 +49,7 @@ def plot_spatial_features(
     geom_style: Optional[Dict] = {},
     annot_style: Optional[Dict] = {},
     alpha: float = 0.2,
+    divergent: bool = False,
     color: Optional[str] = None,
     _ax: Optional[Axes] = None,
     legend: bool = True,
@@ -95,6 +96,9 @@ def plot_spatial_features(
     # only work with spots in tissue
     if tissue:
         obs = obs[obs["in_tissue"] == 1]
+    # use a divergent colormap
+    if divergent:
+        cmap = "Spectral"
 
     # create the subplots with right cols and rows
     if _ax is None:
@@ -173,31 +177,12 @@ def plot_spatial_features(
         if ncols == 1 and nrows == 1:
             ax = axs
 
-        # correct legend if feature is categorical and make sure title is in there
-        # if len(legend_kwds_) == 0:
-
-        #     if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
-        #         legend_kwds_ = {
-        #             "label": feat_ls[i],
-        #             "orientation": "vertical",
-        #             "shrink": 0.3,
-        #         }
-        #     else:
-        #         legend_kwds_ = {"title": feat_ls[i]}
-        # else:
-        #     if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
-        #         legend_kwds_.setdefault("label", feat_ls[i])
-        #         legend_kwds_.setdefault("orientation", "vertical")
-        #         legend_kwds_.setdefault("shrink", 0.3)
-        #     else:
-
-        #         legend_kwds_.setdefault("title", feat_ls[i])
         if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
             legend_kwds_.setdefault("label", feat_ls[i])
             legend_kwds_.setdefault("orientation", "vertical")
             legend_kwds_.setdefault("shrink", 0.4)
         else:
-            # cmap = cm.viridis
+            #  colorbar for discrete categories if pandas column is categorical
             _legend = False
             catnr = adata.obs[feat_ls[i]].unique().shape[0]
             bounds = list(range(catnr + 1))
@@ -216,7 +201,7 @@ def plot_spatial_features(
                 shrink=0.5,
             )
             dd = list(adata.obs[feat_ls[i]].cat.categories)
-            cc = cbar.ax.set_yticklabels(dd)  # vertically oriented colorbar
+            cc = cbar.ax.set_yticklabels(dd)
             cbar.ax.set_title(feat_ls[i])
         if color is not None:
             cmap = None
@@ -254,8 +239,7 @@ def plot_spatial_features(
         fig = ax.get_figure()
     axs = fig.get_axes()
     for i in range(len(axs)):
-        if axs[i].properties()["label"] == "<colorbar>":
-
+        if axs[i].properties()["label"] == "<colorbar>" and axs[i].properties()["ylabel"] != "":
             axs[i].set_title(axs[i].properties()["ylabel"], ha="left")
             axs[i].set_ylabel("")
 
