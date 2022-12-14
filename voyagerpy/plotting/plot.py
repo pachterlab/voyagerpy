@@ -34,7 +34,7 @@ from voyagerpy import spatial as spt
 plt.style.use("ggplot")
 
 
-def plot_features(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6, ax: Optional[Axes] = None) -> Any:
+def plot_barcode_data(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6, ax: Optional[Axes] = None) -> Any:
 
     # TODO: Move these rcParams elsewhere
     from cycler import cycler
