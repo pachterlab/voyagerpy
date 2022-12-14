@@ -34,7 +34,7 @@ from voyagerpy import spatial as spt
 plt.style.use("ggplot")
 
 
-def plot_coldata(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6) -> Any:
+def plot_features(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6, ax: Optional[Axes] = None) -> Any:
 
     import matplotlib as mpl
     from cycler import cycler
@@ -63,6 +63,8 @@ def plot_coldata(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None
 
     else:
         ax.scatter(adata.obs[x], adata.obs[y], **kwargs)
+
+    return ax
 
 
 def plot_bin2d(
