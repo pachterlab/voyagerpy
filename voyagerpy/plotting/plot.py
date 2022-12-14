@@ -34,6 +34,128 @@ from voyagerpy import spatial as spt
 plt.style.use("ggplot")
 
 
+def plot_barcode_data(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6, ax: Optional[Axes] = None) -> Any:
+
+    # TODO: Move these rcParams elsewhere
+    from cycler import cycler
+
+    plt.rcParams["axes.prop_cycle"] = cycler(
+        "color", ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    )
+    plt.rcParams["lines.markersize"] = 3
+    plt.rcParams["legend.frameon"] = False
+    plt.rcParams["legend.shadow"] = False
+
+    if ax is None:
+        _, ax = plt.subplots()
+
+    kwargs = {"alpha": alpha}
+    if colour_by is not None:
+
+        color_vals = sorted(set(adata.obs[colour_by].to_list()))
+        is_binary = len(color_vals) == 2
+        is_binary = is_binary and (color_vals == [0, 1] or color_vals == [False, True])
+
+        for val in color_vals:
+            subdata = adata.obs[adata.obs[colour_by] == val]
+            label = str(bool(val)).upper() if is_binary else val
+            ax.scatter(subdata[x], subdata[y], **kwargs, label=label)
+
+        ax.legend(loc=(1.04, 0.5), title=colour_by)
+
+    else:
+        ax.scatter(adata.obs[x], adata.obs[y], **kwargs)
+
+    return ax
+
+
+def plot_bin2d(
+        data: Union[AnnData, 'pd.DataFrame'], x: str, y: str, filt: Optional[str] = None, subset: Optional[str] = None,
+        bins: int = 100, name_true: Optional[str] = None, name_false: Optional[str] = None,
+        hex_plot: bool = False, binwidth: Optional[float] = None, ax: Optional[Axes] = None, **kwargs
+) -> Axes:
+
+    get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
+    obs = get_dataframe(data) if isinstance(data, AnnData) else data
+
+#     I don't know how the range is computed in ggplot2
+#     r = ((-6.377067e-05,  4.846571e+04), (-1.079733e-05, 8.205973e+03))
+    r = None
+
+    plot_kwargs = dict(
+        bins=bins,
+        cmap='Blues',
+        range=r,
+    )
+
+    figsize = kwargs.pop('figsize', (10, 7))
+    plot_kwargs.update(kwargs)
+
+    grid_kwargs = dict(
+            visible=True,
+            which='both',
+            axis='both',
+            color='k',
+            linewidth=0.5,
+            alpha=0.2
+    )
+
+    if hex_plot:
+        renaming = [
+            ('gridsize', 'bins', bins),
+            ('extent', 'range', None),
+            ('mincnt', 'cmin', 1),
+        ]
+        for hex_name, hist_name, default in renaming:
+            val = plot_kwargs.pop(hist_name, default)
+            plot_kwargs.setdefault(hex_name, val)
+
+        plot_kwargs.setdefault('edgecolor', '#8c8c8c')
+        plot_kwargs.setdefault('linewidth', 0.2)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    plot_fun = ax.hexbin if hex_plot else ax.hist2d
+
+    x = obs[x]
+    y = obs[y]
+
+    if subset is None:
+        myfilt: Any = Ellipsis if filt is None else obs[filt].astype(bool)
+
+        im = plot_fun(x[myfilt], y[myfilt], **plot_kwargs)  # type: ignore
+        plt.colorbar(im[-1] if isinstance(im, tuple) else im)
+
+    else:
+        subset_name = subset
+        name_true = name_true or subset_name
+        name_false = name_false or f'!{subset_name}'
+
+        subset_true = obs[subset].astype(bool)
+        subset_false = (1 - subset_true).astype(bool)
+
+        im1 = plot_fun(x[subset_false], y[subset_false], **plot_kwargs)
+
+        plot_kwargs['cmap'] = 'Reds'
+        im2 = plot_fun(x[subset_true], y[subset_true], **plot_kwargs)
+
+        plt.colorbar(im1[-1] if isinstance(im1, tuple) else im1, label=name_true)
+        plt.colorbar(im2[-1] if isinstance(im2, tuple) else im2, label=name_false)
+
+    ax.grid(**grid_kwargs)
+    ax.set_facecolor('w')
+    return ax
+
+
+def plot_features_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
+    return plot_bin2d(adata.var, *args, **kwargs)
+
+
+def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
+    return plot_bin2d(adata.obs, *args, **kwargs)
+
+
 def plot_spatial_features(
     adata: AnnData,
     features: Union[str, Sequence[str]],
