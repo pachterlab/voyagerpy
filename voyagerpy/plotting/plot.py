@@ -36,16 +36,18 @@ plt.style.use("ggplot")
 
 def plot_features(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6, ax: Optional[Axes] = None) -> Any:
 
-    import matplotlib as mpl
+    # TODO: Move these rcParams elsewhere
     from cycler import cycler
 
-    mpl.rcParams["axes.prop_cycle"] = cycler(
+    plt.rcParams["axes.prop_cycle"] = cycler(
         "color", ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
     )
-    mpl.rcParams["lines.markersize"] = 3
-    mpl.rcParams["legend.frameon"] = False
-    mpl.rcParams["legend.shadow"] = False
-    fig, ax = plt.subplots()
+    plt.rcParams["lines.markersize"] = 3
+    plt.rcParams["legend.frameon"] = False
+    plt.rcParams["legend.shadow"] = False
+
+    if ax is None:
+        _, ax = plt.subplots()
 
     kwargs = {"alpha": alpha}
     if colour_by is not None:
@@ -70,8 +72,8 @@ def plot_features(adata: AnnData, x: str, y: str, colour_by: Optional[str] = Non
 def plot_bin2d(
         data: Union[AnnData, 'pd.DataFrame'], x: str, y: str, filt: Optional[str] = None, subset: Optional[str] = None,
         bins: int = 100, name_true: Optional[str] = None, name_false: Optional[str] = None,
-        hex_plot: bool = False, binwidth: Optional[float] = None, **kwargs
-):
+        hex_plot: bool = False, binwidth: Optional[float] = None, ax: Optional[Axes] = None, **kwargs
+) -> Axes:
 
     get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
     obs = get_dataframe(data) if isinstance(data, AnnData) else data
@@ -111,7 +113,9 @@ def plot_bin2d(
         plot_kwargs.setdefault('edgecolor', '#8c8c8c')
         plot_kwargs.setdefault('linewidth', 0.2)
 
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
     plot_fun = ax.hexbin if hex_plot else ax.hist2d
 
     x = obs[x]
@@ -144,11 +148,11 @@ def plot_bin2d(
     return ax
 
 
-def plot_features_bin2d(adata: AnnData, *args, **kwargs):
+def plot_features_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     return plot_bin2d(adata.var, *args, **kwargs)
 
 
-def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs):
+def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     return plot_bin2d(adata.obs, *args, **kwargs)
 
 
