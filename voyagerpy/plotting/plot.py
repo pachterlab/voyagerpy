@@ -64,8 +64,90 @@ def plot_coldata(adata: AnnData, x: str, y: str, colour_by: Optional[str] = None
     else:
         ax.scatter(adata.obs[x], adata.obs[y], **kwargs)
 
-    # fig.set_label("hello")
-    # fig.legend(loc=(0.6, 0.5))
+
+def plot_bin2d(
+        data: Union[AnnData, 'pd.DataFrame'], x: str, y: str, filt: Optional[str] = None, subset: Optional[str] = None,
+        bins: int = 100, name_true: Optional[str] = None, name_false: Optional[str] = None,
+        hex_plot: bool = False, binwidth: Optional[float] = None, **kwargs
+):
+
+    get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
+    obs = get_dataframe(data) if isinstance(data, AnnData) else data
+
+#     I don't know how the range is computed in ggplot2
+#     r = ((-6.377067e-05,  4.846571e+04), (-1.079733e-05, 8.205973e+03))
+    r = None
+
+    plot_kwargs = dict(
+        bins=bins,
+        cmap='Blues',
+        range=r,
+    )
+
+    figsize = kwargs.pop('figsize', (10, 7))
+    plot_kwargs.update(kwargs)
+
+    grid_kwargs = dict(
+            visible=True,
+            which='both',
+            axis='both',
+            color='k',
+            linewidth=0.5,
+            alpha=0.2
+    )
+
+    if hex_plot:
+        renaming = [
+            ('gridsize', 'bins', bins),
+            ('extent', 'range', None),
+            ('mincnt', 'cmin', 1),
+        ]
+        for hex_name, hist_name, default in renaming:
+            val = plot_kwargs.pop(hist_name, default)
+            plot_kwargs.setdefault(hex_name, val)
+
+        plot_kwargs.setdefault('edgecolor', '#8c8c8c')
+        plot_kwargs.setdefault('linewidth', 0.2)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    plot_fun = ax.hexbin if hex_plot else ax.hist2d
+
+    x = obs[x]
+    y = obs[y]
+
+    if subset is None:
+        myfilt: Any = Ellipsis if filt is None else obs[filt].astype(bool)
+
+        im = plot_fun(x[myfilt], y[myfilt], **plot_kwargs)  # type: ignore
+        plt.colorbar(im[-1] if isinstance(im, tuple) else im)
+
+    else:
+        subset_name = subset
+        name_true = name_true or subset_name
+        name_false = name_false or f'!{subset_name}'
+
+        subset_true = obs[subset].astype(bool)
+        subset_false = (1 - subset_true).astype(bool)
+
+        im1 = plot_fun(x[subset_false], y[subset_false], **plot_kwargs)
+
+        plot_kwargs['cmap'] = 'Reds'
+        im2 = plot_fun(x[subset_true], y[subset_true], **plot_kwargs)
+
+        plt.colorbar(im1[-1] if isinstance(im1, tuple) else im1, label=name_true)
+        plt.colorbar(im2[-1] if isinstance(im2, tuple) else im2, label=name_false)
+
+    ax.grid(**grid_kwargs)
+    ax.set_facecolor('w')
+    return ax
+
+
+def plot_features_bin2d(adata: AnnData, *args, **kwargs):
+    return plot_bin2d(adata.var, *args, **kwargs)
+
+
+def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs):
+    return plot_bin2d(adata.obs, *args, **kwargs)
 
 
 def plot_spatial_features(
