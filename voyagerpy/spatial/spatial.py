@@ -49,12 +49,8 @@ Contour = Any
 
 def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires") -> float:
 
-    if size == "hires":
-        scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
-    elif size == "lowres":
-        scl = adata.uns["spatial"]["scale"]["tissue_lowres_scalef"]
-    else:
-        raise ValueError("size must either 'hires' or 'lowres'")
+    scl = utl.get_scale(adata, res=size)
+
     # tissue_barcodes = adata.obs[adata.obs["in_tissue"] == 1]
     # non_tissue_barcodes  = adata.obs[adata.obs["in_tissue"] != 1]
     # total = tissue_barcodes.shape[0]
@@ -146,12 +142,10 @@ def get_tissue_boundary(
     inplace: bool = False,
     # detect_threshold: bool = False,
 ) -> Polygon:
-    if size == "hires":
-        scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]  # noqa: F841
-        res = "hires"
-    else:
-        scl = adata.uns["spatial"]["scale"]["tissue_lowres_scalef"]  # noqa: F841
-        res = "lowres"
+
+    # TODO: Do we want assert that size is either 'lowres' or 'hires'?
+    res = "hires" if size == "hires" else "lowres"
+    scl = utl.get_scale(adata, res=res)
 
     # load image
 
@@ -231,15 +225,18 @@ def get_tissue_boundary(
     # create outline of tissue sample
 
 
-def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True) -> AnnData:
+def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True, res: str = "hires") -> AnnData:
 
     if "geom" not in adata.uns["spatial"]:
         adata.uns["spatial"]["geom"] = {}
 
     # add spot points to geom
     # Create a geometry column from x & ly
+    scale = utl.get_scale(adata, res=res)
+    spot_diam = adata.uns["spatial"]["spot_diameter_fullres"]
+
     adata.obs["spot_poly"] = adata.obs.apply(
-        lambda x: Point(float(x.pxl_col_in_fullres * 0.2), float(x.pxl_row_in_fullres * 0.2)).buffer((73.61433 / 2) * 0.2),  # type: ignore
+        lambda x: Point(float(x.pxl_col_in_fullres * scale), float(x.pxl_row_in_fullres * scale)).buffer((spot_diam / 2) * 0.2),  # type: ignore
         axis=1,
     )
 
@@ -259,8 +256,7 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True) -> Ann
 
 def get_spot_coords(adata: AnnData, tissue: bool = True, as_tuple: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
 
-    scale_key = "tissue_hires_scalef" if utl.is_highres(adata) else "tissue_lowres_scalef"
-    h_sc = adata.uns["spatial"]["scale"][scale_key]
+    h_sc = utl.get_scale(adata)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
     if tissue:
         coords = (adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc).values
