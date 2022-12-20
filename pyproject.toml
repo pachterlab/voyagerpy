@@ -38,4 +38,4 @@ packages = ["voyagerpy", "voyagerpy.metrics", "voyagerpy.plotting", "voyagerpy.s
 line-length = 140
 
 [tool.flake8]
-profile = black
+profile = "black"
