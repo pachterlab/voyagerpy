@@ -16,9 +16,9 @@ from matplotlib.pyplot import imread
 def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high") -> AnnData:
     path = Path(path)
 
-    loc = 'hires' if res == 'high' else 'lowres'
-    spatial_path = path / 'spatial'
-    readpath = spatial_path / f'tissue_{loc}_image.png'
+    loc = "hires" if res == "high" else "lowres"
+    spatial_path = path / "spatial"
+    readpath = spatial_path / f"tissue_{loc}_image.png"
 
     if readpath.exists() and (spatial_path / "scalefactors_json.json").exists():
         # if res == "high":

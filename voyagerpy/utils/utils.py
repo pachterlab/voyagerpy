@@ -36,16 +36,16 @@ def calculate_metrics(adata: AnnData) -> AnnData:
 
 
 def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
-    if 'sum' not in adata.obs.keys() or force:
-        adata.obs['sum'] = adata.X.sum(axis=1)
+    if "sum" not in adata.obs.keys() or force:
+        adata.obs["sum"] = adata.X.sum(axis=1)
 
-    if 'detected' not in adata.obs.keys() or force:
-        adata.obs['detected'] = (adata.X > 0).sum(axis=1)
+    if "detected" not in adata.obs.keys() or force:
+        adata.obs["detected"] = (adata.X > 0).sum(axis=1)
 
     for key, arr in subsets.items():
-        sum_key = f'subsets_{key}_sum'
-        det_key = f'subsets_{key}_detected'
-        prc_key = f'subsets_{key}_percent'
+        sum_key = f"subsets_{key}_sum"
+        det_key = f"subsets_{key}_detected"
+        prc_key = f"subsets_{key}_percent"
 
         if sum_key not in adata.obs.keys() or force:
             adata.obs[sum_key] = adata.X.dot(arr)
@@ -54,4 +54,4 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
             adata.obs[det_key] = (adata.X > 0).dot(arr)
 
         if prc_key not in adata.obs.keys() or force:
-            adata.obs[prc_key] = adata.obs[sum_key] / adata.obs['sum']
+            adata.obs[prc_key] = adata.obs[sum_key] / adata.obs["sum"]
