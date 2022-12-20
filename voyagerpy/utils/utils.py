@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 from anndata import AnnData
@@ -13,6 +13,15 @@ def is_highres(adata: AnnData) -> bool:
     if "lowres" in adata.uns["spatial"]["img"]:
         return False
     raise ValueError("Cannot find image data in .uns['spatial']")
+
+
+def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
+    if res not in [None, "hi", "hires", "lo", "lowres"]:
+        raise ValueError(f"Unrecognized value {res} for res.")
+
+    hires = is_highres(adata) and res not in ["lowres", "lo"]
+    scale_key = "tissue_hires_scalef" if hires else "tissue_lowres_scalef"
+    return adata.uns["spatial"]["scale"][scale_key]
 
 
 def calculate_metrics(adata: AnnData) -> AnnData:
