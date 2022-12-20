@@ -257,15 +257,25 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True) -> Ann
 # %%
 
 
-def get_spot_coords(adata: AnnData, tissue: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+def get_spot_coords(adata: AnnData, tissue: bool = True, as_tuple: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
 
-    if utl.is_highres(adata):
-        h_sc = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
-    else:
-        h_sc = adata.uns["spatial"]["scale"]["tissue_lowes_scalef"]
+    scale_key = "tissue_hires_scalef" if utl.is_highres(adata) else "tissue_lowres_scalef"
+    h_sc = adata.uns["spatial"]["scale"][scale_key]
+    cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
     if tissue:
-        return np.array(
-            [h_sc * adata.obs[adata.obs["in_tissue"] == 1].iloc[:, 4], h_sc * adata.obs[adata.obs["in_tissue"] == 1].iloc[:, 3]]
-        )
+        coords = (adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc).values
     else:
-        return np.array(h_sc * adata.obs.iloc[:, 4]), np.array(h_sc * adata.obs.iloc[:, 3])
+        coords = (adata.obs.loc[:, cols] * h_sc).values
+
+    # if utl.is_highres(adata):
+    #     h_sc = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
+    # else:
+    #     h_sc = adata.uns["spatial"]["scale"]["tissue_lowes_scalef"]
+    # if tissue:
+    #     return np.array(
+    #         [h_sc * adata.obs[adata.obs["in_tissue"] == 1].iloc[:, 4], h_sc * adata.obs[adata.obs["in_tissue"] == 1].iloc[:, 3]]
+    #     )
+    # else:
+    #     return np.array(h_sc * adata.obs.iloc[:, 4]), np.array(h_sc * adata.obs.iloc[:, 3])
+
+    return (coords[:, 0], coords[:, 1]) if as_tuple else coords
