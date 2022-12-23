@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Any, Optional, Tuple, Union
+from typing import (
+    Any,
+    Iterable,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import geopandas as gpd
 import numpy as np
@@ -275,3 +281,78 @@ def get_spot_coords(adata: AnnData, tissue: bool = True, as_tuple: bool = True) 
     #     return np.array(h_sc * adata.obs.iloc[:, 4]), np.array(h_sc * adata.obs.iloc[:, 3])
 
     return (coords[:, 0], coords[:, 1]) if as_tuple else coords
+def rotate_img90(adata: AnnData, k: int = 1, apply: bool = True, res: str = "all") -> bool:
+    """Rotate the tissue image and the coordinates of the spots by k*90 degrees. If apply is True,
+    then adata.uns['spatial']['rotation'][res] will contain the degrees between the original image (and coordinates)
+    and the rotated version.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData whose image and spot coordinates are to be rotated.
+    k : int, optional
+        The number of times the image should rotated by 90 degrees by default 1
+    apply : bool, optional
+        Whether to apply the rotation to the image and coordinates, by default True. If False, the
+        rotated image will be stored under adata.uns['spatial']['img'] with a key "{res}_rot{k}" for all
+        resolutions `res` that exist. The rotated coordinates are stored under adata.uns with keys
+        "pxl_col_in_fullres_rot{k}" and "pxl_row_in_fullres_rot{k}" if `apply` is False.
+
+    res : str, optional
+        One of 'lowres', 'hires', 'all', the resolution to rotatae, by default "all". If "all", all existing resolutions of the
+        image are rotated.
+
+    Returns
+    -------
+    bool
+        True if any image was rotated. False if no image with resolution `res` exists.
+    """
+    rotation_mats = [
+        np.array([[1, 0], [0, 1]]),
+        np.array([[0, -1], [1, 0]]),
+        np.array([[-1, 0], [0, -1]]),
+        np.array([[0, 1], [-1, 0]]),
+    ]
+
+    k = k % 4
+
+    rot = rotation_mats[k]
+    res_keys = adata.uns["spatial"]["img"].keys()
+    res_vals = ("lowres", "hires") if res == "all" else (res,)
+
+    def rotator(res):
+        img = adata.uns["spatial"]["img"][res]
+        img = np.rot90(img, k=k)
+        n_rows, n_cols, _ = img.shape
+
+        # Rotate all spot coordinates
+        coords = get_spot_coords(adata, tissue=False, as_tuple=False)
+        center = np.array([n_rows, n_cols]) / 2
+
+        # We rotate around the center of the image: translate to Origin > rotate > translate back
+        coords = np.matmul(coords - center, rot) + center
+
+        return img, coords
+
+    ret = False
+    rot_dict = adata.uns["spatial"].get("rotation", {})
+    for res in res_vals:
+        if res in res_keys:
+            img, coords = rotator(res)
+            scale = utl.get_scale(adata, res)
+
+            coords = (coords / scale).astype(int)
+            col_pos, row_pos = coords[:, 0], coords[:, 1]
+
+            if apply:
+                adata.uns["spatial"]["img"][res] = img
+                adata.obs["pxl_col_in_fullres"] = col_pos
+                adata.obs["pxl_row_in_fullres"] = row_pos
+                rot_dict[res] = (rot_dict.get(res, 0) + 90 * k) % 360
+            else:
+                adata.uns["spatial"]["img"][f"{res}_rot{k}"] = img
+                adata.obs[f"pxl_col_in_fullres_rot{k}"] = col_pos
+                adata.obs[f"pxl_row_in_fullres_rot{k}"] = row_pos
+            ret = True
+    adata.uns["spatial"]["rotation"] = rot_dict
+    return ret

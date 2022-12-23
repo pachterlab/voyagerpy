@@ -8,6 +8,7 @@ from voyagerpy.spatial.spatial import (
     get_spot_coords,
     get_tissue_boundary,
     get_tissue_contour_score,
+    rotate_img90,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "get_spot_coords",
     "get_tissue_boundary",
     "get_tissue_contour_score",
+    "rotate_img90",
 ]
