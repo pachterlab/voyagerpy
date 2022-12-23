@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from voyagerpy.spatial.spatial import (
+    apply_mirror,
     apply_rotation,
+    cancel_mirror,
     cancel_rotation,
     detect_tissue_threshold,
     get_approx_tissue_boundary,
@@ -10,11 +12,14 @@ from voyagerpy.spatial.spatial import (
     get_spot_coords,
     get_tissue_boundary,
     get_tissue_contour_score,
+    mirror_img,
     rotate_img90,
 )
 
 __all__ = [
+    "apply_mirror",
     "apply_rotation",
+    "cancel_mirror",
     "cancel_rotation",
     "detect_tissue_threshold",
     "get_approx_tissue_boundary",
@@ -22,5 +27,6 @@ __all__ = [
     "get_spot_coords",
     "get_tissue_boundary",
     "get_tissue_contour_score",
+    "mirror_img",
     "rotate_img90",
 ]
