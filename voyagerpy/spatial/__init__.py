@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from voyagerpy.spatial.spatial import (
+    apply_rotation,
     detect_tissue_threshold,
     get_approx_tissue_boundary,
     get_geom,
@@ -12,6 +13,7 @@ from voyagerpy.spatial.spatial import (
 )
 
 __all__ = [
+    "apply_rotation",
     "detect_tissue_threshold",
     "get_approx_tissue_boundary",
     "get_geom",

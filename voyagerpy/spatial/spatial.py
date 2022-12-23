@@ -281,6 +281,47 @@ def get_spot_coords(adata: AnnData, tissue: bool = True, as_tuple: bool = True) 
     #     return np.array(h_sc * adata.obs.iloc[:, 4]), np.array(h_sc * adata.obs.iloc[:, 3])
 
     return (coords[:, 0], coords[:, 1]) if as_tuple else coords
+
+
+def apply_rotation(
+    adata: AnnData,
+    k: Optional[int] = None,
+    pxl_col_name: str = "pxl_col_in_fullres",
+    pxl_row_name: str = "pxl_row_in_fullres",
+    res: str = "all",
+) -> bool:
+
+    res_vals = ("lowres", "hires", "all")
+    assert res in res_vals
+    res_vals = res_vals[:2] if res == "all" else (res,)
+
+    k_vals = (k % 4,) if k else tuple(range(4))
+    obs_cols = adata.obs.columns
+
+    for k in k_vals:
+        pxl_rotnames = [f"pxl_col_in_fullres_rot{k}", f"pxl_row_in_fullres_rot{k}"]
+
+        if pxl_rotnames[0] in obs_cols and pxl_rotnames[1] in obs_cols:
+            adata.obs[pxl_col_name] = adata.obs[pxl_rotnames[0]]
+            adata.obs[pxl_row_name] = adata.obs[pxl_rotnames[1]]
+            adata.obs.drop(pxl_rotnames, axis=1, inplace=True)
+        else:
+            continue
+
+        img_rot_existed = False
+        rot_dict = adata.uns["spatial"].get("rotation", {})
+        for res in res_vals:
+            img_name = f"{res}_rot{k}"
+            if img_name in adata.uns["spatial"]["img"]:
+                img_rot_existed = True
+                adata.uns["spatial"]["img"][res] = adata.uns["spatial"]["img"][img_name]
+                rot_dict[res] = (rot_dict.get(res, 0) + k * 90) % 360
+                del adata.uns["spatial"]["img"][img_name]
+
+        if img_rot_existed:
+            return True
+    return False
+
 def rotate_img90(adata: AnnData, k: int = 1, apply: bool = True, res: str = "all") -> bool:
     """Rotate the tissue image and the coordinates of the spots by k*90 degrees. If apply is True,
     then adata.uns['spatial']['rotation'][res] will contain the degrees between the original image (and coordinates)
