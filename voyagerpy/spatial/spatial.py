@@ -322,6 +322,35 @@ def apply_rotation(
             return True
     return False
 
+
+def cancel_rotation(adata: AnnData, k: Union[None, int, Iterable[int]] = None, res: str = "all") -> None:
+    """Cancel an unapplied rotation of the tissue image and coordinates.
+    Effectively, it removes any added columns to adata.obs, and the rotated image.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData object which to cancel rotation for.
+    k : Union[None, int, Iterable[int]], optional
+        Cancel unapplied rotations created with k. If None, all rotations are cancelled, by default None
+    res : str, optional
+        The resolution of images to cancel rotation for, by default "all"
+    """
+    res_vals = ("lowres", "hires", "all")
+    assert res in ("lowres", "hires", "all")
+    res_vals = res_vals[:2] if res == "all" else (res,)
+
+    k_vals = list(range(4)) if k is None else [k] if isinstance(k, int) else list(k)
+    k_vals = [k % 4 for k in k_vals]
+
+    for k in k_vals:
+        rotnames = [f"pxl_col_in_fullres_rot{k}", f"pxl_row_in_fullres_rot{k}"]
+        adata.obs.drop(rotnames, axis=1, inplace=True, errors="ignore")
+        img_names = [f"{res}_rot{k}" for res in res_vals]
+        for img in img_names:
+            adata.uns["spatial"]["img"].pop(img, None)
+
+
 def rotate_img90(adata: AnnData, k: int = 1, apply: bool = True, res: str = "all") -> bool:
     """Rotate the tissue image and the coordinates of the spots by k*90 degrees. If apply is True,
     then adata.uns['spatial']['rotation'][res] will contain the degrees between the original image (and coordinates)
