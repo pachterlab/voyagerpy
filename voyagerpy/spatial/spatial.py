@@ -397,7 +397,9 @@ def rotate_img90(adata: AnnData, k: int = 1, apply: bool = True, res: str = "all
         center = np.array([n_rows, n_cols]) / 2
 
         # We rotate around the center of the image: translate to Origin > rotate > translate back
-        coords = np.matmul(coords - center, rot) + center
+        coords = np.matmul(coords - center, rot)
+        # If k is odd, then the center of the image is transposed (x, y) -> (y, x)
+        coords += (center[::-1] if k % 2 else center)
 
         return img, coords
 
