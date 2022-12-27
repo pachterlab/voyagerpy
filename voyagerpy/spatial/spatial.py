@@ -286,6 +286,7 @@ def apply_rotation(
     pxl_col_name: str = "pxl_col_in_fullres",
     pxl_row_name: str = "pxl_row_in_fullres",
     res: str = "all",
+    purge: bool = False,
 ) -> bool:
 
     res_vals = ("lowres", "hires", "all")
@@ -316,6 +317,8 @@ def apply_rotation(
                 del adata.uns["spatial"]["img"][img_name]
 
         if img_rot_existed:
+            if purge:
+                cancel_rotation(adata)
             return True
     return False
 
@@ -399,7 +402,7 @@ def rotate_img90(adata: AnnData, k: int = 1, apply: bool = True, res: str = "all
         # We rotate around the center of the image: translate to Origin > rotate > translate back
         coords = np.matmul(coords - center, rot)
         # If k is odd, then the center of the image is transposed (x, y) -> (y, x)
-        coords += (center[::-1] if k % 2 else center)
+        coords += center[::-1] if k % 2 else center
 
         return img, coords
 
@@ -505,7 +508,7 @@ def apply_mirror(
     res: str = "all",
     pxl_col_name: str = "pxl_col_in_fullres",
     pxl_row_name: str = "pxl_row_in_fullres",
-    purge: bool = True,
+    purge: bool = False,
 ) -> bool:
 
     res_vals = ("lowres", "hires", "all")
@@ -536,11 +539,17 @@ def apply_mirror(
                 del adata.uns["spatial"]["img"][img_name]
 
         if img_mirr_existed:
+            if purge:
+                cancel_mirror(adata)
             return True
     return False
 
 
-def cancel_mirror(adata: AnnData, axis: Union[None, int, Iterable[int]] = None, res: str = "all") -> None:
+def cancel_mirror(
+    adata: AnnData,
+    axis: Union[None, int, Iterable[int]] = None,
+    res: str = "all",
+) -> None:
     """Cancel an unapplied mirroring of an image
 
     Parameters
