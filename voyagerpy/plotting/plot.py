@@ -162,7 +162,7 @@ def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     return plot_bin2d(adata.obs, *args, **kwargs)
 
 
-def plot_spatial_features(
+def plot_spatial_feature(
     adata: AnnData,
     features: Union[str, Sequence[str]],
     ncol: Optional[int] = None,
@@ -179,6 +179,7 @@ def plot_spatial_features(
     color: Optional[str] = None,
     _ax: Optional[Axes] = None,
     legend: bool = True,
+    plot: bool = True,
     subplot_kwds: Optional[Dict] = {},
     legend_kwds: Optional[Dict] = {},
     **kwds,
@@ -218,8 +219,8 @@ def plot_spatial_features(
     if ncol is not None:
         if ncol > 3:
             raise ValueError("Too many columns for subplots")
-    if ncol > len(features):
-        raise ValueError("Too many columns")
+        if ncol > len(feat_ls):
+            raise ValueError("Too many columns")
     # only work with spots in tissue
     if tissue:
         obs = obs[obs["in_tissue"] == 1]
@@ -337,6 +338,181 @@ def plot_spatial_features(
 
         obs.plot(
             feat_ls[i],
+            ax=ax,
+            color=color,
+            legend=_legend,
+            cmap=cmap,
+            legend_kwds=legend_kwds_,
+            **geom_style,
+            **kwds,
+        )
+        if annot_geom is not None:
+            if annot_geom in adata.uns["spatial"]["geom"]:
+
+                # check annot_style is dict with correct values
+                plg = adata.uns["spatial"]["geom"][annot_geom]
+                if len(annot_style) != 0:
+                    gpd.GeoSeries(plg).plot(ax=ax, **annot_style, **kwds)
+                else:
+                    gpd.GeoSeries(plg).plot(color="blue", ax=ax, alpha=alpha, **kwds)
+            else:
+                raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
+
+            pass
+
+        y = y + 1
+        if y >= ncols:
+            y = 0
+            x = x + 1
+    # colorbar title
+    if _ax is not None:
+        fig = ax.get_figure()
+    axs = fig.get_axes()
+    for i in range(len(axs)):
+        if axs[i].properties()["label"] == "<colorbar>" and axs[i].properties()["ylabel"] != "":
+            axs[i].set_title(axs[i].properties()["ylabel"], ha="left")
+            axs[i].set_ylabel("")
+
+    return axs  # ,fig
+
+
+def spatial_reduced_dim(
+    adata: AnnData,
+    dimred: str,
+    ncomponents: Union[int, Sequence[int]],
+    barcode_geom: Optional[str] = None,
+    ncol: Optional[int] = None,
+    annot_geom: Optional[str] = None,
+    tissue: bool = True,
+    cmap: Optional[str] = "Blues",
+    geom_style: Optional[Dict] = {},
+    annot_style: Optional[Dict] = {},
+    alpha: float = 0.2,
+    divergent: bool = False,
+    color: Optional[str] = None,
+    _ax: Optional[Axes] = None,
+    legend: bool = True,
+    subplot_kwds: Optional[Dict] = {},
+    legend_kwds: Optional[Dict] = {},
+    **kwds,
+):
+    if isinstance(ncomponents, list):
+        dims = ncomponents
+    elif isinstance(ncomponents, int):
+        dims = list(range(ncomponents))
+    else:
+        raise TypeError("features must be a integer or a list of integers")
+    dim_nr = len(dims)
+    # check input
+    if ("geometry" not in adata.obs) or "geom" not in adata.uns["spatial"]:
+        adata = spt.get_geom(adata)
+
+    if dimred not in adata.obsm:
+        raise ValueError(f"Cannot find {dimred!r} in adata.obsm")
+
+    # create df for dimension reduction
+
+    ls = []
+    for i in range(adata.obsm[dimred].shape[1]):
+        ls.append(dimred + str(i))
+    red_arr = gpd.GeoDataFrame(adata.obsm[dimred], columns=ls, index=adata.obs.index)
+    # check if barcode geometry exists
+    if barcode_geom is not None:
+        if barcode_geom not in adata.obs:
+            raise ValueError(f"Cannot find {barcode_geom!r} data in adata.obs")
+
+        # if barcode_geom is not spot polygons, change the default
+        # geometry of the observation matrix, so we can plot it
+        if barcode_geom != "spot_poly":
+            red_arr.set_geometry(adata.obs[barcode_geom], inplace=True)
+        else:
+            red_arr.set_geometry(adata.obs["spot_poly"], inplace=True)
+
+    # check if features are in rowdata
+
+    # Check if too many subplots
+    if dim_nr > 6:
+        raise ValueError("Too many components to plot, reduce the number of components")
+    if ncol is not None:
+        if ncol > 3:
+            raise ValueError("Too many columns for subplots")
+        if ncol > dim_nr:
+            raise ValueError("Too many columns")
+    # only work with spots in tissue
+    if tissue:
+        red_arr = red_arr[adata.obs["in_tissue"] == 1]
+    # use a divergent colormap
+    if divergent:
+        cmap = "Spectral"
+
+    # create the subplots with right cols and rows
+    if _ax is None:
+        plt_nr = dim_nr
+        nrows = 1
+        # ncols = ncol if ncol is not None else 1
+
+        # defaults
+        if ncol is None:
+            if plt_nr < 4:
+                ncols = plt_nr
+            if plt_nr >= 4:
+                nrows = 2
+                ncols = 3
+
+        else:
+            ncols = ncol
+            nrows = ceil(plt_nr / ncols)
+
+        # if(subplot_kwds is None):
+        #     fig, axs = plt.subplots(nrows=nrows, ncols=ncols,figsize=(10,10))
+
+        if "figsize" in subplot_kwds:
+            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplot_kwds)
+        else:
+
+            # rat = row /col
+            if nrows >= 2 and ncols == 3:
+                _figsize = (10, 7)
+
+            else:
+                _figsize = (10, 10)
+            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=_figsize, **subplot_kwds)
+            # last axis not used
+            if (ncols * nrows) - 1 == dim_nr:
+                axs[-1, -1].axis("off")
+        fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
+
+        # plt.subplots_adjust(wspace = 1/ncols +  0.2)
+    else:
+        ncols = 1
+        nrows = 1
+        axs = _ax
+    # iterate over features to plot
+    x = 0
+    y = 0
+
+    for i in dims:
+        legend_kwds_ = deepcopy(legend_kwds)
+        _legend = legend
+
+        if ncols > 1 and nrows > 1:
+            ax = axs[x, y]
+        if ncols == 1 and nrows > 1:
+            ax = axs[x]
+        if nrows == 1 and ncols > 1:
+            ax = axs[y]
+        if ncols == 1 and nrows == 1:
+            ax = axs
+
+        legend_kwds_.setdefault("label", red_arr.columns[i])
+        legend_kwds_.setdefault("orientation", "vertical")
+        legend_kwds_.setdefault("shrink", 0.3)
+
+        if color is not None:
+            cmap = None
+
+        red_arr.plot(
+            red_arr.columns[i],
             ax=ax,
             color=color,
             legend=_legend,
