@@ -565,6 +565,29 @@ def cancel_mirror(adata: AnnData, axis: Union[None, int, Iterable[int]] = None, 
             adata.uns["spatial"]["img"].pop(img, None)
 
 
+def cancel_transformations(
+    adata: AnnData,
+    axis: Union[None, int, Iterable[int]] = None,
+    k: Union[None, int, Iterable[int]] = None,
+    res: str = "all",
+) -> None:
+    """Cancel unapplied transformations of an image
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData object to cancel transformations for
+    axis : Union[None, int, Iterable[int]], optional
+        The axis to cancel mirroring for, by default None
+    k : Union[None, int, Iterable[int]], optional
+        The rotation to cancel rotation for, by default None
+    res : str, optional
+        The resolution of images to cancel transformationr for, by default "all"
+    """
+    cancel_mirror(adata, axis, res)
+    cancel_rotation(adata, k, res)
+
+
 def get_mirror_val(curr: Optional[int], ax: Optional[int]) -> Optional[int]:
     """Get the result of mirroring image by ax, if already mirrored by curr.
 
