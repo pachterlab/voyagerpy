@@ -233,7 +233,7 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True, res: s
     # add spot points to geom
     # Create a geometry column from x & ly
     scale = utl.get_scale(adata, res=res)
-    spot_diam = adata.uns["spatial"]["spot_diameter_fullres"]
+    spot_diam = adata.uns["spatial"]["scale"]["spot_diameter_fullres"]
 
     adata.obs["spot_poly"] = adata.obs.apply(
         lambda x: Point(float(x.pxl_col_in_fullres * scale), float(x.pxl_row_in_fullres * scale)).buffer((spot_diam / 2) * 0.2),  # type: ignore
