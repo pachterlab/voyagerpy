@@ -18,22 +18,14 @@ def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high"
 
     loc = "hires" if res == "high" else "lowres"
     spatial_path = path / "spatial"
-    readpath = spatial_path / f"tissue_{loc}_image.png"
+    scalefactors_path = spatial_path / "scalefactors_json.json"
+    img_path = spatial_path / f"tissue_{loc}_image.png"
 
-    if readpath.exists() and (spatial_path / "scalefactors_json.json").exists():
-        # if res == "high":
-        #     readpath = path / "spatial" / "tissue_hires_image.png"
-        #     loc = "hires"
-        # else:
-        #     readpath = path / "spatial" / "tissue_lowres_image.png"
-        #     loc = "lowres"
-        image = imread(str(readpath))
-        # adata.uns = {}
-        adata.uns["spatial"] = {}
-        adata.uns["spatial"]["img"] = {}
-        # adata.uns["spatial"]["img"] = image
+    if img_path.exists() and scalefactors_path.exists():
+        image = imread(str(img_path))
+        adata.uns.setdefault("spatial", {}).setdefault("img", {})
         adata.uns["spatial"]["img"][loc] = image
-        adata.uns["spatial"]["scale"] = json.load(open(path / "spatial" / "scalefactors_json.json"))
+        adata.uns["spatial"]["scale"] = json.load(scalefactors_path.open("rt"))
     else:
         raise ValueError("Cannot read tissue image or scaling file")
     return adata
