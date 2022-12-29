@@ -159,9 +159,14 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
         raise ValueError("Invalid datatype for bc_matrix")
 
     # spatial
-    spatial_path = "spatial/tissue_positions.csv"
-    if (path / spatial_path).exists():
-        adata.obs = pd.concat([adata.obs, pd.read_csv(path / "spatial" / "tissue_positions.csv").set_index(["barcode"])], axis=1)
+    tissue_pos_path = path / "spatial" / "tissue_positions.csv"
+    tissue_alt_path = tissue_pos_path.with_stem("tissue_positions_list")
+
+    if tissue_pos_path.exists():
+        adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path).set_index(["barcode"])], axis=1)
+    elif tissue_alt_path.exists():
+        colnames = ["barcode", "in_tissue", "array_row", "array_col", "pxl_row_in_fullres", "pxl_col_in_fullres"]
+        adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path, header=None, names=colnames).set_index(["barcode"])], axis=1)
     else:
         raise ValueError("Cannot read file tissue_positions.csv")
     adata = read_img_data(path, adata)
