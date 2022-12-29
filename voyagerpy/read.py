@@ -134,17 +134,13 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
     path = Path(path)
     if not path.exists():
         raise ValueError(f"Reading with path {path!r} failed, ")
-    # path = os.path.normpath(path)
-    if prefix is not None:
-        prefix_str = prefix
-    else:
-        prefix_str = ""
-    if raw:
-        h5_file_path = prefix_str + "raw_feature_bc_matrix.h5"
-        mtx_dir_path = "raw_feature_bc_matrix"
-    else:
-        h5_file_path = prefix_str + "filtered_feature_bc_matrix.h5"
-        mtx_dir_path = "filtered_feature_bc_matrix"
+
+    prefix_str = prefix or ""
+
+    raw_qualifier = "raw" if raw else "filtered"
+    h5_file_path = f"{prefix_str}{raw_qualifier}_feature_bc_matrix.h5"
+    # TODO: should the mtx_dir not have an optional prefix?
+    mtx_dir_path = f"{raw_qualifier}_feature_bc_matrix"
 
     # wait with testing outs
     # if path.endswith("outs"):
