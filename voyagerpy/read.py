@@ -148,11 +148,15 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
     # else:
     #     if(os.path.exists(path+"/outs")):
 
-    if datatype is None or datatype == "h5":
+    adata: Optional[AnnData] = None
 
+    if (datatype is None and (path / h5_file_path).exists()) or datatype == "h5":
         adata = _read_10x_h5(path / h5_file_path)
-    if datatype == "mtx":
+    elif (datatype is None and (path / mtx_dir_path).exists()) or datatype == "mtx":
         adata = _read_10x_mtx(path / mtx_dir_path)
+
+    if adata is None:
+        raise ValueError("Invalid datatype for bc_matrix")
 
     # spatial
     spatial_path = "spatial/tissue_positions.csv"
