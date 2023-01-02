@@ -16,20 +16,16 @@ from matplotlib.pyplot import imread
 def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high") -> AnnData:
     path = Path(path)
 
-    if (path / "spatial" / "tissue_hires_image.png").exists() and (path / "spatial" / "scalefactors_json.json").exists():
-        if res == "high":
-            readpath = path / "spatial" / "tissue_hires_image.png"
-            loc = "hires"
-        else:
-            readpath = path / "spatial" / "tissue_lowres_image.png"
-            loc = "lowres"
-        image = imread(str(readpath))
-        # adata.uns = {}
-        adata.uns["spatial"] = {}
-        adata.uns["spatial"]["img"] = {}
-        # adata.uns["spatial"]["img"] = image
+    loc = "hires" if res == "high" else "lowres"
+    spatial_path = path / "spatial"
+    scalefactors_path = spatial_path / "scalefactors_json.json"
+    img_path = spatial_path / f"tissue_{loc}_image.png"
+
+    if img_path.exists() and scalefactors_path.exists():
+        image = imread(str(img_path))
+        adata.uns.setdefault("spatial", {}).setdefault("img", {})
         adata.uns["spatial"]["img"][loc] = image
-        adata.uns["spatial"]["scale"] = json.load(open(path / "spatial" / "scalefactors_json.json"))
+        adata.uns["spatial"]["scale"] = json.load(scalefactors_path.open("rt"))
     else:
         raise ValueError("Cannot read tissue image or scaling file")
     return adata
@@ -138,17 +134,13 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
     path = Path(path)
     if not path.exists():
         raise ValueError(f"Reading with path {path!r} failed, ")
-    # path = os.path.normpath(path)
-    if prefix is not None:
-        prefix_str = prefix
-    else:
-        prefix_str = ""
-    if raw:
-        h5_file_path = prefix_str + "raw_feature_bc_matrix.h5"
-        mtx_dir_path = "raw_feature_bc_matrix"
-    else:
-        h5_file_path = prefix_str + "filtered_feature_bc_matrix.h5"
-        mtx_dir_path = "filtered_feature_bc_matrix"
+
+    prefix_str = prefix or ""
+
+    raw_qualifier = "raw" if raw else "filtered"
+    h5_file_path = f"{prefix_str}{raw_qualifier}_feature_bc_matrix.h5"
+    # TODO: should the mtx_dir not have an optional prefix?
+    mtx_dir_path = f"{raw_qualifier}_feature_bc_matrix"
 
     # wait with testing outs
     # if path.endswith("outs"):
@@ -156,16 +148,25 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
     # else:
     #     if(os.path.exists(path+"/outs")):
 
-    if datatype is None or datatype == "h5":
+    adata: Optional[AnnData] = None
 
+    if (datatype is None and (path / h5_file_path).exists()) or datatype == "h5":
         adata = _read_10x_h5(path / h5_file_path)
-    if datatype == "mtx":
+    elif (datatype is None and (path / mtx_dir_path).exists()) or datatype == "mtx":
         adata = _read_10x_mtx(path / mtx_dir_path)
 
+    if adata is None:
+        raise ValueError("Invalid datatype for bc_matrix")
+
     # spatial
-    spatial_path = "spatial/tissue_positions.csv"
-    if (path / spatial_path).exists():
-        adata.obs = pd.concat([adata.obs, pd.read_csv(path / "spatial" / "tissue_positions.csv").set_index(["barcode"])], axis=1)
+    tissue_pos_path = path / "spatial" / "tissue_positions.csv"
+    tissue_alt_path = tissue_pos_path.with_stem("tissue_positions_list")
+
+    if tissue_pos_path.exists():
+        adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path).set_index(["barcode"])], axis=1)
+    elif tissue_alt_path.exists():
+        colnames = ["barcode", "in_tissue", "array_row", "array_col", "pxl_row_in_fullres", "pxl_col_in_fullres"]
+        adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path, header=None, names=colnames).set_index(["barcode"])], axis=1)
     else:
         raise ValueError("Cannot read file tissue_positions.csv")
     adata = read_img_data(path, adata)
