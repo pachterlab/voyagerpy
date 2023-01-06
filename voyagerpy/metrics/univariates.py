@@ -17,7 +17,7 @@ def moran(adata, gene):
 
 
 function_map = {
-  'moran': calcChurn,
+  'moran': moran,
   'geary': calcEngagement,
   'moran.mc':,
   'geary.mc',
@@ -48,4 +48,20 @@ def calculate_univariate(
         include_self=None,
         p_adjust_method=None
 ):
-    
+    if(fun_type in function_map):
+        val = function_map[fun_type](adata, features)
+
+    return val
+
+import libpysal
+
+w = libpysal.io.open(libpysal.examples.get_path("stl.gal")).read()
+f = libpysal.io.open(libpysal.examples.get_path("stl_hom.txt"))
+y = np.array(f.by_col["HR8893"])
+from esda.moran import Moran
+
+y
+w
+w1, w2 = w.full()
+mi = Moran(y, w)
+mi.I
