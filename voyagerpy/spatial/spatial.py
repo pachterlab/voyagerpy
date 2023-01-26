@@ -10,6 +10,7 @@ from typing import (
 )
 
 import geopandas as gpd
+import pandas as pd
 import numpy as np
 from anndata import AnnData
 from cv2 import (
@@ -262,7 +263,7 @@ def get_spot_coords(
     tissue: bool = True,
     as_tuple: bool = True,
     as_df: bool = False,
-) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], "pd.DataFrame"]:
+) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
 
     h_sc = utl.get_scale(adata)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
