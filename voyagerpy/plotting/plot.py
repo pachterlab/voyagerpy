@@ -314,25 +314,10 @@ def plot_spatial_feature(
         else:
             #  colorbar for discrete categories if pandas column is categorical
             _legend = False
-            catnr = adata.obs[feat_ls[i]].unique().shape[0]
-            bounds = list(range(catnr + 1))
-            norm = colors.BoundaryNorm(bounds, cm.get_cmap(cmap).N)
-            ticks = list(range(catnr))
-            ticks = [x + 0.5 for x in ticks]
-            cbar = fig.colorbar(
-                cm.ScalarMappable(cmap=cm.get_cmap(cmap), norm=norm),
-                ax=ax,
-                # extend="both",
-                extendfrac="auto",
-                ticks=ticks,
-                spacing="uniform",
-                orientation="vertical",
-                # label=catname,
-                shrink=0.3,
+            add_colorbar_discrete(
+                ax, fig, cmap, feat_ls[i], adata.obs[feat_ls[i]].unique().shape[0], list(adata.obs[feat_ls[i]].cat.categories)
             )
-            dd = list(adata.obs[feat_ls[i]].cat.categories)
-            cc = cbar.ax.set_yticklabels(dd)
-            cbar.ax.set_title(feat_ls[i])
+
         if color is not None:
             cmap = None
 
@@ -549,3 +534,25 @@ def spatial_reduced_dim(
             axs[i].set_ylabel("")
 
     return axs  # ,fig
+
+
+def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list):
+    # catnr = adata.obs[feat_ls[i]].unique().shape[0]
+    bounds = list(range(cat_nr + 1))
+    norm = colors.BoundaryNorm(bounds, cm.get_cmap(cmap).N)
+    ticks = list(range(cat_nr))
+    ticks = [x + 0.5 for x in ticks]
+    cbar = fig.colorbar(
+        cm.ScalarMappable(cmap=cm.get_cmap(cmap), norm=norm),
+        ax=ax,
+        # extend="both",
+        extendfrac="auto",
+        ticks=ticks,
+        spacing="uniform",
+        orientation="vertical",
+        # label=catname,
+        shrink=0.3,
+    )
+    # dd = list(adata.obs[feat_ls[i]].cat.categories)
+    cc = cbar.ax.set_yticklabels(cat_names)
+    cbar.ax.set_title(cbar_title)
