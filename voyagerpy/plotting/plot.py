@@ -585,3 +585,21 @@ def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names
     cc = cbar.ax.set_yticklabels(cat_names)
     cbar.ax.set_title(cbar_title)
     return cbar
+
+
+def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
+    fig_kwargs = {"layout": "tight"}
+    fig_kwargs.update(kwargs)
+    figsize = fig_kwargs.pop("figsize", None)
+    if isinstance(figsize, tuple):
+        figsize = (figsize[0] * (ncol + 1) / ncol, figsize[1])
+    fig = plt.figure(**fig_kwargs)
+
+    spec = fig.add_gridspec(nrow, ncol + 1)
+    axs = np.array([[fig.add_subplot(spec[row, col]) for col in range(ncol)] for row in range(nrow)])
+    cax = fig.add_subplot(spec[:, -1])
+    cax.grid(False)
+    cax.set_xticks([])
+    cax.set_yticks([])
+    return fig, axs, cax
+
