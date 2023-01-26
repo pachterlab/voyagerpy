@@ -7,7 +7,7 @@ from voyagerpy.plotting.plot import (
     plot_barcode_data,
     plot_features_bin2d,
     plot_spatial_feature,
-    spatial_reduced_dim
+    spatial_reduced_dim,
 )
 
 __all__ = [
@@ -15,6 +15,6 @@ __all__ = [
     "plot_barcode_data",
     "plot_bin2d",
     "plot_features_bin2d",
-    "plot_spatial_features",
-    "spatial_reduced_dim"
+    "plot_spatial_feature",
+    "spatial_reduced_dim",
 ]
