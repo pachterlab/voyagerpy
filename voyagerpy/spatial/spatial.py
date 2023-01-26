@@ -10,6 +10,7 @@ from typing import (
 )
 
 import geopandas as gpd
+import pandas as pd
 import numpy as np
 from anndata import AnnData
 from cv2 import (
@@ -257,15 +258,23 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True, res: s
     return adata
 
 
-def get_spot_coords(adata: AnnData, tissue: bool = True, as_tuple: bool = True) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+def get_spot_coords(
+    adata: AnnData,
+    tissue: bool = True,
+    as_tuple: bool = True,
+    as_df: bool = False,
+) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
 
     h_sc = utl.get_scale(adata)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
     if tissue:
-        coords = (adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc).values
+        coords = adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc
     else:
-        coords = (adata.obs.loc[:, cols] * h_sc).values
+        coords = adata.obs.loc[:, cols] * h_sc
 
+    if as_df:
+        return coords
+    coords = coords.values
     # if utl.is_highres(adata):
     #     h_sc = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
     # else:

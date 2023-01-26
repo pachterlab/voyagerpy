@@ -6,6 +6,7 @@ from voyagerpy.utils.utils import (
     calculate_metrics,
     get_scale,
     is_highres,
+    normalize_csr,
 )
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "calculate_metrics",
     "get_scale",
     "is_highres",
+    "normalize_csr",
 ]

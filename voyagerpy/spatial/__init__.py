@@ -17,6 +17,7 @@ from voyagerpy.spatial.spatial import (
     rotate_img90,
 )
 
+from voyagerpy.spatial import graphs
 __all__ = [
     "apply_mirror",
     "apply_rotation",
