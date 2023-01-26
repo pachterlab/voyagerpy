@@ -4,6 +4,7 @@
 from typing import Dict, Optional
 
 import numpy as np
+import scipy.sparse as sp
 from anndata import AnnData
 
 
@@ -13,7 +14,6 @@ def is_highres(adata: AnnData) -> bool:
     if "lowres" in adata.uns["spatial"]["img"]:
         return False
     raise ValueError("Cannot find image data in .uns['spatial']")
-
 
 def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
     if res not in [None, "hi", "hires", "lo", "lowres"]:
@@ -64,3 +64,12 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
 
         if prc_key not in adata.obs.keys() or force:
             adata.obs[prc_key] = adata.obs[sum_key] / adata.obs["sum"]
+
+
+def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:
+    axis = int(byrow)
+    sum_ = sp.csr_matrix(X.sum(axis=axis))
+    sum_.eliminate_zeros()
+    sum_.data = 1 / sum_.data
+    sum_ = sp.diags(sum_.toarray().ravel())
+    return sum_.dot(X) if byrow else X.dot(sum_)
