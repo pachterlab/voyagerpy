@@ -7,11 +7,13 @@ Created on Fri Nov 25 14:08:42 2022
 """
 
 
+import functools
+from copy import deepcopy
 from math import ceil
 from typing import (
     Any,
-    Dict,
     Collection,
+    Dict,
     Optional,
     Sequence,
     Tuple,
@@ -20,18 +22,17 @@ from typing import (
 
 import geopandas as gpd
 import numpy as np
-
 from anndata import AnnData
-from copy import deepcopy
-from matplotlib import cm
-from matplotlib import colors
+from matplotlib import cm, colors
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+from matplotlib.colorbar import Colorbar
 from pandas import options
+from scipy.stats import gaussian_kde
+
+from voyagerpy import spatial as spt
 
 options.mode.chained_assignment = None  # default='warn'
-from voyagerpy import spatial as spt
 
 plt.style.use("ggplot")
 plt.rcParams["axes.facecolor"] = "white"
