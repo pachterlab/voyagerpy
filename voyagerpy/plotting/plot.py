@@ -34,6 +34,9 @@ options.mode.chained_assignment = None  # default='warn'
 from voyagerpy import spatial as spt
 
 plt.style.use("ggplot")
+plt.rcParams["axes.facecolor"] = "white"
+plt.rcParams["grid.color"] = "k"
+plt.rcParams["grid.alpha"] = 0.2
 
 
 def plot_barcode_data(
