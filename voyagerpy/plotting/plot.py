@@ -603,3 +603,41 @@ def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
     cax.set_yticks([])
     return fig, axs, cax
 
+
+def pca_plot(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
+
+    data = adata.obsm["X_pca"]
+
+    color_vals = list(adata.obs[colorby].unique())
+    if all(map(str.isdigit, color_vals)):
+        color_vals = map(int, color_vals)
+    color_vals = sorted(color_vals)
+
+    # color_vals = sorted(map(int, adata.obs[colorby].unique()))
+    n_colors = len(color_vals)
+
+    fig, ax, cax = subplots_single_colorbar(ndim, ndim, figsize=figsize)
+    cbar = add_colorbar_discrete(cax, fig, cmap, colorby, n_colors, color_vals)
+    color_mapper = cbar.mappable.to_rgba  # This scales the n_colors to cmap.N
+    # color_mapper = plt.get_cmap(cmap)  # this uses the first N colors of the map
+    colors = adata.obs[colorby].astype(int).map(color_mapper)
+
+    var_expl = np.round(adata.uns["pca"]["variance_ratio"] * 100).astype(int)
+    for i in range(ndim):
+
+        ax[0, i].set_xlabel(f"PC{i} ({var_expl[i]:d}%)")
+        ax[0, i].xaxis.set_label_position("top")
+        ax[i, -1].set_ylabel(f"PC{i} ({var_expl[i]:d}%)", rotation=270, labelpad=10)
+        ax[i, -1].yaxis.set_label_position("right")
+        for j in range(ndim):
+            if i != j:
+                ax[i, j].scatter(*data[:, (j, i)].T, c=colors, s=2)
+
+        density = gaussian_kde(data[:, i])
+        density.covariance_factor = lambda: 0.25
+        density._compute_covariance()
+        xs = np.linspace(data[:, i].min(), data[:, i].max())
+        ax[i, i].plot(xs, density(xs), c="k", linewidth=1)
+
+    fig.tight_layout()
+    return ax
