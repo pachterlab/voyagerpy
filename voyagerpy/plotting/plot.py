@@ -166,6 +166,30 @@ def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     return plot_bin2d(adata.obs, *args, **kwargs)
 
 
+def rcDecorator(context):
+    def decorator(func):
+        @functools.wraps(func)
+        def inner_wrapper(*args, **kwargs):
+            with plt.rc_context(context):
+                return func(*args, **kwargs)
+
+        return inner_wrapper
+
+    return decorator
+
+
+def nogrid(func):
+
+    context = {"axes.grid": False}
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with plt.rc_context(context):
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
 def plot_spatial_feature(
     adata: AnnData,
     features: Union[str, Sequence[str]],
