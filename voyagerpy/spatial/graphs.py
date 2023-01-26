@@ -7,24 +7,24 @@ import shapely
 from anndata import AnnData
 
 
-def compute_weights(coords: gpd.GeoSeries, func='euclidean') -> Any:
-    if func == 'euclidean':
-        point_func = shapely.ops.BaseGeometry.distance
 
+def compute_weights(coords: gpd.GeoSeries, func="euclidean") -> Any:
+    if func == "euclidean":
+        point_func = shapely.ops.BaseGeometry.distance  # type: ignore
     else:
         point_func = func
 
-    def func(point):
+    def row_func(point):
         return coords.apply(point_func, other=point)
 
-    return coords.apply(func)
+    return coords.apply(row_func)
 
 
 def knn(W: np.ndarray, k: int) -> np.ndarray:
     n = W.shape[0]
     nbrs = np.empty((n, k))
     for i, d in enumerate(W):
-        idx = np.argpartition(d, k+1)[k+1]
+        idx = np.argpartition(d, k + 1)[k + 1]
         nbrs[i] = idx[idx != i]
     return nbrs
 
