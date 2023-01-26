@@ -564,7 +564,7 @@ def spatial_reduced_dim(
     return axs  # ,fig
 
 
-def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list):
+def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list) -> Colorbar:
     # catnr = adata.obs[feat_ls[i]].unique().shape[0]
     bounds = list(range(cat_nr + 1))
     norm = colors.BoundaryNorm(bounds, cm.get_cmap(cmap).N)
@@ -584,3 +584,4 @@ def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names
     # dd = list(adata.obs[feat_ls[i]].cat.categories)
     cc = cbar.ax.set_yticklabels(cat_names)
     cbar.ax.set_title(cbar_title)
+    return cbar
