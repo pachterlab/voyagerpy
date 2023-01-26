@@ -29,21 +29,25 @@ def knn(W: np.ndarray, k: int) -> np.ndarray:
     return nbrs
 
 
-def dnn(W: np.ndarray, min_dist: float = 0, max_dist: float = 1, full: bool = True, include_low: bool = False, include_high: bool = False) -> Union[np.ndarray, List[np.ndarray]]:
+def dnn(
+    W: np.ndarray,
+    min_dist: float = 0,
+    max_dist: float = 1,
+    full: bool = True,
+    include_low: bool = False,
+    include_high: bool = False,
+) -> Union[np.ndarray, List[np.ndarray]]:
     pred00 = lambda d: (min_dist < d) & (d < max_dist)  # noqa E713
     pred10 = lambda d: (min_dist <= d) & (d < max_dist)  # noqa E713
     pred01 = lambda d: (min_dist < d) & (d <= max_dist)  # noqa E713
     pred11 = lambda d: (min_dist <= d) & (d <= max_dist)  # noqa E713
-    
+
     pred = ((pred00, pred01), (pred10, pred11))[include_low][include_high]
 
     if full:
         return np.apply_along_axis(pred, 0, W)
 
-    ret = []
-    for d in W:
-        ret.append(np.where(pred(d))[0])
-
+    ret = [np.where(pred(d))[0] for d in W]
     return ret
 
 def graph2np(g: Any) -> List[List[Tuple[str, float]]]:
