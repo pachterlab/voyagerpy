@@ -662,6 +662,16 @@ def plot_dim_loadings(
     return axs
 
 
+def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Optional[Axes] = None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    var_ratio = adata.uns[reduction]["variance_ratio"][:ndims]
+    ax.scatter(np.arange(var_ratio.size), var_ratio * 100, s=8, c="k")
+    ax.set_ylabel("Variance explained (%)")
+    ax.set_xlabel("PC")
+    return ax
+
+
 @rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
 def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
 

@@ -7,6 +7,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.pyplot import rcParams
 
 from voyagerpy.plotting.plot import (
+    elbow_plot,
     plot_barcode_data,
     plot_barcodes_bin2d,
     plot_bin2d,
@@ -67,6 +68,7 @@ colormaps.register(dittoseq_cmap.reversed())
 rcParams["image.cmap"] = "dittoseq"
 
 __all__ = [
+    "elbow_plot",
     "plot_barcodes_bin2d",
     "plot_barcode_data",
     "plot_bin2d",
