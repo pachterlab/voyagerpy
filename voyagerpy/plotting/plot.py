@@ -614,13 +614,19 @@ def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
     return fig, axs, cax
 
 
-def plot_dim_loadings(adata, dims, ncol=2, figsize=6, n_extremes: int = 5):
+def plot_dim_loadings(
+    adata: AnnData,
+    dims: Sequence[int],
+    ncol: int = 2,
+    figsize: Union[Tuple[float, float], float, int] = 6,
+    n_extremes: int = 5,
+):
     dat = adata.varm["PCs"][:, dims]
 
     ncol = min(ncol, len(dims))
     nrow = int(np.ceil(len(dims) / ncol))
 
-    if isinstance(figsize, int):
+    if isinstance(figsize, (int, float)):
         figsize = (nrow * figsize / ncol, figsize)
 
     fig, axs = plt.subplots(nrow, ncol, figsize=figsize, sharex=True)
