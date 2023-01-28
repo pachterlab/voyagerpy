@@ -609,40 +609,47 @@ def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
     return fig, axs, cax
 
 
-def pca_plot(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
+@rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
+def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
 
     data = adata.obsm["X_pca"]
 
-    color_vals = list(adata.obs[colorby].unique())
-    if all(map(str.isdigit, color_vals)):
-        color_vals = map(int, color_vals)
-    color_vals = sorted(color_vals)
-
-    # color_vals = sorted(map(int, adata.obs[colorby].unique()))
-    n_colors = len(color_vals)
-
     fig, ax, cax = subplots_single_colorbar(ndim, ndim, figsize=figsize)
-    cbar = add_colorbar_discrete(cax, fig, cmap, colorby, n_colors, color_vals)
-    color_mapper = cbar.mappable.to_rgba  # This scales the n_colors to cmap.N
-    # color_mapper = plt.get_cmap(cmap)  # this uses the first N colors of the map
-    colors = adata.obs[colorby].astype(int).map(color_mapper)
 
+    max_color = plt.get_cmap(cmap).N
+    colors = adata.obs[colorby].astype(int)
     var_expl = np.round(adata.uns["pca"]["variance_ratio"] * 100).astype(int)
-    for i in range(ndim):
 
-        ax[0, i].set_xlabel(f"PC{i} ({var_expl[i]:d}%)")
-        ax[0, i].xaxis.set_label_position("top")
-        ax[i, -1].set_ylabel(f"PC{i} ({var_expl[i]:d}%)", rotation=270, labelpad=10)
-        ax[i, -1].yaxis.set_label_position("right")
-        for j in range(ndim):
-            if i != j:
-                ax[i, j].scatter(*data[:, (j, i)].T, c=colors, s=2)
+    scatter_kwargs = dict(
+        c=colors,
+        s=8,
+        alpha=0.5,
+        cmap=cmap,
+        vmin=0,
+        vmax=max_color,
+    )
 
-        density = gaussian_kde(data[:, i])
-        density.covariance_factor = lambda: 0.25
-        density._compute_covariance()
-        xs = np.linspace(data[:, i].min(), data[:, i].max())
-        ax[i, i].plot(xs, density(xs), c="k", linewidth=1)
+    for row in range(ndim):
+        for col in range(ndim):
+            if row != col:
+                ax[row, col].scatter(*data[:, (col, row)].T, **scatter_kwargs)
+            if row < ndim - 1:
+                ax[row, col].set_xticklabels([])
+            if col > 0:
+                ax[row, col].set_yticklabels([])
+            ax[row, col].set_frame_on(True)
 
-    fig.tight_layout()
+        ax[0, row].set_xlabel(f"PC{row} ({var_expl[row]:d}%)")
+        ax[0, row].xaxis.set_label_position("top")
+        ax[row, -1].set_ylabel(f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15)
+        ax[row, -1].yaxis.set_label_position("right")
+
+        density = gaussian_kde(data[:, row])
+        xs = np.linspace(data[:, row].min(), data[:, row].max(), 200)
+        ax[row, row].plot(xs, density(xs), c="k", linewidth=1)
+
+    legend_elements = ax.flat[1].collections[0].legend_elements()
+    cax.legend(*legend_elements, loc="center", title=colorby, frameon=False)
+
+    fig.tight_layout(pad=0)
     return ax
