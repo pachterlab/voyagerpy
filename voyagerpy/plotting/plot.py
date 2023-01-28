@@ -595,9 +595,14 @@ def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
         figsize = (figsize[0] * (ncol + 1) / ncol, figsize[1])
     fig = plt.figure(**fig_kwargs)
 
-    spec = fig.add_gridspec(nrow, ncol + 1)
+    fig = plt.figure(figsize=figsize, **fig_kwargs)
+
+    width_ratios = [1] * ncol + [0.6]
+    spec = fig.add_gridspec(nrow, ncol + 1, width_ratios=width_ratios, height_ratios=[1] * nrow)
     axs = np.array([[fig.add_subplot(spec[row, col]) for col in range(ncol)] for row in range(nrow)])
+
     cax = fig.add_subplot(spec[:, -1])
+    cax.set_frame_on(False)
     cax.grid(False)
     cax.set_xticks([])
     cax.set_yticks([])
