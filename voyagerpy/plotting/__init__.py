@@ -61,11 +61,12 @@ ditto_colors = [
     "#3D3D3D",
 ]
 
-
-dittoseq_cmap = ListedColormap(ditto_colors, name="dittoseq")
-colormaps.register(dittoseq_cmap)
-colormaps.register(dittoseq_cmap.reversed())
-rcParams["image.cmap"] = "dittoseq"
+dittoseq_name = "dittoseq"
+if dittoseq_name not in colormaps:
+    dittoseq_cmap = ListedColormap(ditto_colors, name=dittoseq_name)
+    colormaps.register(dittoseq_cmap)
+    colormaps.register(dittoseq_cmap.reversed())
+    rcParams["image.cmap"] = dittoseq_name
 
 __all__ = [
     "elbow_plot",
