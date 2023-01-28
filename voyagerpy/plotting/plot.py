@@ -29,6 +29,7 @@ from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
 from pandas import options
+from pandas.api.types import is_categorical_dtype
 from scipy.stats import gaussian_kde
 
 from voyagerpy import spatial as spt
@@ -43,41 +44,86 @@ plt.rcParams["axes.edgecolor"] = "#00000050"
 plt.rcParams["axes.grid.which"] = "both"
 
 
+def configure_violins(violins, cmap=None, edgecolor="#00000050", alpha=0.7):
+    cmap = plt.get_cmap(cmap) if isinstance(cmap, (str, type(None))) else cmap
+    for i, violin in enumerate(violins["bodies"]):
+        violin.set_facecolor(cmap(i))
+        violin.set_edgecolor(edgecolor)
+        violin.set_alpha(alpha)
+
+
+def simple_violin_plot(axs, adata, y, cmap=None):
+
+    for feature, ax in zip(y, axs.flat):
+        violins = ax.violinplot(adata.obs[feature], showmeans=False, showextrema=False, showmedians=False)
+        configure_violins(violins, cmap)
+
+        ax.set_ylabel(feature)
+    return axs
+
+
+def grouped_violin_plot(axs, adata, x, y, cmap=None):
+    groups = adata.obs.groupby(x)[y].groups
+    keys = sorted(groups.keys())
+    grouped_data = [adata.obs.loc[groups[key]] for key in keys]
+
+    for feature, ax in zip(y, axs.flat):
+        dat = [group[feature] for group in grouped_data]
+        violins = ax.violinplot(dat, showmeans=False, showextrema=False, showmedians=False)
+        configure_violins(violins, cmap)
+
+        ax.set_xticks(np.arange(len(keys)) + 1, labels=keys)
+        ax.set_xlabel(x)
+        ax.set_ylabel(feature)
+
+    for i, key in enumerate(keys):
+        ax.scatter([], [], label=key, color=cmap(i))
+    ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title=x, frameon=False)
+
+    return axs
+
+
 def plot_barcode_data(
-    adata: AnnData, x: str, y: str, colour_by: Optional[str] = None, cmap: str = "viridis", alpha: float = 0.6, ax: Optional[Axes] = None
-) -> Any:
+    adata: AnnData,
+    y: Union[str, Sequence[str]],
+    x: Optional[str] = None,
+    ncol: int = 3,
+    cmap: Union[None, str, colors.ListedColormap, colors.LinearSegmentedColormap] = None,
+    color_by: Optional[str] = None,
+):
+    if not isinstance(x, (str, type(None), int)):
+        raise TypeError("x must be either None or str")
 
-    # TODO: Move these rcParams elsewhere
-    from cycler import cycler
+    if not isinstance(y, (list, tuple, np.ndarray)):
+        y = [y]
 
-    plt.rcParams["axes.prop_cycle"] = cycler(
-        "color", ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
-    )
-    plt.rcParams["lines.markersize"] = 3
-    plt.rcParams["legend.frameon"] = False
-    plt.rcParams["legend.shadow"] = False
+    nplots = len(y)
+    ncol = min(nplots, ncol)
+    nrow = int(np.ceil(nplots / ncol))
+    fig, axs = plt.subplots(nrow, ncol, figsize=(8, 4))
 
-    if ax is None:
-        _, ax = plt.subplots()
+    if isinstance(cmap, (str, type(None))):
+        cmap = plt.get_cmap(cmap)
 
-    kwargs = {"alpha": alpha}
-    if colour_by is not None:
+    if nplots == 1:
+        axs = np.array([axs])
 
-        color_vals = sorted(set(adata.obs[colour_by].to_list()))
-        is_binary = len(color_vals) == 2
-        is_binary = is_binary and (color_vals == [0, 1] or color_vals == [False, True])
-
-        for val in color_vals:
-            subdata = adata.obs[adata.obs[colour_by] == val]
-            label = str(bool(val)).upper() if is_binary else val
-            ax.scatter(subdata[x], subdata[y], **kwargs, label=label)
-
-        ax.legend(loc=(1.04, 0.5), title=colour_by)
-
+    if x is None:
+        simple_violin_plot(axs, adata, y, cmap)
+    elif is_categorical_dtype(adata.obs[x]):
+        grouped_violin_plot(axs, adata, x, y, cmap)
     else:
-        ax.scatter(adata.obs[x], adata.obs[y], **kwargs)
+        for feature, ax in zip(y, axs.flat):
+            x_dat = adata.obs[x]
+            y_dat = adata.obs[feature]
+            color = np.zeros_like(x_dat) if color_by is None else adata.obs[color_by].astype(int)
+            scat = ax.scatter(x_dat, y_dat, c=color, vmax=cmap.N, alpha=0.5, s=8)
+            ax.set_xlabel(x)
+            ax.set_ylabel(feature)
+        ax.legend(*scat.legend_elements(), bbox_to_anchor=(1.04, 0.5), loc="center left", title=color_by, frameon=False)
 
-    return ax
+    fig.tight_layout()
+    return axs
 
 
 def plot_bin2d(
