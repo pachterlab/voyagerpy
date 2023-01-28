@@ -26,6 +26,7 @@ from anndata import AnnData
 from matplotlib import cm, colors
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
 from pandas import options
 from scipy.stats import gaussian_kde
@@ -609,6 +610,48 @@ def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
     cax.set_xticks([])
     cax.set_yticks([])
     return fig, axs, cax
+
+
+def plot_dim_loadings(adata, dims, ncol=2, figsize=6, n_extremes: int = 5):
+    dat = adata.varm["PCs"][:, dims]
+
+    ncol = min(ncol, len(dims))
+    nrow = int(np.ceil(len(dims) / ncol))
+
+    if isinstance(figsize, int):
+        figsize = (nrow * figsize / ncol, figsize)
+
+    fig, axs = plt.subplots(nrow, ncol, figsize=figsize, sharex=True)
+
+    if not isinstance(axs, np.ndarray):
+        axs = np.array([axs])
+
+    for i in range(len(dims), nrow * ncol):
+        axs.flat[i].remove()
+
+    for i, (ax, dim) in enumerate(zip(axs.flat, dims)):
+        ax.set_title(f"PC{dim}")
+
+        idx = np.argsort(dat[:, i])
+        idx = np.hstack([idx[:n_extremes], idx[-n_extremes:]])
+        genes = adata.var.index[idx]
+        loadings = dat[idx, i]
+        lines = [((0, row), (loading, row)) for row, loading in enumerate(loadings)]
+
+        line_segments = LineCollection(lines, colors="k")
+        ax.add_collection(line_segments)
+
+        ax.scatter(loadings, genes, c="b")
+        ax.axvline(0, linestyle="--", c="k")
+
+        # Show ticks at the bottom of each column
+        ax.tick_params("x", labelbottom=i + ncol >= len(dims))
+
+    fig.supxlabel("Loading")
+    fig.supylabel("Gene")
+    fig.tight_layout()
+
+    return axs
 
 
 @rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})

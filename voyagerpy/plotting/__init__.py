@@ -5,10 +5,12 @@ import matplotlib
 from matplotlib import colormaps
 from matplotlib.colors import ListedColormap
 from matplotlib.pyplot import rcParams
+
 from voyagerpy.plotting.plot import (
+    plot_barcode_data,
     plot_barcodes_bin2d,
     plot_bin2d,
-    plot_barcode_data,
+    plot_dim_loadings,
     plot_features_bin2d,
     plot_pca,
     plot_spatial_feature,
@@ -68,6 +70,7 @@ __all__ = [
     "plot_barcodes_bin2d",
     "plot_barcode_data",
     "plot_bin2d",
+    "plot_dim_loadings",
     "plot_features_bin2d",
     "plot_pca",
     "plot_spatial_feature",
