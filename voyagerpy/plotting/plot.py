@@ -578,12 +578,15 @@ def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names
         ticks=ticks,
         spacing="uniform",
         orientation="vertical",
+        drawedges=False,
         # label=catname,
         shrink=0.3,
     )
     # dd = list(adata.obs[feat_ls[i]].cat.categories)
     cc = cbar.ax.set_yticklabels(cat_names)
     cbar.ax.set_title(cbar_title)
+    cbar.ax.grid(None, which="major")
+
     return cbar
 
 
