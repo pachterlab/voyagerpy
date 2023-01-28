@@ -39,6 +39,8 @@ plt.style.use("ggplot")
 plt.rcParams["axes.facecolor"] = "white"
 plt.rcParams["grid.color"] = "k"
 plt.rcParams["grid.alpha"] = 0.2
+plt.rcParams["axes.edgecolor"] = "#00000050"
+plt.rcParams["axes.grid.which"] = "both"
 
 
 def plot_barcode_data(
