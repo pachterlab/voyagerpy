@@ -593,7 +593,6 @@ def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
     figsize = fig_kwargs.pop("figsize", None)
     if isinstance(figsize, tuple):
         figsize = (figsize[0] * (ncol + 1) / ncol, figsize[1])
-    fig = plt.figure(**fig_kwargs)
 
     fig = plt.figure(figsize=figsize, **fig_kwargs)
 
