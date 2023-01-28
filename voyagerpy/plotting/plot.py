@@ -620,6 +620,7 @@ def plot_dim_loadings(
     ncol: int = 2,
     figsize: Union[Tuple[float, float], float, int] = 6,
     n_extremes: int = 5,
+    show_symbol: bool = True,
 ):
     dat = adata.varm["PCs"][:, dims]
 
@@ -643,6 +644,9 @@ def plot_dim_loadings(
         idx = np.argsort(dat[:, i])
         idx = np.hstack([idx[:n_extremes], idx[-n_extremes:]])
         genes = adata.var.index[idx]
+        if not show_symbol:
+            genes = adata.var.loc[genes, "gene_ids"]  # .values
+
         loadings = dat[idx, i]
         lines = [((0, row), (loading, row)) for row, loading in enumerate(loadings)]
 
