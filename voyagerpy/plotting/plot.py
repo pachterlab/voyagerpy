@@ -272,9 +272,35 @@ def plot_spatial_feature(
     # check input
     if ("geometry" not in adata.obs) or "geom" not in adata.uns["spatial"]:
         adata = spt.get_geom(adata)
-    for i in feat_ls:
-        if i not in adata.obs and i not in adata.var.index:
-            raise ValueError(f"Cannot find {i!r} in adata.obs or gene names")
+
+    added_features = []
+    features_to_pop = []
+    for feature in feat_ls:
+        if feature in adata.obs:
+            continue
+        if feature in adata.var.index:
+            continue
+
+        # Add the indices of the feature found in the secondary_var_names column
+        secondary_gene_column = adata.uns["config"]["secondary_var_names"]
+        if feature in adata.var[secondary_gene_column]:
+            ids = adata.var[adata.var[secondary_gene_column] == feature].index
+            added_features.extend(ids)
+            features_to_pop.append(feature)
+
+        raise ValueError(f"Cannot find {feature!r} in adata.obs or gene names")
+
+    # rename the features found via the secondary column
+    feat_ls.extend(added_features)
+    for feature in features_to_pop:
+        feat_ls.remove(feature)
+
+    # Remove duplicates
+    for i_feature in range(len(feat_ls) - 1, -1, -1):
+        feature = feat_ls[i_feature]
+        if feat_ls.count(feature) > 1:
+            feat_ls.pop(i_feature)
+
     # copy observation dataframe so we can edit it without changing the inputs
     obs = adata.obs
 
