@@ -316,14 +316,16 @@ def plot_spatial_feature(
 
     # check if features are in rowdata
 
+    n_features = len(feat_ls)
     # Check if too many subplots
-    if len(feat_ls) > 6:
+    if n_features > 6:
         raise ValueError("Too many features to plot, reduce the number of features")
-    if ncol is not None:
-        if ncol > 3:
-            raise ValueError("Too many columns for subplots")
-        if ncol > len(feat_ls):
-            raise ValueError("Too many columns")
+    ncols = min(ncol, n_features)
+    nrows = int(ceil(n_features / ncol))
+
+    if ncols > 3:
+        raise ValueError("Too many columns for subplots, max 3 allowed.")
+
     # only work with spots in tissue
     if tissue:
         obs = obs[obs["in_tissue"] == 1]
