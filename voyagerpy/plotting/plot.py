@@ -356,59 +356,48 @@ def plot_spatial_feature(
         ncols = 1
         nrows = 1
         axs = _ax
+        fig = _ax.get_figure()
     # iterate over features to plot
-    x = 0
-    y = 0
 
-    for i in range(len(feat_ls)):
+    if n_features == 1:
+        axs = np.array([axs])
+
+    for ax, feature in zip(axs.flat, feat_ls):
         legend_kwds_ = deepcopy(legend_kwds)
         _legend = legend
         if tissue:
-
             # if gene value
-            if feat_ls[i] in adata.var.index:
-                # col = adata.var[features]
-                col = adata[adata.obs["in_tissue"] == 1, feat_ls[i]].X.todense().reshape((adata[adata.obs["in_tissue"] == 1, :].shape[0])).T
+            if feature in adata.var.index:
+                # col = adata.var[features])
+                col = adata[adata.obs["in_tissue"] == 1, feature].X.todense().reshape((adata[adata.obs["in_tissue"] == 1, :].shape[0])).T
 
                 col = np.array(col.ravel()).T
-                obs[feat_ls[i]] = col
-            if feat_ls[i] in obs.columns:
+                obs[feature] = col
+            if feature in obs.columns:
                 # feat = features
                 pass
         else:
-
-            if feat_ls[i] in adata.var.index:
+            if feature in adata.var.index:
                 # col = adata.var[features]
-                col = adata[:, feat_ls[i]].X.todense().reshape((adata.shape[0])).T
-                obs[feat_ls[i]] = col
-            if feat_ls[i] in obs.columns:
+                col = adata[:, feature].X.todense().reshape((adata.shape[0])).T
+                obs[feature] = col
+            if feature in obs.columns:
                 pass
 
-        if ncols > 1 and nrows > 1:
-            ax = axs[x, y]
-        if ncols == 1 and nrows > 1:
-            ax = axs[x]
-        if nrows == 1 and ncols > 1:
-            ax = axs[y]
-        if ncols == 1 and nrows == 1:
-            ax = axs
-
-        if feat_ls[i] in adata.var.index or adata.obs[feat_ls[i]].dtype != "category":
-            legend_kwds_.setdefault("label", feat_ls[i])
+        if feature in adata.var.index or adata.obs[feature].dtype != "category":
+            legend_kwds_.setdefault("label", feature)
             legend_kwds_.setdefault("orientation", "vertical")
             legend_kwds_.setdefault("shrink", 0.3)
         else:
             #  colorbar for discrete categories if pandas column is categorical
             _legend = False
-            add_colorbar_discrete(
-                ax, fig, cmap, feat_ls[i], adata.obs[feat_ls[i]].unique().shape[0], list(adata.obs[feat_ls[i]].cat.categories)
-            )
+            add_colorbar_discrete(ax, fig, cmap, feature, adata.obs[feature].unique().shape[0], list(adata.obs[feature].cat.categories))
 
         if color is not None:
             cmap = None
 
         obs.plot(
-            feat_ls[i],
+            feature,
             ax=ax,
             color=color,
             legend=_legend,
@@ -417,6 +406,7 @@ def plot_spatial_feature(
             **geom_style,
             **kwds,
         )
+
         if annot_geom is not None:
             if annot_geom in adata.uns["spatial"]["geom"]:
 
@@ -431,18 +421,17 @@ def plot_spatial_feature(
 
             pass
 
-        y = y + 1
-        if y >= ncols:
-            y = 0
-            x = x + 1
     # colorbar title
     if _ax is not None:
         fig = ax.get_figure()
+
     axs = fig.get_axes()
-    for i in range(len(axs)):
-        if axs[i].properties()["label"] == "<colorbar>" and axs[i].properties()["ylabel"] != "":
-            axs[i].set_title(axs[i].properties()["ylabel"], ha="left")
-            axs[i].set_ylabel("")
+
+    # for i in range(len(axs)):
+    for ax in axs:
+        if ax.properties()["label"] == "<colorbar>" and ax.properties()["ylabel"] != "":
+            ax.set_title(ax.properties()["ylabel"], ha="left")
+            ax.set_ylabel("")
 
     return axs  # ,fig
 
