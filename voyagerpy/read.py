@@ -31,7 +31,7 @@ def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high"
     return adata
 
 
-def _read_10x_h5(path: PathLike) -> Optional[AnnData]:
+def _read_10x_h5(path: PathLike, symbol_as_index: bool = False) -> Optional[AnnData]:
     """
     Parameters
     ----------
@@ -69,15 +69,23 @@ def _read_10x_h5(path: PathLike) -> Optional[AnnData]:
             cm = csr_matrix((data, indices, indptr), shape=(shape[1], shape[0]), dtype="float32")
             # df_feat = pd.DataFrame(np.column_stack((features["id"][()].astype("str"),features["feature_type"][()].astype("str"),
             # features["genome"][()].astype("str"))),index=features["name"][()].astype("str"))
+
+            var_names_key = "id"
+            gene_name_key = "name"
+            secondary_gene_column_name: str = "symbol"
+            if symbol_as_index:
+                var_names_key, gene_name_key = gene_name_key, var_names_key
+                secondary_gene_column_name = "gene_ids"
+
             adata = AnnData(
                 cm,
                 obs=dict(obs_names=barcodes),
-                var=dict(
-                    var_names=features["name"][()].astype("str"),
-                    gene_ids=features["id"][()].astype("str"),
-                    feature_types=features["feature_type"][()].astype("str"),
-                    genome=features["genome"][()].astype("str"),
-                ),
+                var={
+                    "var_names": features[var_names_key][()].astype("str"),
+                    secondary_gene_column_name: features[gene_name_key][()].astype("str"),
+                    "feature_types": features["feature_type"][()].astype("str"),
+                    "genome": features["genome"][()].astype("str"),
+                },
             )
 
         return adata
@@ -166,7 +174,7 @@ def read_10x_visium(
     adata: Optional[AnnData] = None
 
     if (datatype is None and (path / h5_file_path).exists()) or datatype == "h5":
-        adata = _read_10x_h5(path / h5_file_path)
+        adata = _read_10x_h5(path / h5_file_path, symbol_as_index=symbol_as_index)
     elif (datatype is None and (path / mtx_dir_path).exists()) or datatype == "mtx":
         adata = _read_10x_mtx(path / mtx_dir_path, symbol_as_index=symbol_as_index)
 
