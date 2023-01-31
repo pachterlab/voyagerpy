@@ -242,7 +242,7 @@ def nogrid(func):
 def plot_spatial_feature(
     adata: AnnData,
     features: Union[str, Sequence[str]],
-    ncol: Optional[int] = None,
+    ncol: int = 3,
     barcode_geom: Optional[str] = None,
     annot_geom: Optional[str] = None,
     tissue: bool = True,
