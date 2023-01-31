@@ -262,8 +262,8 @@ def plot_spatial_feature(
     **kwds,
 ) -> Union[np.ndarray, Any]:
 
-    if isinstance(features, list):
-        feat_ls = features
+    if isinstance(features, (list, tuple)):
+        feat_ls = list(features)
     elif isinstance(features, str):
         feat_ls = [features]
     else:
