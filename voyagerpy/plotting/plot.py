@@ -682,14 +682,16 @@ def plot_dim_loadings(
     for i in range(len(dims), nrow * ncol):
         axs.flat[i].remove()
 
+    show_symbol = show_symbol and adata.uns["config"]["var_names"] != "symbol"
+
     for i, (ax, dim) in enumerate(zip(axs.flat, dims)):
         ax.set_title(f"PC{dim}")
 
         idx = np.argsort(dat[:, i])
         idx = np.hstack([idx[:n_extremes], idx[-n_extremes:]])
         genes = adata.var.index[idx]
-        if not show_symbol:
-            genes = adata.var.loc[genes, "gene_ids"]  # .values
+        if show_symbol:
+            genes = adata.var.loc[genes, "symbol"]
 
         loadings = dat[idx, i]
         lines = [((0, row), (loading, row)) for row, loading in enumerate(loadings)]
