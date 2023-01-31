@@ -331,7 +331,7 @@ def plot_spatial_feature(
         obs = obs[obs["in_tissue"] == 1]
     # use a divergent colormap
     if divergent:
-        cmap = "Spectral"
+        cmap = "Spectral_r"
 
     # create the subplots with right cols and rows
     if _ax is None:
@@ -533,7 +533,7 @@ def spatial_reduced_dim(
         red_arr = red_arr[adata.obs["in_tissue"] == 1]
     # use a divergent colormap
     if divergent:
-        cmap = "Spectral"
+        cmap = "Spectral_r"
 
     # create the subplots with right cols and rows
     if _ax is None:
