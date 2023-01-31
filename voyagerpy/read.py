@@ -181,6 +181,11 @@ def read_10x_visium(
     if adata is None:
         raise ValueError("Invalid datatype for bc_matrix")
 
+    adata.uns["config"] = {
+        "var_names": "symbol" if symbol_as_index else "gene_ids",
+        "secondary_var_names": "gene_ids" if symbol_as_index else "symbol",
+    }
+
     # spatial
     tissue_pos_path = path / "spatial" / "tissue_positions.csv"
     tissue_alt_path = tissue_pos_path.with_stem("tissue_positions_list")
