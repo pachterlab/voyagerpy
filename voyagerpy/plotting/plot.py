@@ -333,22 +333,16 @@ def plot_spatial_feature(
     if divergent:
         cmap = "Spectral_r"
 
+    subplot_kwds = {} if subplot_kwds is None else deepcopy(subplot_kwds)
     # create the subplots with right cols and rows
+
+    _figsize = (10, 7) if nrows >= 2 and ncols == 3 else (10, 10)
+    subplot_kwds.setdefault("figsize", _figsize)
     if _ax is None:
-        if "figsize" in subplot_kwds:
-            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplot_kwds)
-        else:
-
-            # rat = row /col
-            if nrows >= 2 and ncols == 3:
-                _figsize = (10, 7)
-
-            else:
-                _figsize = (10, 10)
-            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=_figsize, **subplot_kwds)
-            # last axis not used
-            if (ncols * nrows) - 1 == n_features:
-                axs[-1, -1].axis("off")
+        fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplot_kwds)
+        # last axis not used
+        if (ncols * nrows) - 1 == n_features:
+            axs[-1, -1].axis("off")
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
 
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
