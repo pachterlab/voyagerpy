@@ -335,25 +335,6 @@ def plot_spatial_feature(
 
     # create the subplots with right cols and rows
     if _ax is None:
-        plt_nr = len(feat_ls)
-        nrows = 1
-        # ncols = ncol if ncol is not None else 1
-
-        # defaults
-        if ncol is None:
-            if plt_nr < 4:
-                ncols = plt_nr
-            if plt_nr >= 4:
-                nrows = 2
-                ncols = 3
-
-        else:
-            ncols = ncol
-            nrows = ceil(plt_nr / ncols)
-
-        # if(subplot_kwds is None):
-        #     fig, axs = plt.subplots(nrows=nrows, ncols=ncols,figsize=(10,10))
-
         if "figsize" in subplot_kwds:
             fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplot_kwds)
         else:
@@ -366,7 +347,7 @@ def plot_spatial_feature(
                 _figsize = (10, 10)
             fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=_figsize, **subplot_kwds)
             # last axis not used
-            if (ncols * nrows) - 1 == len(feat_ls):
+            if (ncols * nrows) - 1 == n_features:
                 axs[-1, -1].axis("off")
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
 
