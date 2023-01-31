@@ -1,13 +1,6 @@
 [build-system]
 requires = [
-	"anndata>=0.6.22",
-	"geopandas>=0.12",
-	"matplotlib>=3.6",
-	"numpy>=1.23",
-	"scipy>=1.9",
-	"seaborn>=0.12",
-	"setuptools>=61.0",
-	"shapely>=1.8.5",
+	"setuptools>=61.0"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -18,6 +11,17 @@ authors = [
 	{name="Sindri Emmanuel Antonsson", email="sea7@hi.is"},
 	{name="Petur Helgi Einarsson", email="peturhelgi@gmail.com"},
 	{name="Pall Melsted", email="pmelsted@hi.is"}
+]
+dependencies = [
+	"anndata>=0.6.22",
+	"geopandas>=0.12",
+	"matplotlib>=3.6",
+	"numpy>=1.23",
+	"scipy>=1.9",
+	"seaborn>=0.12",
+	"shapely>=1.8.5",
+	"opencv-python>=4.7",
+	"networkx>=3.0"
 ]
 description="Python library for Voyager, the geo-spatialist"
 readme="README.md"
