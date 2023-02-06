@@ -44,6 +44,60 @@ plt.rcParams["axes.edgecolor"] = "#00000050"
 plt.rcParams["axes.grid.which"] = "both"
 
 
+def imshow(
+    adata: AnnData,
+    res: Optional[str] = None,
+    ax: Optional[Axes] = None,
+    tmp: bool = False,
+    title: Optional[str] = None,
+    **kwargs,
+) -> Axes:
+    """Show an image stored in adata.uns["spatial"].
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData object containing the image.
+    res : Optional[str], optional
+        The resolution of the image to show. If None, the first resolution found is used, by default None.
+    ax : Optional[Axes], optional
+        The axis showing the image. If None, a new axis is created, by default None.
+    tmp : bool, optional
+        If True, a temporary image is shown, by default False. This is useful to show an image with
+        unapplied transformations.
+    title : Optional[str], optional
+        The title for the axis, by default None
+
+    **kwargs: Parameters passed to matplotlib.axes.Axes.imshow.
+    Returns
+    -------
+    Axes
+        The axis showing the image.
+    """
+
+    img_key = "img_tmp" if tmp else "img"
+    if res is None:
+        res = list(adata.uns["spatial"][img_key].keys())[0]
+
+    img = adata.uns["spatial"][img_key][res]
+
+    if ax is None:
+        _, axs = plt.subplots()
+    else:
+        axs = ax
+
+    im_kwargs = dict(origin="lower")
+
+    axs.set_xticks([])
+    axs.set_yticks([])
+    im_kwargs.update(kwargs)
+    if title is not None:
+        axs.set_title(title)
+
+    axs.imshow(img, **im_kwargs)
+    return axs
+
+
 def configure_violins(violins, cmap=None, edgecolor="#00000050", alpha=0.7):
     cmap = plt.get_cmap(cmap) if isinstance(cmap, (str, type(None))) else cmap
     for i, violin in enumerate(violins["bodies"]):
