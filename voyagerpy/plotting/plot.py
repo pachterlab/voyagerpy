@@ -153,6 +153,44 @@ def grouped_violinplot(
     return ax
 
 
+def plot_single_barcode_data(
+    adata: AnnData,
+    y: Union[int, str],
+    x: Union[int, str, None] = None,
+    cmap: Optional[str] = None,
+    ax: Optional[Axes] = None,
+    legend: bool = False,
+    color_by: Optional[str] = None,
+):
+    obs = adata.obs
+    if ax is None:
+        fig, ax = plt.subplots()
+    assert ax is not None
+
+    if is_categorical_dtype(obs[y]):
+        if x is None:
+            raise NotImplementedError('"Rectangule" plots not implemented')
+        elif is_categorical_dtype(obs[x]):
+            raise NotImplementedError('"Rectangule" plots not implemented')
+        else:
+            # Create a horizontal plot, so we group by y instead of x
+            ax = grouped_violinplot(ax, adata.obs, x, y, cmap, legend=legend, vert=False)
+    else:
+        if x is None:
+            ax = simple_violinplot(ax, adata.obs, y, cmap)
+        elif is_categorical_dtype(obs[x]):
+            ax = grouped_violinplot(ax, adata.obs, x, y, cmap, legend=legend)
+        else:
+            colors = np.zeros_like(adata.obs[x], "int") if color_by is None else adata.obs[color_by].astype(int)
+            colormap = plt.get_cmap(cmap)
+            scat = ax.scatter(x, y, data=adata.obs, c=colors, cmap=colormap, vmin=0, vmax=colormap.N, alpha=0.5, s=8)
+            ax.set_xlabel(x)
+            ax.set_ylabel(y)
+            if legend and color_by is not None:
+                ax.legend(*scat.legend_elements(), bbox_to_anchor=(1.04, 0.5), loc="center left", title=color_by, frameon=False)
+
+    return ax
+
 
 def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
     figsize = kwargs.pop("figsize", (10, 10))
