@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from voyagerpy.spatial import graphs
 from voyagerpy.spatial.spatial import (
-    apply_mirror,
-    apply_rotation,
-    cancel_mirror,
-    cancel_rotation,
-    cancel_transformations,
+    apply_transforms,
+    cancel_transforms,
     detect_tissue_threshold,
     get_approx_tissue_boundary,
     get_geom,
@@ -14,16 +12,13 @@ from voyagerpy.spatial.spatial import (
     get_tissue_boundary,
     get_tissue_contour_score,
     mirror_img,
+    rollback_transforms,
     rotate_img90,
 )
 
-from voyagerpy.spatial import graphs
 __all__ = [
-    "apply_mirror",
-    "apply_rotation",
-    "cancel_mirror",
-    "cancel_rotation",
-    "cancel_transformations",
+    "apply_transforms",
+    "cancel_transforms",
     "detect_tissue_threshold",
     "get_approx_tissue_boundary",
     "get_geom",
@@ -31,5 +26,6 @@ __all__ = [
     "get_tissue_boundary",
     "get_tissue_contour_score",
     "mirror_img",
+    "rollback_transforms",
     "rotate_img90",
 ]

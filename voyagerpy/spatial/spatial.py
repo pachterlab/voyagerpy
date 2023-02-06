@@ -3,6 +3,7 @@
 
 from typing import (
     Any,
+    Dict,
     Iterable,
     Optional,
     Tuple,
@@ -10,8 +11,8 @@ from typing import (
 )
 
 import geopandas as gpd
-import pandas as pd
 import numpy as np
+import pandas as pd
 from anndata import AnnData
 from cv2 import (
     CHAIN_APPROX_SIMPLE,
@@ -289,351 +290,190 @@ def get_spot_coords(
     return (coords[:, 0], coords[:, 1]) if as_tuple else coords
 
 
-def apply_rotation(
-    adata: AnnData,
-    k: Optional[int] = None,
-    pxl_col_name: str = "pxl_col_in_fullres",
-    pxl_row_name: str = "pxl_row_in_fullres",
-    res: str = "all",
-    purge: bool = False,
-) -> bool:
+def cancel_transforms(adata: AnnData) -> None:
+    spatial_dict = adata.uns["spatial"]
+    transforms = spatial_dict.get("transform", ([], []))
+    pxl_coord_cols = ["pxl_col_in_fullres_tmp", "pxl_row_in_fullres_tmp"]
 
-    res_vals = ("lowres", "hires", "all")
-    assert res in res_vals
-    res_vals = res_vals[:2] if res == "all" else (res,)
-
-    k_vals = (k % 4,) if k else tuple(range(4))
-    obs_cols = adata.obs.columns
-
-    for k in k_vals:
-        pxl_rotnames = [f"pxl_col_in_fullres_rot{k}", f"pxl_row_in_fullres_rot{k}"]
-
-        if pxl_rotnames[0] in obs_cols and pxl_rotnames[1] in obs_cols:
-            adata.obs[pxl_col_name] = adata.obs[pxl_rotnames[0]]
-            adata.obs[pxl_row_name] = adata.obs[pxl_rotnames[1]]
-            adata.obs.drop(pxl_rotnames, axis=1, inplace=True)
-        else:
-            continue
-
-        img_rot_existed = False
-        rot_dict = adata.uns["spatial"].get("rotation", {})
-        for res in res_vals:
-            img_name = f"{res}_rot{k}"
-            if img_name in adata.uns["spatial"]["img"]:
-                img_rot_existed = True
-                adata.uns["spatial"]["img"][res] = adata.uns["spatial"]["img"][img_name]
-                rot_dict[res] = (rot_dict.get(res, 0) + k * 90) % 360
-                del adata.uns["spatial"]["img"][img_name]
-
-        if img_rot_existed:
-            if purge:
-                cancel_rotation(adata)
-            return True
-    return False
+    transforms[1].clear()
+    spatial_dict.pop("img_tmp", None)
+    adata.obs.drop(pxl_coord_cols, axis="columns", inplace=True, errors="ignore")
 
 
-def cancel_rotation(adata: AnnData, k: Union[None, int, Iterable[int]] = None, res: str = "all") -> None:
-    """Cancel an unapplied rotation of the tissue image and coordinates.
-    Effectively, it removes any added columns to adata.obs, and the rotated image.
+def apply_transforms(adata) -> None:
+    spatial_dict = adata.uns["spatial"]
+    transforms = spatial_dict.get("transform", ([], []))
+    pxl_coord_cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
+    pxl_coord_cols_tmp = [f"{colname}_tmp" for colname in pxl_coord_cols]
 
-    Parameters
-    ----------
-    adata : AnnData
-        The AnnData object which to cancel rotation for.
-    k : Union[None, int, Iterable[int]], optional
-        Cancel unapplied rotations created with k. If None, all rotations are cancelled, by default None
-    res : str, optional
-        The resolution of images to cancel rotation for, by default "all"
-    """
-    res_vals = ("lowres", "hires", "all")
-    assert res in res_vals
-    res_vals = res_vals[:2] if res == "all" else (res,)
+    if "img_tmp" in spatial_dict:
+        spatial_dict["img"] = spatial_dict["img_tmp"]
+        transforms[0].extend(transforms[1])
 
-    k_vals = [k] if isinstance(k, int) else list(range(4) if k is None else k)
-    k_vals = [k % 4 for k in k_vals]
+        if all(colname in adata.obs for colname in pxl_coord_cols_tmp):
+            adata.obs[pxl_coord_cols] = adata.obs[pxl_coord_cols_tmp]
 
-    for k in k_vals:
-        rotnames = [f"pxl_col_in_fullres_rot{k}", f"pxl_row_in_fullres_rot{k}"]
-        adata.obs.drop(rotnames, axis=1, inplace=True, errors="ignore")
-        img_names = [f"{res}_rot{k}" for res in res_vals]
-        for img in img_names:
-            adata.uns["spatial"]["img"].pop(img, None)
+    # cleanup tmp image, coords and transform
+    transforms[1].clear()
+    spatial_dict.pop("img_tmp", None)
+    adata.obs.drop(pxl_coord_cols_tmp, axis="columns", inplace=True, errors="ignore")
 
 
-def rotate_img90(adata: AnnData, k: int = 1, apply: bool = True, res: str = "all") -> bool:
-    """Rotate the tissue image and the coordinates of the spots by k*90 degrees. If apply is True,
-    then adata.uns['spatial']['rotation'][res] will contain the degrees between the original image (and coordinates)
-    and the rotated version.
-
-    Parameters
-    ----------
-    adata : AnnData
-        The AnnData whose image and spot coordinates are to be rotated.
-    k : int, optional
-        The number of times the image should rotated by 90 degrees by default 1
-    apply : bool, optional
-        Whether to apply the rotation to the image and coordinates, by default True. If False, the
-        rotated image will be stored under adata.uns['spatial']['img'] with a key "{res}_rot{k}" for all
-        resolutions `res` that exist. The rotated coordinates are stored under adata.uns with keys
-        "pxl_col_in_fullres_rot{k}" and "pxl_row_in_fullres_rot{k}" if `apply` is False.
-
-    res : str, optional
-        One of 'lowres', 'hires', 'all', the resolution to rotatae, by default "all". If "all", all existing resolutions of the
-        image are rotated.
-
-    Returns
-    -------
-    bool
-        True if any image was rotated. False if no image with resolution `res` exists.
-    """
-    rotation_mats = [
+def _rotate_coordinate_system(img: np.ndarray, coords: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    rotation_mats = rotation_mats = [
         np.array([[1, 0], [0, 1]]),
         np.array([[0, -1], [1, 0]]),
         np.array([[-1, 0], [0, -1]]),
         np.array([[0, 1], [-1, 0]]),
     ]
+    img = np.rot90(img, k=k)
+    n_rows, n_cols = img.shape[:2]
 
-    k = k % 4
+    # rotate all spot coordinates
+    center = np.array([n_rows, n_cols]) / 2
 
-    rot = rotation_mats[k]
-    res_keys = adata.uns["spatial"]["img"].keys()
-    res_vals = ("lowres", "hires") if res == "all" else (res,)
+    # we rotate around the center of the image:
+    # 1. translate to origin
+    # 2. rotate
+    coords = np.matmul(coords - center, rotation_mats[k])
 
-    def rotator(res):
-        img = adata.uns["spatial"]["img"][res]
-        img = np.rot90(img, k=k)
-        n_rows, n_cols, _ = img.shape
+    # 3. translate back, maybe transposing the center
+    coords += center[::-1] if k % 2 else center
+    return img, coords
 
-        # Rotate all spot coordinates
-        coords = get_spot_coords(adata, tissue=False, as_tuple=False)
-        center = np.array([n_rows, n_cols]) / 2
 
-        # We rotate around the center of the image: translate to Origin > rotate > translate back
-        coords = np.matmul(coords - center, rot)
-        # If k is odd, then the center of the image is transposed (x, y) -> (y, x)
-        coords += center[::-1] if k % 2 else center
+def _mirror_coordinate_system(img, coords, axis):
+    n_rows, n_cols = img.shape[:2]
 
-        return img, coords
+    if axis % 2 == 0:
+        img = img[::-1, ...]
+        coords[:, 1] = n_rows - 1 - coords[:, 1]
 
-    ret = False
-    rot_dict = adata.uns["spatial"].get("rotation", {})
-    for res in res_vals:
-        if res in res_keys:
-            img, coords = rotator(res)
+    if axis > 0:
+        img = img[:, ::-1, ...]
+        coords[:, 0] = n_cols - 1 - coords[:, 0]
+
+    return img, coords
+
+
+def get_transformation_function(which: str):
+    def mirror_param_eval(k: Optional[int] = None, axis: Optional[int] = None) -> int:
+        axis = axis or 0
+        if axis not in range(2):
+            raise ValueError("Invalid mirror axis, must be either 0 or 1")
+        return axis
+
+    def rotate_param_eval(k: Optional[int] = None, axis: Optional[int] = None) -> int:
+        k = k or 1
+        return k % 4
+
+    if which == "mirror":
+        param_evaluator = mirror_param_eval
+        inner_transformer = _mirror_coordinate_system
+    elif which == "rotate":
+        param_evaluator = rotate_param_eval
+        inner_transformer = _rotate_coordinate_system
+    else:
+        raise ValueError('`which` must be either "rotate" and "mirror"')
+
+    def inner(adata: AnnData, apply: bool = True, k: Optional[int] = None, axis: Optional[int] = None):
+        param = param_evaluator(k, axis)
+        del k, axis
+        imgs_ret = {}
+
+        spatial_dict = adata.uns["spatial"]
+        spatial_dict.setdefault("transform", ([], []))
+
+        # Determine where to fetch and store the data
+        img_key_fetch = "img" if (apply or "img_tmp" not in spatial_dict) else "img_tmp"
+        img_key_store = "img" if apply else "img_tmp"
+
+        if not apply:
+            spatial_dict.setdefault("img_tmp", {})
+
+        pxl_coord_cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
+        pxl_coord_cols_tmp = [f"{colname}_tmp" for colname in pxl_coord_cols]
+
+        pxl_coord_cols_fetch = pxl_coord_cols
+        pxl_coord_cols_store = pxl_coord_cols if apply else pxl_coord_cols_tmp
+
+        if not apply and all(col in adata.obs for col in pxl_coord_cols_tmp):
+            pxl_coord_cols_fetch = pxl_coord_cols_tmp
+
+        spot_coords = adata.obs.loc[:, pxl_coord_cols_fetch].values
+        transforms = spatial_dict["transform"]
+
+        res_keys = spatial_dict[img_key_fetch].keys()
+
+        for res in res_keys:
             scale = utl.get_scale(adata, res)
 
+            img = spatial_dict[img_key_fetch][res]
+            img, coords = inner_transformer(img, spot_coords * scale, param)
             coords = (coords / scale).astype(int)
-            col_pos, row_pos = coords[:, 0], coords[:, 1]
 
-            if apply:
-                adata.uns["spatial"]["img"][res] = img
-                adata.obs["pxl_col_in_fullres"] = col_pos
-                adata.obs["pxl_row_in_fullres"] = row_pos
-                rot_dict[res] = (rot_dict.get(res, 0) + 90 * k) % 360
-            else:
-                adata.uns["spatial"]["img"][f"{res}_rot{k}"] = img
-                adata.obs[f"pxl_col_in_fullres_rot{k}"] = col_pos
-                adata.obs[f"pxl_row_in_fullres_rot{k}"] = row_pos
-            ret = True
-    adata.uns["spatial"]["rotation"] = rot_dict
-    return ret
+            adata.obs[pxl_coord_cols_store] = coords
+            spatial_dict[img_key_store][res] = img.copy()
+            imgs_ret[res] = img
 
-
-def mirror_img(adata: AnnData, axis: int, apply: bool = True, res: str = "all") -> bool:
-    """Mirror the tissue image and spot coordinates in the direction given by axis.
-
-    Parameters
-    ----------
-    adata : AnnData
-        The AnnData whose spatial data should be mirrored.
-    axis : int
-        0 mirrors the data horizontally
-        1 mirrors the data vertically
-        2 mirrors the data in both directions
-    apply : bool, optional
-        Whether to apply the mirror, by default True
-    res : str, optional
-        One of 'lowres', 'hires', 'all', the resolution to mirror, by default "all". If "all", all existing resolutions of the
-        image are mirrored.
-
-    Returns
-    -------
-    bool
-        True if any image was mirrored, False if no image with resolution `res` exists.
-    """
-
-    if axis not in range(3):
-        raise ValueError("Invalid mirror axis, must be one of [0, 1, 2].")
-    res_keys = adata.uns["spatial"]["img"].keys()
-    res_vals = ("lowres", "hires") if res == "all" else (res,)
-
-    def mirror(res: str, axis: int) -> Tuple[np.ndarray, np.ndarray]:
-        img = adata.uns["spatial"]["img"][res]
-        n_rows, n_cols, _ = img.shape
-
-        # This returns (cols, rows)
-        coords: np.ndarray = get_spot_coords(adata, tissue=False, as_tuple=False)  # type: ignore
-
-        if axis % 2 == 0:
-            # mirror cols around a vertical axis
-            img = img[::-1, :, :]
-            coords[:, 1] = n_rows - 1 - coords[:, 1]
-
-        if axis > 0:
-            # mirror rows around a horizontal axis
-            img = img[:, ::-1, :]
-            coords[:, 0] = n_cols - 1 - coords[:, 0]
-
-        return img, coords
-
-    ret = False
-    mirror_dict = adata.uns["spatial"].get("mirror", {})
-    for res in res_vals:
-        if res not in res_keys:
-            continue
-        img, coords = mirror(res, axis)
-        scale = utl.get_scale(adata, res)
-
-        coords = (coords / scale).astype(int)
-        col_pos, row_pos = coords[:, 0], coords[:, 1]
+        transforms[not apply].append((which, param))
 
         if apply:
-            adata.uns["spatial"]["img"][res] = img
-            adata.obs["pxl_col_in_fullres"] = col_pos
-            adata.obs["pxl_row_in_fullres"] = row_pos
-            mirror_dict[res] = get_mirror_val(mirror_dict.get(res), axis)
+            # Cleanup tmp space
+            transforms[1].clear()
+            spatial_dict.pop("img_tmp", None)
+            adata.obs.drop(pxl_coord_cols_tmp, inplace=True, errors="ignore")
+
+        return imgs_ret
+
+    return inner
+
+
+# %%
+
+rotate_img90 = get_transformation_function("rotate")
+mirror_img = get_transformation_function("mirror")
+
+
+def rollback_transforms(adata: AnnData, apply: bool = True):
+    spatial_dict = adata.uns["spatial"]
+    transforms = spatial_dict.get("transform", ([], []))
+    if len(transforms[0]) == 0:
+        return
+
+    res_keys = spatial_dict["img"].keys()
+    pxl_coord_cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
+    pxl_coord_cols_tmp = [f"{colname}_tmp" for colname in pxl_coord_cols]
+
+    saved_transform = []
+    if not apply:
+        # Save applied state in the tmp space
+        spatial_dict.setdefault("img_tmp", {})
+        for res in res_keys:
+            spatial_dict["img_tmp"][res] = spatial_dict["img"][res].copy()
+        adata.obs[pxl_coord_cols_tmp] = adata.obs[pxl_coord_cols]
+        saved_transform.extend(transforms[0])
+    else:
+        adata.obs.drop(pxl_coord_cols_tmp, axis="columns", inplace=True, errors="ignore")
+        spatial_dict.pop("img_tmp", None)
+
+    rollback = transforms[0][::-1]
+    for transform, param in rollback:
+        if transform == "mirror":
+            mirror_img(adata, axis=param, apply=apply)
         else:
-            adata.uns["spatial"]["img"][f"{res}_mirror{axis}"] = img
-            adata.obs[f"pxl_col_in_fullres_mirror{axis}"] = col_pos
-            adata.obs[f"pxl_row_in_fullres_mirror{axis}"] = row_pos
-        ret = True
-    adata.uns["spatial"]["mirror"] = mirror_dict
-    return ret
+            rotate_img90(adata, k=-param, apply=apply)
+
+    transforms[1].clear()
+    transforms[1].extend(saved_transform)
+
+    if not apply:
+        spatial_dict["img"], spatial_dict["img_tmp"] = spatial_dict["img_tmp"], spatial_dict["img"]
+        coords = adata.obs[pxl_coord_cols]
+        adata.obs[pxl_coord_cols] = adata.obs[pxl_coord_cols_tmp]
+        adata.obs[pxl_coord_cols_tmp] = coords
+
+    transforms[0].clear()
 
 
-def apply_mirror(
-    adata,
-    axis: Optional[int] = None,
-    res: str = "all",
-    pxl_col_name: str = "pxl_col_in_fullres",
-    pxl_row_name: str = "pxl_row_in_fullres",
-    purge: bool = False,
-) -> bool:
-
-    res_vals = ("lowres", "hires", "all")
-    assert res in res_vals
-    res_vals = res_vals[:2] if res == "all" else (res,)
-
-    axes = (axis % 3,) if axis else tuple(range(3))
-    obs_cols = adata.obs.columns
-
-    for ax in axes:
-        pxl_mirrnames = [f"pxl_col_in_fullres_mirror{ax}", f"pxl_row_in_fullres_mirror{ax}"]
-
-        if pxl_mirrnames[0] in obs_cols and pxl_mirrnames[1] in obs_cols:
-            adata.obs[pxl_col_name] = adata.obs[pxl_mirrnames[0]]
-            adata.obs[pxl_row_name] = adata.obs[pxl_mirrnames[1]]
-            adata.obs.drop(pxl_mirrnames, axis=1, inplace=True)
-        else:
-            continue
-
-        img_mirr_existed = False
-        mirr_dict = adata.uns["spatial"].get("mirror", {})
-        for res in res_vals:
-            img_name = f"{res}_mirror{ax}"
-            if img_name in adata.uns["spatial"]["img"]:
-                img_mirr_existed = True
-                adata.uns["spatial"]["img"][res] = adata.uns["spatial"]["img"][img_name]
-                mirr_dict[res] = get_mirror_val(mirr_dict.get(res), ax)
-                del adata.uns["spatial"]["img"][img_name]
-
-        if img_mirr_existed:
-            if purge:
-                cancel_mirror(adata)
-            return True
-    return False
-
-
-def cancel_mirror(
-    adata: AnnData,
-    axis: Union[None, int, Iterable[int]] = None,
-    res: str = "all",
-) -> None:
-    """Cancel an unapplied mirroring of an image
-
-    Parameters
-    ----------
-    adata : AnnData
-        The AnnData object to cancel mirroring for
-    axis : Union[None, int, Iterable[int]], optional
-        The axis to cancel the mirroring for.
-    res : str, optional
-        The resolution of images to cancel mirroring for, by default "all"
-    """
-    res_vals = ("lowres", "hires", "all")
-    assert res in res_vals
-    res_vals = res_vals[:2] if res == "all" else (res,)
-    axis = [axis] if isinstance(axis, int) else list(range(3) if axis is None else axis)
-
-    for ax in axis:
-        flipnames = [f"pxl_col_in_fullres_mirror{ax}", f"pxl_row_in_fullres_mirror{ax}"]
-        adata.obs.drop(flipnames, axis=1, inplace=True, errors="ignore")
-        img_names = [f"{res}_mirror{ax}" for res in res_vals]
-        for img in img_names:
-            adata.uns["spatial"]["img"].pop(img, None)
-
-
-def cancel_transformations(
-    adata: AnnData,
-    axis: Union[None, int, Iterable[int]] = None,
-    k: Union[None, int, Iterable[int]] = None,
-    res: str = "all",
-) -> None:
-    """Cancel unapplied transformations of an image
-
-    Parameters
-    ----------
-    adata : AnnData
-        The AnnData object to cancel transformations for
-    axis : Union[None, int, Iterable[int]], optional
-        The axis to cancel mirroring for, by default None
-    k : Union[None, int, Iterable[int]], optional
-        The rotation to cancel rotation for, by default None
-    res : str, optional
-        The resolution of images to cancel transformationr for, by default "all"
-    """
-    cancel_mirror(adata, axis, res)
-    cancel_rotation(adata, k, res)
-
-
-def get_mirror_val(curr: Optional[int], ax: Optional[int]) -> Optional[int]:
-    """Get the result of mirroring image by ax, if already mirrored by curr.
-
-    The values can be None, 0, 1, or 2.
-    * None means no mirror.
-    * 0 means mirror along a horizontal axis
-    * 1 means mirror along a vertical axis
-    * 2 means mirror along a both axis
-
-    Parameters
-    ----------
-    curr : Optional[int]
-        One of None, 0, 1, 2. The current mirror condition. None means no mirror.
-    ax : Optional[int]
-        One of None, 0, 1, 2. The mirror axis. None means no mirroring.
-
-    Returns
-    -------
-    Optional[int]
-        One of None, 0, 1, 2. None means the effictive mirror is none.
-    """
-    if curr == ax:
-        # ax cancels out
-        return None
-
-    # Change the values if None to fit the return statement
-    ax = (3 - 2 * curr) if ax is None else ax  # type: ignore
-    curr = (3 - 2 * ax) if curr is None else curr  # type: ignore
-
-    # The function is symmetric. Only options we consider are (0, 1), (0, 2), and (1,2).
-    return 3 - (curr + ax)
+# %%
