@@ -95,9 +95,50 @@ def _read_10x_h5(path: PathLike, symbol_as_index: bool = False) -> Optional[AnnD
     return adata
 
 
+def read_10x_counts(
+    path: PathLike,
+    datatype: Optional[str] = None,
+    raw: bool = True,
+    prefix: Optional[str] = None,
+    symbol_as_index: bool = False,
+) -> AnnData:
+    path = Path(path)
+    if not path.exists():
+        raise ValueError(f"Reading with path {path!r} failed, ")
+
+    prefix_str = prefix or ""
+
+    raw_qualifier = "raw" if raw else "filtered"
+    h5_file_path = path / f"{prefix_str}{raw_qualifier}_feature_bc_matrix.h5"
+    # TODO: should the mtx_dir not have an optional prefix?
+    mtx_dir_path = path / f"{raw_qualifier}_feature_bc_matrix"
+
+    # wait with testing outs
+    # if path.endswith("outs"):
+    #     pass
+    # else:
+    #     if(os.path.exists(path+"/outs")):
+
+    adata: Optional[AnnData] = None
+
+    if (datatype is None and h5_file_path.exists()) or datatype == "h5":
+        adata = _read_10x_h5(h5_file_path, symbol_as_index=symbol_as_index)
+    elif (datatype is None and mtx_dir_path.exists()) or datatype == "mtx":
+        adata = _read_10x_mtx(mtx_dir_path, symbol_as_index=symbol_as_index)
+
+    if adata is None:
+        raise ValueError("Invalid datatype for bc_matrix")
+
+    adata.uns["config"] = {
+        "var_names": "symbol" if symbol_as_index else "gene_ids",
+        "secondary_var_names": "gene_ids" if symbol_as_index else "symbol",
+    }
+
+    return adata
+
+
 def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False) -> AnnData:
     path = Path(path)
-
     genes = pd.read_csv(path / "features.tsv.gz", header=None, sep="\t")
     cells = pd.read_csv(path / "barcodes.tsv.gz", header=None, sep="\t")
 
@@ -155,36 +196,7 @@ def read_10x_visium(
 
     """
     path = Path(path)
-    if not path.exists():
-        raise ValueError(f"Reading with path {path!r} failed, ")
-
-    prefix_str = prefix or ""
-
-    raw_qualifier = "raw" if raw else "filtered"
-    h5_file_path = f"{prefix_str}{raw_qualifier}_feature_bc_matrix.h5"
-    # TODO: should the mtx_dir not have an optional prefix?
-    mtx_dir_path = f"{raw_qualifier}_feature_bc_matrix"
-
-    # wait with testing outs
-    # if path.endswith("outs"):
-    #     pass
-    # else:
-    #     if(os.path.exists(path+"/outs")):
-
-    adata: Optional[AnnData] = None
-
-    if (datatype is None and (path / h5_file_path).exists()) or datatype == "h5":
-        adata = _read_10x_h5(path / h5_file_path, symbol_as_index=symbol_as_index)
-    elif (datatype is None and (path / mtx_dir_path).exists()) or datatype == "mtx":
-        adata = _read_10x_mtx(path / mtx_dir_path, symbol_as_index=symbol_as_index)
-
-    if adata is None:
-        raise ValueError("Invalid datatype for bc_matrix")
-
-    adata.uns["config"] = {
-        "var_names": "symbol" if symbol_as_index else "gene_ids",
-        "secondary_var_names": "gene_ids" if symbol_as_index else "symbol",
-    }
+    adata = read_10x_counts(path, datatype, raw, prefix, symbol_as_index)
 
     # spatial
     tissue_pos_path = path / "spatial" / "tissue_positions.csv"
