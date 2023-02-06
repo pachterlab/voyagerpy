@@ -14,6 +14,7 @@ from typing import (
     Any,
     Collection,
     Dict,
+    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -22,15 +23,18 @@ from typing import (
 
 import geopandas as gpd
 import numpy as np
+import numpy.typing as npt
 from anndata import AnnData
 from matplotlib import cm, colors
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
-from pandas import options
+from matplotlib.figure import Figure
+from pandas import DataFrame, options
 from pandas.api.types import is_categorical_dtype
 from scipy.stats import gaussian_kde
+from scipy import sparse as sp
 
 from voyagerpy import spatial as spt
 
@@ -213,43 +217,54 @@ def plot_barcode_data(
     adata: AnnData,
     y: Union[str, Sequence[str]],
     x: Optional[str] = None,
-    ncol: int = 3,
+    ncol: Optional[int] = None,
     cmap: Union[None, str, colors.ListedColormap, colors.LinearSegmentedColormap] = None,
     color_by: Optional[str] = None,
+    sharex: Union[None, Literal["none", "all", "row", "col"], bool] = None,
+    sharey: Union[None, str, bool] = None,
+    figsize: Optional[Tuple[float, float]] = None,
 ):
-    if not isinstance(x, (str, type(None), int)):
-        raise TypeError("x must be either None or str")
+    x_features = x if isinstance(x, (list, tuple)) else [x]
+    y_features = y if isinstance(y, (list, tuple)) else [y]
 
-    if not isinstance(y, (list, tuple, np.ndarray)):
-        y = [y]
+    del x, y
 
-    nplots = len(y)
-    ncol = min(nplots, ncol)
-    nrow = int(np.ceil(nplots / ncol))
-    fig, axs = plt.subplots(nrow, ncol, figsize=(8, 4))
+    nplots = len(y_features) * len(x_features)
 
-    if isinstance(cmap, (str, type(None))):
-        cmap = plt.get_cmap(cmap)
+    if ncol is None:
+        ncol = len(x_features)
 
-    if nplots == 1:
-        axs = np.array([axs])
+    if sharex is None:
+        if len(y_features) and ncol == len(x_features):
+            sharex = "col"
+        else:
+            sharex = False
+    if sharey is None:
+        if len(y_features) and ncol == len(x_features):
+            sharey = "row"
+        else:
+            sharey = False
 
-    if x is None:
-        simple_violin_plot(axs, adata, y, cmap)
-    elif is_categorical_dtype(adata.obs[x]):
-        grouped_violin_plot(axs, adata, x, y, cmap)
-    else:
-        for feature, ax in zip(y, axs.flat):
-            x_dat = adata.obs[x]
-            y_dat = adata.obs[feature]
-            color = np.zeros_like(x_dat) if color_by is None else adata.obs[color_by].astype(int)
-            scat = ax.scatter(x_dat, y_dat, c=color, vmax=cmap.N, alpha=0.5, s=8)
-            ax.set_xlabel(x)
-            ax.set_ylabel(feature)
-        ax.legend(*scat.legend_elements(), bbox_to_anchor=(1.04, 0.5), loc="center left", title=color_by, frameon=False)
+    fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey)
+
+    feature_iterator = ((y_feat, x_feat) for y_feat in y_features for x_feat in x_features)
+
+    for i_plot, (y_feat, x_feat) in enumerate(feature_iterator):
+        i_col = i_plot % ncol
+        add_legend = i_col == ncol - 1
+
+        axs_arr.flat[i_plot] = plot_single_barcode_data(
+            adata,
+            y=y_feat,
+            x=x_feat,
+            cmap=cmap,
+            ax=axs_arr.flat[i_plot],
+            legend=add_legend,
+            color_by=color_by,
+        )
 
     fig.tight_layout()
-    return axs
+    return axs_arr
 
 
 def plot_bin2d(
