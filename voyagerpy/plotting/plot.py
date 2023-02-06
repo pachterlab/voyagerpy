@@ -154,6 +154,22 @@ def grouped_violinplot(
 
 
 
+def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
+    figsize = kwargs.pop("figsize", (10, 10))
+    kwargs["figsize"] = figsize
+
+    ncol = min(ncol or 2, nplots)
+    nrow = int(np.ceil(nplots / ncol))
+    fig, axs = plt.subplots(nrow, ncol, **kwargs)
+    if nplots == 1:
+        axs = np.array([axs])
+
+    assert isinstance(axs, np.ndarray)
+    for ax in axs.flat[nplots:]:
+        ax.axis("off")
+
+    return fig, axs
+
 
 def plot_barcode_data(
     adata: AnnData,
