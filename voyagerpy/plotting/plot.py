@@ -520,12 +520,12 @@ def plot_spatial_feature(
     # Check if too many subplots
     if n_features > 6:
         raise ValueError("Too many features to plot, reduce the number of features")
-    ncols = min(ncol, n_features)
-    nrows = int(ceil(n_features / ncol))
+    ncol = min(ncol, n_features)
 
-    if ncols > 3:
+    if ncol > 3:
         raise ValueError("Too many columns for subplots, max 3 allowed.")
 
+    nrow = int(ceil(n_features / ncol))
     # only work with spots in tissue
     if tissue:
         obs = obs[obs["in_tissue"] == 1]
@@ -533,29 +533,18 @@ def plot_spatial_feature(
     if divergent:
         cmap = "Spectral_r"
 
-    subplot_kwds = {} if subplot_kwds is None else deepcopy(subplot_kwds)
+    subplot_kwds = subplot_kwds or {}
     # create the subplots with right cols and rows
 
-    _figsize = (10, 7) if nrows >= 2 and ncols == 3 else (10, 10)
-    subplot_kwds.setdefault("figsize", _figsize)
     if _ax is None:
-        fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplot_kwds)
-        # last axis not used
-        if (ncols * nrows) - 1 == n_features:
-            axs[-1, -1].axis("off")
-
+        fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **subplot_kwds)
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
-
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
-        ncols = 1
-        nrows = 1
-        axs = _ax
+        axs = np.array([_ax])
         fig = _ax.get_figure()
     # iterate over features to plot
-
-    if n_features == 1:
-        axs = np.array([axs])
+    del nrow, ncol
 
     for ax, feature in zip(axs.flat, feat_ls):
         legend_kwds_ = deepcopy(legend_kwds)
