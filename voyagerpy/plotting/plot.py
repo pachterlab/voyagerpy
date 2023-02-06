@@ -106,35 +106,53 @@ def configure_violins(violins, cmap=None, edgecolor="#00000050", alpha=0.7):
         violin.set_alpha(alpha)
 
 
-def simple_violin_plot(axs, adata, y, cmap=None):
+def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, **kwargs):
+    violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
+    kwargs.pop("legend", False)
+    violin_opts.update(kwargs)
+    violins = ax.violinplot(df[y], **violin_opts)
+    configure_violins(violins, cmap)
+    ax.set_ylabel(str(y))
+    return ax
 
-    for feature, ax in zip(y, axs.flat):
-        violins = ax.violinplot(adata.obs[feature], showmeans=False, showextrema=False, showmedians=False)
-        configure_violins(violins, cmap)
 
-        ax.set_ylabel(feature)
-    return axs
-
-
-def grouped_violin_plot(axs, adata, x, y, cmap=None):
-    groups = adata.obs.groupby(x)[y].groups
+def grouped_violinplot(
+    ax: Axes,
+    df: DataFrame,
+    x: str,
+    y: str,
+    cmap: Optional[str] = None,
+    legend: bool = True,
+    vert: bool = True,
+):
+    if not vert:
+        x, y = y, x
+    groups = df.groupby(x)[y].groups
     keys = sorted(groups.keys())
-    grouped_data = [adata.obs.loc[groups[key]] for key in keys]
 
-    for feature, ax in zip(y, axs.flat):
-        dat = [group[feature] for group in grouped_data]
-        violins = ax.violinplot(dat, showmeans=False, showextrema=False, showmedians=False)
-        configure_violins(violins, cmap)
+    grouped_data = [df.loc[groups[key], y] for key in keys]
+    violin_opts = dict(showmeans=False, showextrema=False, showmedians=False, vert=vert)
+    violins = ax.violinplot(grouped_data, **violin_opts)
+    configure_violins(violins, cmap)
 
-        ax.set_xticks(np.arange(len(keys)) + 1, labels=keys)
-        ax.set_xlabel(x)
-        ax.set_ylabel(feature)
+    set_ticks = ax.set_xticks if vert else ax.set_yticks
+    set_ticks(np.arange(len(keys)) + 1, labels=keys)
 
+    if not vert:
+        x, y = y, x
+
+    ax.set_xlabel(x)
+    ax.set_ylabel(y)
+    if not legend:
+        return ax
+
+    colormap = plt.get_cmap(cmap)
     for i, key in enumerate(keys):
-        ax.scatter([], [], label=key, color=cmap(i))
+        ax.scatter([], [], label=key, color=colormap(i))
     ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title=x, frameon=False)
+    return ax
 
-    return axs
+
 
 
 def plot_barcode_data(
