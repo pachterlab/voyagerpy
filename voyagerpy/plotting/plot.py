@@ -197,12 +197,14 @@ def plot_single_barcode_data(
 
 
 def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
-    figsize = kwargs.pop("figsize", (10, 10))
-    kwargs["figsize"] = figsize
-
     ncol = min(ncol or 2, nplots)
     nrow = int(np.ceil(nplots / ncol))
-    fig, axs = plt.subplots(nrow, ncol, **kwargs)
+
+    default_figsize = (10, 7) if nrow >= 2 and ncol == 3 else (10, 10)
+    plot_kwargs = {"figsize": default_figsize}
+    plot_kwargs.update(kwargs)
+
+    fig, axs = plt.subplots(nrow, ncol, **plot_kwargs)
     if nplots == 1:
         axs = np.array([axs])
 
