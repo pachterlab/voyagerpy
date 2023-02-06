@@ -348,6 +348,63 @@ def plot_bin2d(
     return ax
 
 
+def plot_expression(
+    adata: AnnData,
+    genes: Union[str, Sequence[str]],
+    groupby: Optional[str] = None,
+    ncol: Optional[int] = 2,
+    show_symbol: bool = False,
+    layer: Optional[str] = "logcounts",
+):
+    genes = [genes] if isinstance(genes, str) else genes[:]
+    gene_ids = []
+
+    secondary_column = adata.uns["config"]["secondary_var_names"]
+
+    for gene in genes:
+        if gene in adata.var[secondary_column].values:
+            new_genes = adata.var.index[adata.var[secondary_column] == gene]
+            gene_ids.extend(new_genes.tolist())
+        else:
+            assert gene in adata.var_names
+            gene_ids.append(gene)
+
+    obs = adata.obs[[groupby]] if groupby is not None else adata.obs.copy()
+    for gene_id in gene_ids:
+        subset_gene = adata.var_names == gene_id
+        if layer is not None:
+            counts = adata.layers[layer][:, subset_gene]
+        else:
+            counts = adata.X[:, subset_gene]
+        if isinstance(counts, sp.csr_matrix):
+            counts = counts.todense()
+        obs[gene_id] = counts.copy()
+
+    nplots = len(gene_ids)
+    fig, axs = configure_subplots(nplots, ncol, sharey=True)
+
+    for ax, gene_id in zip(axs.flat, gene_ids):
+        if groupby is not None:
+            grouped_violinplot(ax, obs, groupby, gene_id, legend=False)
+        else:
+            simple_violinplot(ax, obs, gene_id, legend=False)
+        title = gene_id
+        if show_symbol and secondary_column == "symbol":
+            title = adata.var.at[gene_id, secondary_column]
+        elif show_symbol:
+            title = gene_id
+
+        ax.set_title(title, fontsize=10)
+        ax.set_ylabel("")
+        ax.set_xlabel("")
+
+    fig.supylabel("Expression" + f" ({layer})" if layer is not None else "", fontsize=14)
+    if groupby is not None:
+        fig.supxlabel(groupby, fontsize=14)
+    fig.tight_layout()
+    return axs
+
+
 def plot_features_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     return plot_bin2d(adata.var, *args, **kwargs)
 
