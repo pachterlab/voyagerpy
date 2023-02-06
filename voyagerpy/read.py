@@ -31,7 +31,7 @@ def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high"
     return adata
 
 
-def _read_10x_h5(path: PathLike) -> Optional[AnnData]:
+def _read_10x_h5(path: PathLike, symbol_as_index: bool = False) -> Optional[AnnData]:
     """
     Parameters
     ----------
@@ -69,15 +69,23 @@ def _read_10x_h5(path: PathLike) -> Optional[AnnData]:
             cm = csr_matrix((data, indices, indptr), shape=(shape[1], shape[0]), dtype="float32")
             # df_feat = pd.DataFrame(np.column_stack((features["id"][()].astype("str"),features["feature_type"][()].astype("str"),
             # features["genome"][()].astype("str"))),index=features["name"][()].astype("str"))
+
+            var_names_key = "id"
+            gene_name_key = "name"
+            secondary_gene_column_name: str = "symbol"
+            if symbol_as_index:
+                var_names_key, gene_name_key = gene_name_key, var_names_key
+                secondary_gene_column_name = "gene_ids"
+
             adata = AnnData(
                 cm,
                 obs=dict(obs_names=barcodes),
-                var=dict(
-                    var_names=features["name"][()].astype("str"),
-                    gene_ids=features["id"][()].astype("str"),
-                    feature_types=features["feature_type"][()].astype("str"),
-                    genome=features["genome"][()].astype("str"),
-                ),
+                var={
+                    "var_names": features[var_names_key][()].astype("str"),
+                    secondary_gene_column_name: features[gene_name_key][()].astype("str"),
+                    "feature_types": features["feature_type"][()].astype("str"),
+                    "genome": features["genome"][()].astype("str"),
+                },
             )
 
         return adata
@@ -87,7 +95,7 @@ def _read_10x_h5(path: PathLike) -> Optional[AnnData]:
     return adata
 
 
-def _read_10x_mtx(path: PathLike) -> AnnData:
+def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False) -> AnnData:
     path = Path(path)
 
     genes = pd.read_csv(path / "features.tsv.gz", header=None, sep="\t")
@@ -95,15 +103,31 @@ def _read_10x_mtx(path: PathLike) -> AnnData:
 
     data = read_mtx(path / "matrix.mtx.gz").T
 
+    varname_pos, geneids_pos = 0, 1
+    gene_column_key = "symbol"
+    if symbol_as_index:
+        varname_pos, geneids_pos = geneids_pos, varname_pos
+        gene_column_key = "gene_ids"
+
     adata = AnnData(
         data.X,
         obs=dict(obs_names=cells[0].to_numpy()),
-        var=dict(var_names=genes[1].to_numpy(), gene_ids=genes[0].to_numpy(), feature_types=genes[2].to_numpy()),
+        var={
+            "var_names": genes[varname_pos].to_numpy(),
+            gene_column_key: genes[geneids_pos].to_numpy(),
+            "feature_types": genes[2].to_numpy(),
+        },
     )
     return adata
 
 
-def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = True, prefix: Optional[str] = None) -> AnnData:
+def read_10x_visium(
+    path: PathLike,
+    datatype: Optional[str] = None,
+    raw: bool = True,
+    prefix: Optional[str] = None,
+    symbol_as_index: bool = False,
+) -> AnnData:
     """
 
     Parameters
@@ -130,7 +154,6 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
         Complete anndata object with spatial information in adata.uns["spatial"] .
 
     """
-
     path = Path(path)
     if not path.exists():
         raise ValueError(f"Reading with path {path!r} failed, ")
@@ -151,12 +174,17 @@ def read_10x_visium(path: PathLike, datatype: Optional[str] = None, raw: bool = 
     adata: Optional[AnnData] = None
 
     if (datatype is None and (path / h5_file_path).exists()) or datatype == "h5":
-        adata = _read_10x_h5(path / h5_file_path)
+        adata = _read_10x_h5(path / h5_file_path, symbol_as_index=symbol_as_index)
     elif (datatype is None and (path / mtx_dir_path).exists()) or datatype == "mtx":
-        adata = _read_10x_mtx(path / mtx_dir_path)
+        adata = _read_10x_mtx(path / mtx_dir_path, symbol_as_index=symbol_as_index)
 
     if adata is None:
         raise ValueError("Invalid datatype for bc_matrix")
+
+    adata.uns["config"] = {
+        "var_names": "symbol" if symbol_as_index else "gene_ids",
+        "secondary_var_names": "gene_ids" if symbol_as_index else "symbol",
+    }
 
     # spatial
     tissue_pos_path = path / "spatial" / "tissue_positions.csv"
