@@ -541,6 +541,7 @@ def plot_spatial_feature(
         # last axis not used
         if (ncols * nrows) - 1 == n_features:
             axs[-1, -1].axis("off")
+
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
 
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
@@ -558,11 +559,11 @@ def plot_spatial_feature(
         legend_kwds_ = deepcopy(legend_kwds)
         _legend = legend
         if tissue:
+            tissue_selection = adata.obs["in_tissue"] == 1
             # if gene value
             if feature in adata.var.index:
                 # col = adata.var[features])
-                col = adata[adata.obs["in_tissue"] == 1, feature].X.todense().reshape((adata[adata.obs["in_tissue"] == 1, :].shape[0])).T
-
+                col = adata[tissue_selection, feature].X.todense().reshape((adata[tissue_selection, :].shape[0])).T
                 col = np.array(col.ravel()).T
                 obs[feature] = col
             if feature in obs.columns:
