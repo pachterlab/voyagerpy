@@ -31,7 +31,7 @@ def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high"
     return adata
 
 
-def _read_10x_h5(path: PathLike, symbol_as_index: bool = False) -> Optional[AnnData]:
+def _read_10x_h5(path: PathLike, symbol_as_index: bool = False, dtype: str = 'float64') -> Optional[AnnData]:
     """
     Parameters
     ----------
@@ -66,7 +66,7 @@ def _read_10x_h5(path: PathLike, symbol_as_index: bool = False) -> Optional[AnnD
             #     if(i > indptr[cell_ind+1]):
             #         cell_ind = cell_ind + 1
             # cell_nr = indptr[cell_ind+1]
-            cm = csr_matrix((data, indices, indptr), shape=(shape[1], shape[0]), dtype="float32")
+            cm = csr_matrix((data, indices, indptr), shape=(shape[1], shape[0]), dtype=dtype)
             # df_feat = pd.DataFrame(np.column_stack((features["id"][()].astype("str"),features["feature_type"][()].astype("str"),
             # features["genome"][()].astype("str"))),index=features["name"][()].astype("str"))
 
@@ -86,6 +86,7 @@ def _read_10x_h5(path: PathLike, symbol_as_index: bool = False) -> Optional[AnnD
                     "feature_types": features["feature_type"][()].astype("str"),
                     "genome": features["genome"][()].astype("str"),
                 },
+                dtype=dtype
             )
 
         return adata
@@ -101,6 +102,7 @@ def read_10x_counts(
     raw: bool = True,
     prefix: Optional[str] = None,
     symbol_as_index: bool = False,
+    dtype: str = 'float64',
 ) -> AnnData:
     path = Path(path)
     if not path.exists():
@@ -113,18 +115,12 @@ def read_10x_counts(
     # TODO: should the mtx_dir not have an optional prefix?
     mtx_dir_path = path / f"{raw_qualifier}_feature_bc_matrix"
 
-    # wait with testing outs
-    # if path.endswith("outs"):
-    #     pass
-    # else:
-    #     if(os.path.exists(path+"/outs")):
-
     adata: Optional[AnnData] = None
 
     if (datatype is None and h5_file_path.exists()) or datatype == "h5":
-        adata = _read_10x_h5(h5_file_path, symbol_as_index=symbol_as_index)
+        adata = _read_10x_h5(h5_file_path, symbol_as_index=symbol_as_index, dtype=dtype)
     elif (datatype is None and mtx_dir_path.exists()) or datatype == "mtx":
-        adata = _read_10x_mtx(mtx_dir_path, symbol_as_index=symbol_as_index)
+        adata = _read_10x_mtx(mtx_dir_path, symbol_as_index=symbol_as_index, dtype=dtype)
 
     if adata is None:
         raise ValueError("Invalid datatype for bc_matrix")
@@ -137,12 +133,12 @@ def read_10x_counts(
     return adata
 
 
-def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False) -> AnnData:
+def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False, dtype: str = 'float64') -> AnnData:
     path = Path(path)
     genes = pd.read_csv(path / "features.tsv.gz", header=None, sep="\t")
     cells = pd.read_csv(path / "barcodes.tsv.gz", header=None, sep="\t")
 
-    data = read_mtx(path / "matrix.mtx.gz").T
+    data = read_mtx(path / "matrix.mtx.gz", dtype=dtype).T
 
     varname_pos, geneids_pos = 0, 1
     gene_column_key = "symbol"
@@ -158,7 +154,9 @@ def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False) -> AnnData:
             gene_column_key: genes[geneids_pos].to_numpy(),
             "feature_types": genes[2].to_numpy(),
         },
+        dtype=dtype
     )
+
     return adata
 
 
@@ -168,6 +166,7 @@ def read_10x_visium(
     raw: bool = True,
     prefix: Optional[str] = None,
     symbol_as_index: bool = False,
+    dtype: str = 'float64'
 ) -> AnnData:
     """
 
@@ -196,7 +195,7 @@ def read_10x_visium(
 
     """
     path = Path(path)
-    adata = read_10x_counts(path, datatype, raw, prefix, symbol_as_index)
+    adata = read_10x_counts(path, datatype, raw, prefix, symbol_as_index, dtype=dtype)
 
     # spatial
     tissue_pos_path = path / "spatial" / "tissue_positions.csv"
