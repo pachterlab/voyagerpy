@@ -15,6 +15,7 @@ def is_highres(adata: AnnData) -> bool:
         return False
     raise ValueError("Cannot find image data in .uns['spatial']")
 
+
 def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
     if res not in [None, "hi", "hires", "lo", "lowres"]:
         raise ValueError(f"Unrecognized value {res} for res.")
@@ -64,6 +65,19 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
 
         if prc_key not in adata.obs.keys() or force:
             adata.obs[prc_key] = adata.obs[sum_key] / adata.obs["sum"]
+
+
+def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool = True):
+    if not inplace:
+        adata = adata.copy()
+
+    X = adata.X if layer is None else adata.layers[layer]
+    cell_sums = sp.csr_matrix(X.sum(axis=1)).toarray()
+
+    target_sum = cell_sums.mean()
+    X = sp.csr_matrix(X / cell_sums * target_sum).log1p()
+    adata.X = X
+    return adata
 
 
 def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:
