@@ -319,6 +319,8 @@ def plot_bin2d(
         _, ax = plt.subplots(figsize=figsize)
 
     plot_fun = ax.hexbin if hex_plot else ax.hist2d
+    x_label = x
+    y_label = y
 
     x = obs[x]
     y = obs[y]
@@ -344,6 +346,9 @@ def plot_bin2d(
 
         plt.colorbar(im1[-1] if isinstance(im1, tuple) else im1, label=name_true)
         plt.colorbar(im2[-1] if isinstance(im2, tuple) else im2, label=name_false)
+
+    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label)
 
     ax.grid(**grid_kwargs)
     ax.set_facecolor("w")
