@@ -275,7 +275,7 @@ def plot_bin2d(
     y: str,
     filt: Optional[str] = None,
     subset: Optional[str] = None,
-    bins: int = 100,
+    bins: int = 101,
     name_true: Optional[str] = None,
     name_false: Optional[str] = None,
     hex_plot: bool = False,
@@ -476,7 +476,10 @@ def plot_spatial_feature(
 
     # check input
     if ("geometry" not in adata.obs) or "geom" not in adata.uns["spatial"]:
-        adata = spt.get_geom(adata)
+        raise KeyError(
+            'Both "geometry" must be a column in adata.obs and "geom" must be a key in adata.uns["spatial"].'
+            "Please run voyagerpy.spatial.get_geom(adata) first."
+        )
 
     added_features = []
     features_to_pop = []
@@ -800,10 +803,14 @@ def spatial_reduced_dim(
     return axs  # ,fig
 
 
-def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list) -> Colorbar:
+def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list, scale: bool = False) -> Colorbar:
     # catnr = adata.obs[feat_ls[i]].unique().shape[0]
     bounds = list(range(cat_nr + 1))
-    norm = colors.BoundaryNorm(bounds, cm.get_cmap(cmap).N)
+    n_bounds = cm.get_cmap(cmap).N if scale else cat_nr + 1
+    norm = colors.BoundaryNorm(bounds, n_bounds)
+    print(bounds)
+    print("n_bounds", n_bounds)
+
     ticks = list(range(cat_nr))
     ticks = [x + 0.5 for x in ticks]
     cbar = fig.colorbar(
