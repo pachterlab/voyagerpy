@@ -481,20 +481,32 @@ def plot_spatial_feature(
     # copy observation dataframe so we can edit it without changing the inputs
     adata = adata.copy()
 
+    secondary_gene_column = adata.uns["config"]["secondary_var_names"]
     added_features = []
+
     features_to_pop = []
+
+    var_features = []
+    labeled_features = []
+
     for feature in feat_ls:
         if feature in adata.obs:
+            labeled_features.append((feature, feature))
             continue
         if feature in adata.var.index:
+            labeled_features.append((feature, feature))
+            var_features.append(feature)
             continue
 
         # Add the indices of the feature found in the secondary_var_names column
-        secondary_gene_column = adata.uns["config"]["secondary_var_names"]
-        if feature in adata.var[secondary_gene_column]:
+        if feature in adata.var[secondary_gene_column].values:
             ids = adata.var[adata.var[secondary_gene_column] == feature].index
             added_features.extend(ids)
+            var_features.extend(ids)
+
+            labeled_features.extend([(idx, feature) for idx in ids])
             features_to_pop.append(feature)
+            continue
 
         raise ValueError(f"Cannot find {feature!r} in adata.obs or gene names")
 
