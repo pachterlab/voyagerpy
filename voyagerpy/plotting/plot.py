@@ -968,6 +968,11 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
     )
 
     for row in range(ndim):
+        if ndim > 1:
+            scatters_in_row = [ax for i, ax in enumerate(axs[row, :]) if i != row]
+            scatters_in_row[0].get_shared_y_axes().join(scatters_in_row[0], *scatters_in_row)
+            axs[1, row].get_shared_x_axes().join(axs[1, row], *axs[1:, row])
+
         for col in range(ndim):
             ax = axs[row, col]
 
