@@ -510,7 +510,35 @@ def plot_spatial_feature(
             feat_ls.pop(i_feature)
 
     # copy observation dataframe so we can edit it without changing the inputs
+    # Select the spots to work with
+    barcode_selection = slice(None) if not tissue else adata.obs["in_tissue"] == 1
+    gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
+
+    # Retain the type of obs
+    geo_obs = adata.obs.copy()
+
+    adata = adata[barcode_selection, gene_selection]
+    adata = AnnData(
+        X=adata.X,
+        layers=adata.layers,
+        var=adata.var,
+        varm=adata.varm,
+        varp=adata.varp,
+        obs=geo_obs,
+        obsm=adata.obsm,
+        obsp=adata.obsp,
+        dtype=adata.X.dtype,
+    )
+
     obs = adata.obs
+
+    if var_features:
+        if layer is None:
+            columns = adata[:, var_features].X.toarray()
+        else:
+            columns = adata[:, var_features].layers[layer].toarray()
+
+        obs[var_features] = columns
 
     # check if barcode geometry exists
     if barcode_geom is not None:
