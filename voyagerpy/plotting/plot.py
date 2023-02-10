@@ -1000,4 +1000,4 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
         cax.remove()
 
     fig.tight_layout(pad=0)
-    return ax
+    return axs
