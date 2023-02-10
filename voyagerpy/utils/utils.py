@@ -67,15 +67,32 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
             adata.obs[prc_key] = adata.obs[sum_key] / adata.obs["sum"]
 
 
-def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool = True):
+def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool = True, base: Optional[int] = 2, pseudocount: int = 1):
+
+    # Equivalent to:
+    # target_sum = adata.X.sum(axis=1).mean()
+    # sc.pp.normalize_total(adata, target_sum=target_sum)
+    # sc.pp.log1p(adata, base=2)
+
     if not inplace:
         adata = adata.copy()
 
     X = adata.X if layer is None else adata.layers[layer]
-    cell_sums = sp.csr_matrix(X.sum(axis=1)).toarray()
 
-    target_sum = cell_sums.mean()
-    X = sp.csr_matrix(X / cell_sums * target_sum).log1p()
+    cell_sums = sp.csr_matrix(X.sum(axis=1)).toarray()
+    cell_sums /= cell_sums.mean()
+
+    X = sp.csr_matrix(X / cell_sums)
+
+    log_funcs = {2: np.log2, 10: np.log10, None: np.log}
+    other_log = lambda x: np.log(x) / np.log(base)  # type: ignore # noqa: E731
+    log = log_funcs.get(base, other_log)
+
+    if pseudocount == 1:
+        # This ensures we don't interact with the zeros in X
+        X.data = log(X.data + pseudocount)
+    else:
+        X = log(X + pseudocount)
     adata.X = X
     return adata
 
