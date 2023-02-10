@@ -630,6 +630,32 @@ def plot_spatial_feature(
     return axs  # ,fig
 
 
+def assert_basic_spatial_features(adata, errors: str = "raise") -> Tuple[bool, str]:
+
+    ret = True
+    errors_to_raise = []
+    get_geom_prompt = "Consider run voyagerpy.spatial.get_geom(adata) first."
+
+    if not isinstance(adata.obs, gpd.GeoDataFrame):
+        error_msg = "adata.obs must be a geopandas.GeoDataFrame. " + get_geom_prompt
+        if errors == "raise":
+            raise TypeError(error_msg)
+        return False, error_msg
+
+    if adata.obs.geometry.name not in adata.obs:
+        error_msg = f'"{adata.obs.geometry.name}" must be a column in adata.obs. ' + get_geom_prompt
+        if errors == "raise":
+            raise KeyError(error_msg)
+        return False, error_msg
+    if "geom" not in adata.uns["spatial"]:
+        error_msg = '"geom" must be a key in adata.uns["spatial"]. ' + get_geom_prompt
+        if errors == "raise":
+            raise KeyError(error_msg)
+        return False, error_msg
+
+    return True, ""
+
+
 def spatial_reduced_dim(
     adata: AnnData,
     dimred: str,
