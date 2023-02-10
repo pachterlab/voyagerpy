@@ -18,7 +18,7 @@ def is_highres(adata: AnnData) -> bool:
 
 def make_unique(items: List) -> List:
     items = items[:]
-    for i in range(len(items)-1, -1, -1):
+    for i in range(len(items) - 1, -1, -1):
         if items.count(items[i]) > 1:
             items.pop(i)
     return items
@@ -103,6 +103,32 @@ def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool =
         X = log(X + pseudocount)
     adata.X = X
     return adata
+
+
+def scale(X, center=True, unit_variance: bool = True, center_before_scale: bool = True):
+    is_sparse = isinstance(X, sp.csr_matrix)
+    if is_sparse:
+        X = X.todense()
+    else:
+        X = X.copy()
+
+    kwargs = dict(axis=0, keepdims=True)
+    if isinstance(X, np.matrix):
+        kwargs.pop("keepdims")
+
+    if center and center_before_scale:
+        X -= X.mean(**kwargs)
+
+    if unit_variance:
+        std = X.std(**kwargs)
+        w = np.where(std == 0)
+        std[w] = 1
+        X = np.divide(X, std)
+
+    if center and not center_before_scale:
+        X -= X.mean(axis=0)
+
+    return X
 
 
 def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:

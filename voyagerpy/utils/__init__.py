@@ -9,6 +9,7 @@ from voyagerpy.utils.utils import (
     log_norm_counts,
     make_unique,
     normalize_csr,
+    scale,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "log_norm_counts",
     "make_unique",
     "normalize_csr",
+    "scale",
 ]
