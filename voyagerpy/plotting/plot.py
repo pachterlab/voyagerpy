@@ -899,7 +899,8 @@ def add_colorbar_discrete(
     )
     # dd = list(adata.obs[feat_ls[i]].cat.categories)
     cc = cbar.ax.set_yticklabels(cat_names)
-    cbar.ax.set_title(cbar_title)
+    title_kwargs = title_kwargs or {}
+    cbar.ax.set_title(cbar_title, **title_kwargs)
     cbar.ax.grid(None, which="major")
 
     return cbar
@@ -985,7 +986,7 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
     return ax
 
 
-@rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
+# @rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
 def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
 
     data = adata.obsm["X_pca"]
