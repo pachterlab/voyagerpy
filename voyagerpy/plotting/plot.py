@@ -579,9 +579,6 @@ def plot_spatial_feature(
             obs.set_geometry(barcode_geom)
 
     n_features = len(labeled_features)
-    # Check if too many subplots
-    if n_features > 6:
-        raise ValueError("Too many features to plot, reduce the number of features")
 
     ncol = min(ncol, n_features)
     if ncol > 3:
