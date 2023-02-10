@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import scipy.sparse as sp
@@ -14,6 +14,14 @@ def is_highres(adata: AnnData) -> bool:
     if "lowres" in adata.uns["spatial"]["img"]:
         return False
     raise ValueError("Cannot find image data in .uns['spatial']")
+
+
+def make_unique(items: List) -> List:
+    items = items[:]
+    for i in range(len(items)-1, -1, -1):
+        if items.count(items[i]) > 1:
+            items.pop(i)
+    return items
 
 
 def get_scale(adata: AnnData, res: Optional[str] = None) -> float:

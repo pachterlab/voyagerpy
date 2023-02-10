@@ -7,6 +7,7 @@ from voyagerpy.utils.utils import (
     get_scale,
     is_highres,
     log_norm_counts,
+    make_unique,
     normalize_csr,
 )
 
@@ -16,5 +17,6 @@ __all__ = [
     "get_scale",
     "is_highres",
     "log_norm_counts",
+    "make_unique",
     "normalize_csr",
 ]
