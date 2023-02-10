@@ -14,6 +14,7 @@ from typing import (
     Any,
     Collection,
     Dict,
+    Iterable,
     Literal,
     Optional,
     Sequence,
@@ -461,7 +462,7 @@ def plot_spatial_feature(
     alpha: float = 0.2,
     divergent: bool = False,
     color: Optional[str] = None,
-    _ax: Optional[Axes] = None,
+    _ax: Union[None, Axes, Iterable[Axes]] = None,
     legend: bool = True,
     plot: bool = True,
     subplot_kwds: Optional[Dict] = {},
@@ -589,8 +590,15 @@ def plot_spatial_feature(
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
-        axs = np.array([_ax])
-        fig = _ax.get_figure()
+        if isinstance(_ax, Axes):
+            axs = np.array([_ax])
+        elif not isinstance(_ax, np.ndarray):
+            axs = np.array(_ax)
+        else:
+            axs = _ax
+
+        fig = axs.flat[0].get_figure()
+
     # iterate over features to plot
     del nrow, ncol
 
