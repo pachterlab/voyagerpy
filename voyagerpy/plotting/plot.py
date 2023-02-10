@@ -547,7 +547,7 @@ def plot_spatial_feature(
 
         # if barcode_geom is not spot polygons, change the default
         # geometry of the observation matrix, so we can plot it
-        if barcode_geom != "spot_poly":
+        if barcode_geom != obs.geometry.name:
             obs.set_geometry(barcode_geom)
 
     # check if features are in rowdata
