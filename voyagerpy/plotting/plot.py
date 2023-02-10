@@ -832,16 +832,23 @@ def spatial_reduced_dim(
 
 def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list, scale: bool = False) -> Colorbar:
     # catnr = adata.obs[feat_ls[i]].unique().shape[0]
-    bounds = list(range(cat_nr + 1))
-    n_bounds = cm.get_cmap(cmap).N if scale else cat_nr + 1
-    norm = colors.BoundaryNorm(bounds, n_bounds)
-    print(bounds)
-    print("n_bounds", n_bounds)
 
-    ticks = list(range(cat_nr))
-    ticks = [x + 0.5 for x in ticks]
+    colormap = cm.get_cmap(cmap)
+    del cmap
+
+    n_values = len(cat_names)
+    n_colors = colormap.N if scale else n_values
+    if not scale:
+        colormap = colors.ListedColormap(colormap.colors[:n_colors])
+
+    bounds = list(range(n_values + 1))
+    n_bounds = cm.get_cmap(colormap).N if scale else n_values + 1
+    norm = colors.BoundaryNorm(bounds, n_bounds)
+
+    ticks = [x + 0.5 for x in range(n_values)]
+
     cbar = fig.colorbar(
-        cm.ScalarMappable(cmap=cm.get_cmap(cmap), norm=norm),
+        cm.ScalarMappable(cmap=colormap, norm=norm),
         ax=ax,
         # extend="both",
         extendfrac="auto",
