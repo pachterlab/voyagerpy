@@ -37,7 +37,8 @@ from pandas.api.types import is_categorical_dtype
 from scipy.stats import gaussian_kde
 from scipy import sparse as sp
 
-from voyagerpy import spatial as spt
+from voyagerpy import utils
+
 
 options.mode.chained_assignment = None  # default='warn'
 
@@ -595,46 +596,47 @@ def plot_spatial_feature(
 
     # iterate over features to plot
 
-    for ax, feature in zip(axs.flat, feat_ls):
+    cax_title_kwargs = dict(loc="left", fontsize=10)
+
+    for ax, (feature, label) in zip(axs.flat, labeled_features):
         legend_kwds_ = deepcopy(legend_kwds)
         _legend = legend
-        if tissue:
-            tissue_selection = adata.obs["in_tissue"] == 1
-            # if gene value
-            if feature in adata.var.index:
-                # col = adata.var[features])
-                col = adata[tissue_selection, feature].X.todense().reshape((adata[tissue_selection, :].shape[0])).T
-                col = np.array(col.ravel()).T
-                obs[feature] = col
-            if feature in obs.columns:
-                # feat = features
-                pass
-        else:
-            if feature in adata.var.index:
-                # col = adata.var[features]
-                col = adata[:, feature].X.todense().reshape((adata.shape[0])).T
-                obs[feature] = col
-            if feature in obs.columns:
-                pass
+        curr_cmap = cmap
 
-        if feature in adata.var.index or adata.obs[feature].dtype != "category":
-            legend_kwds_.setdefault("label", feature)
+        if adata.obs[feature].dtype != "category":
+            curr_cmap = cmap
+            vmax = None
+
+            legend_kwds_.setdefault("label", label)
             legend_kwds_.setdefault("orientation", "vertical")
-            legend_kwds_.setdefault("shrink", 0.3)
+            legend_kwds_.setdefault("shrink", 0.6)
+
         else:
             #  colorbar for discrete categories if pandas column is categorical
+            curr_cmap = cat_cmap
+            vmax = cm.get_cmap(cat_cmap).N
             _legend = False
-            add_colorbar_discrete(ax, fig, cmap, feature, adata.obs[feature].unique().shape[0], list(adata.obs[feature].cat.categories))
+
+            add_colorbar_discrete(
+                ax=ax,
+                fig=fig,
+                cmap=curr_cmap,
+                cbar_title=feature,
+                cat_names=list(adata.obs[feature].cat.categories),
+                scale=False,
+                title_kwargs=cax_title_kwargs,
+            )
 
         if color is not None:
-            cmap = None
+            curr_cmap = None
 
         obs.plot(
             feature,
             ax=ax,
             color=color,
             legend=_legend,
-            cmap=cmap,
+            cmap=curr_cmap,
+            vmax=vmax,
             legend_kwds=legend_kwds_,
             **geom_style,
             **kwds,
@@ -652,21 +654,14 @@ def plot_spatial_feature(
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
-            pass
-
-    # colorbar title
-    if _ax is not None:
-        fig = ax.get_figure()
-
     axs = fig.get_axes()
 
-    # for i in range(len(axs)):
     for ax in axs:
         if ax.properties()["label"] == "<colorbar>" and ax.properties()["ylabel"] != "":
-            ax.set_title(ax.properties()["ylabel"], ha="left")
+            ax.set_title(ax.properties()["ylabel"], **cax_title_kwargs)
             ax.set_ylabel("")
 
-    return axs  # ,fig
+    return axs
 
 
 def assert_basic_spatial_features(adata, errors: str = "raise") -> Tuple[bool, str]:
@@ -871,7 +866,9 @@ def spatial_reduced_dim(
     return axs  # ,fig
 
 
-def add_colorbar_discrete(ax, fig, cmap, cbar_title: str, cat_nr: int, cat_names: list, scale: bool = False) -> Colorbar:
+def add_colorbar_discrete(
+    ax, fig, cmap, cbar_title: str, cat_names: list, scale: bool = False, title_kwargs: Optional[Dict] = None
+) -> Colorbar:
     # catnr = adata.obs[feat_ls[i]].unique().shape[0]
 
     colormap = cm.get_cmap(cmap)
