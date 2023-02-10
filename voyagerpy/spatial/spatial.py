@@ -237,6 +237,8 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True, res: s
 
     if "geom" not in adata.uns["spatial"]:
         adata.uns["spatial"]["geom"] = {}
+
+    adata.uns["spatial"].setdefault("geom", {})
     geom = adata.uns["spatial"]["geom"]
 
     # Create a geometry column from x & ly
