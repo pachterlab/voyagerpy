@@ -575,9 +575,6 @@ def plot_spatial_feature(
         raise ValueError("Too many columns for subplots, max 3 allowed.")
 
     nrow = int(ceil(n_features / ncol))
-    # only work with spots in tissue
-    if tissue:
-        obs = obs[obs["in_tissue"] == 1]
     # use a divergent colormap
     if divergent:
         cmap = "Spectral_r"
