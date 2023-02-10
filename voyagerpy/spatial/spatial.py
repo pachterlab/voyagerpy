@@ -85,9 +85,7 @@ def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires")
                 tn = tn + 1
 
     # method youden j....whynot
-    # print([tp,fp,tn,fn])
-    J = (tp / (tp + fn)) + (tn / (tn + fp)) - 1
-    # print(J)
+    J = (tp / max(tp + fn, 1)) + (tn / max(tn + fp, 1)) - 1
     return J
 
 
