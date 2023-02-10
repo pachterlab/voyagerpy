@@ -237,24 +237,42 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True, res: s
 
     if "geom" not in adata.uns["spatial"]:
         adata.uns["spatial"]["geom"] = {}
+    geom = adata.uns["spatial"]["geom"]
 
-    # add spot points to geom
     # Create a geometry column from x & ly
     scale = utl.get_scale(adata, res=res)
     spot_diam = adata.uns["spatial"]["scale"]["spot_diameter_fullres"]
 
-    adata.obs["spot_poly"] = adata.obs.apply(
-        lambda x: Point(float(x.pxl_col_in_fullres * scale), float(x.pxl_row_in_fullres * scale)).buffer((spot_diam / 2) * 0.2),  # type: ignore
-        axis=1,
-    )
+    type_converter = {"float32": np.float32, "float64": np.float64, "float": np.float32}
+    dtype_cast = type_converter.get(str(adata.X.dtype), np.float64)
 
-    # Create a GeoDataFrame from adata.obs
-    adata.obs = gpd.GeoDataFrame(adata.obs, geometry=adata.obs.spot_poly)  # type: ignore
+    def to_point(x) -> Point:
+        return Point(
+            dtype_cast(x.pxl_col_in_fullres * scale),
+            dtype_cast(x.pxl_row_in_fullres * scale),
+        ).buffer((spot_diam / 2) * 0.2)
 
-    # add boundary and tissue poly to geom
-    tissue_poly = get_tissue_boundary(adata, threshold)
-    adata.uns["spatial"]["geom"]["tissue_poly"] = tissue_poly
-    adata.uns["spatial"]["geom"]["tissue_boundary"] = gpd.GeoSeries(tissue_poly).boundary
+    geometry_name: str = "spot_poly"
+    if geometry_name not in adata.obs:
+        # add spot points to geom
+        adata.obs[geometry_name] = adata.obs.apply(to_point, axis=1)
+
+    if not isinstance(adata.obs, gpd.GeoDataFrame):
+        # Create a GeoDataFrame from adata.obs
+        adata.obs = gpd.GeoDataFrame(
+            adata.obs,
+            geometry=geometry_name,
+        )
+
+    tissue_poly = geom.get("tissue_poly", None)
+    boundary = geom.get("tissue_boundary", None)
+
+    if not isinstance(tissue_poly, Polygon):
+        # add boundary and tissue poly to geom
+        tissue_poly = get_tissue_boundary(adata, threshold)
+        geom["tissue_poly"] = tissue_poly
+    if not isinstance(boundary, gpd.GeoSeries):
+        geom["tissue_boundary"] = gpd.GeoSeries(tissue_poly).boundary
 
     return adata
 
