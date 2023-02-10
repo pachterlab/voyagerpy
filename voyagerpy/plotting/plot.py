@@ -110,6 +110,7 @@ def configure_violins(violins, cmap=None, edgecolor="#00000050", alpha=0.7):
         violin.set_facecolor(cmap(i))
         violin.set_edgecolor(edgecolor)
         violin.set_alpha(alpha)
+    return edgecolor, alpha
 
 
 def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, **kwargs):
@@ -139,7 +140,7 @@ def grouped_violinplot(
     grouped_data = [df.loc[groups[key], y] for key in keys]
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False, vert=vert)
     violins = ax.violinplot(grouped_data, **violin_opts)
-    configure_violins(violins, cmap)
+    ec, alpha = configure_violins(violins, cmap)
 
     set_ticks = ax.set_xticks if vert else ax.set_yticks
     set_ticks(np.arange(len(keys)) + 1, labels=keys)
