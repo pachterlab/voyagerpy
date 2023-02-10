@@ -233,10 +233,10 @@ def get_tissue_boundary(
     # create outline of tissue sample
 
 
-def get_geom(adata: AnnData, threshold: int = None, inplace: bool = True, res: str = "hires") -> AnnData:
+def get_geom(adata: AnnData, threshold: int = None, inplace: bool = False, res: str = "hires") -> AnnData:
 
-    if "geom" not in adata.uns["spatial"]:
-        adata.uns["spatial"]["geom"] = {}
+    if not inplace:
+        adata = adata.copy()
 
     adata.uns["spatial"].setdefault("geom", {})
     geom = adata.uns["spatial"]["geom"]
