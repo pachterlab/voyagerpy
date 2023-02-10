@@ -136,6 +136,9 @@ def grouped_violinplot(
         x, y = y, x
     groups = df.groupby(x)[y].groups
     keys = sorted(groups.keys())
+    labels = keys
+    if df[x].dtype == "category" and keys == [0, 1]:
+        labels = [False, True]
 
     grouped_data = [df.loc[groups[key], y] for key in keys]
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False, vert=vert)
@@ -143,7 +146,7 @@ def grouped_violinplot(
     ec, alpha = configure_violins(violins, cmap)
 
     set_ticks = ax.set_xticks if vert else ax.set_yticks
-    set_ticks(np.arange(len(keys)) + 1, labels=keys)
+    set_ticks(np.arange(len(keys)) + 1, labels=labels)
 
     if not vert:
         x, y = y, x
@@ -154,8 +157,8 @@ def grouped_violinplot(
         return ax
 
     colormap = plt.get_cmap(cmap)
-    for i, key in enumerate(keys):
-        ax.scatter([], [], label=key, color=colormap(i))
+    for i, label in enumerate(labels):
+        ax.scatter([], [], label=label, color=colormap(i), alpha=alpha)
     ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title=x, frameon=False)
     return ax
 
