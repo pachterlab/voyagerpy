@@ -993,8 +993,11 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
         xs = np.linspace(data[:, row].min(), data[:, row].max(), 200)
         axs[row, row].plot(xs, density(xs), c="k", linewidth=1)
 
-    legend_elements = ax.flat[1].collections[0].legend_elements()
-    cax.legend(*legend_elements, loc="center", title=colorby, frameon=False)
+    if ndim > 1:
+        legend_elements = axs.flat[1].collections[0].legend_elements()
+        cax.legend(*legend_elements, loc="center", title=colorby, frameon=False)
+    else:
+        cax.remove()
 
     fig.tight_layout(pad=0)
     return ax
