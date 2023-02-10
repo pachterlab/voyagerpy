@@ -476,12 +476,10 @@ def plot_spatial_feature(
     else:
         raise TypeError("features must be a string or a list of strings")
 
-    # check input
-    if ("geometry" not in adata.obs) or "geom" not in adata.uns["spatial"]:
-        raise KeyError(
-            'Both "geometry" must be a column in adata.obs and "geom" must be a key in adata.uns["spatial"].'
-            "Please run voyagerpy.spatial.get_geom(adata) first."
-        )
+    assert_basic_spatial_features(adata, errors="raise")
+
+    # copy observation dataframe so we can edit it without changing the inputs
+    adata = adata.copy()
 
     added_features = []
     features_to_pop = []
@@ -676,6 +674,7 @@ def spatial_reduced_dim(
     legend_kwds: Optional[Dict] = {},
     **kwds,
 ):
+    adata = adata.copy()
     if isinstance(ncomponents, list):
         dims = ncomponents
     elif isinstance(ncomponents, int):
@@ -683,9 +682,9 @@ def spatial_reduced_dim(
     else:
         raise TypeError("features must be a integer or a list of integers")
     dim_nr = len(dims)
+
     # check input
-    if ("geometry" not in adata.obs) or "geom" not in adata.uns["spatial"]:
-        adata = spt.get_geom(adata)
+    assert_basic_spatial_features(adata, errors="raise")
 
     if dimred not in adata.obsm:
         raise ValueError(f"Cannot find {dimred!r} in adata.obsm")
