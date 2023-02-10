@@ -952,7 +952,7 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
 
     data = adata.obsm["X_pca"]
 
-    fig, ax, cax = subplots_single_colorbar(ndim, ndim, figsize=figsize)
+    fig, axs, cax = subplots_single_colorbar(ndim, ndim, figsize=figsize)
 
     max_color = plt.get_cmap(cmap).N
     colors = adata.obs[colorby].astype(int)
@@ -969,22 +969,24 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
 
     for row in range(ndim):
         for col in range(ndim):
-            if row != col:
-                ax[row, col].scatter(*data[:, (col, row)].T, **scatter_kwargs)
-            if row < ndim - 1:
-                ax[row, col].set_xticklabels([])
-            if col > 0:
-                ax[row, col].set_yticklabels([])
-            ax[row, col].set_frame_on(True)
+            ax = axs[row, col]
 
-        ax[0, row].set_xlabel(f"PC{row} ({var_expl[row]:d}%)")
-        ax[0, row].xaxis.set_label_position("top")
-        ax[row, -1].set_ylabel(f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15)
-        ax[row, -1].yaxis.set_label_position("right")
+            if row != col:
+                ax.scatter(*data[:, (col, row)].T, **scatter_kwargs)
+            if row < ndim - 1:
+                ax.set_xticklabels([])
+            if col > 0:
+                ax.set_yticklabels([])
+            ax.set_frame_on(True)
+
+        axs[0, row].set_xlabel(f"PC{row} ({var_expl[row]:d}%)")
+        axs[0, row].xaxis.set_label_position("top")
+        axs[row, -1].set_ylabel(f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15)
+        axs[row, -1].yaxis.set_label_position("right")
 
         density = gaussian_kde(data[:, row])
         xs = np.linspace(data[:, row].min(), data[:, row].max(), 200)
-        ax[row, row].plot(xs, density(xs), c="k", linewidth=1)
+        axs[row, row].plot(xs, density(xs), c="k", linewidth=1)
 
     legend_elements = ax.flat[1].collections[0].legend_elements()
     cax.legend(*legend_elements, loc="center", title=colorby, frameon=False)
