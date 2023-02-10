@@ -898,19 +898,12 @@ def plot_dim_loadings(
 ):
     dat = adata.varm["PCs"][:, dims]
 
-    ncol = min(ncol, len(dims))
-    nrow = int(np.ceil(len(dims) / ncol))
-
     if isinstance(figsize, (int, float)):
+        ncol = min(ncol, len(dims))
+        nrow = int(np.ceil(len(dims) / ncol))
         figsize = (nrow * figsize / ncol, figsize)
 
-    fig, axs = plt.subplots(nrow, ncol, figsize=figsize, sharex=True)
-
-    if not isinstance(axs, np.ndarray):
-        axs = np.array([axs])
-
-    for i in range(len(dims), nrow * ncol):
-        axs.flat[i].remove()
+    fig, axs = configure_subplots(len(dims), ncol, figsize=figsize, sharex=True)
 
     show_symbol = show_symbol and adata.uns["config"]["var_names"] != "symbol"
 
