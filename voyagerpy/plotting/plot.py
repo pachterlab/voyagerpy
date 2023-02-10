@@ -986,7 +986,7 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
     return ax
 
 
-# @rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
+@rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
 def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
 
     data = adata.obsm["X_pca"]
