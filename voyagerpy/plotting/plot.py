@@ -511,7 +511,7 @@ def plot_spatial_feature(
 
         raise ValueError(f"Cannot find {feature!r} in adata.obs or gene names")
 
-    # rename the features found via the secondary column
+    # Rename the features found via the secondary column
     feat_ls.extend(added_features)
     for feature in features_to_pop:
         feat_ls.remove(feature)
@@ -522,7 +522,7 @@ def plot_spatial_feature(
         if feat_ls.count(feature) > 1:
             feat_ls.pop(i_feature)
 
-    # copy observation dataframe so we can edit it without changing the inputs
+    del feat_ls
     # Select the spots to work with
     barcode_selection = slice(None) if not tissue else adata.obs["in_tissue"] == 1
     gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
@@ -563,18 +563,15 @@ def plot_spatial_feature(
         if barcode_geom != obs.geometry.name:
             obs.set_geometry(barcode_geom)
 
-    # check if features are in rowdata
-
-    n_features = len(feat_ls)
+    n_features = len(labeled_features)
     # Check if too many subplots
     if n_features > 6:
         raise ValueError("Too many features to plot, reduce the number of features")
-    ncol = min(ncol, n_features)
 
+    ncol = min(ncol, n_features)
     if ncol > 3:
         raise ValueError("Too many columns for subplots, max 3 allowed.")
 
-    nrow = int(ceil(n_features / ncol))
     # use a divergent colormap
     if divergent:
         cmap = "Spectral_r"
@@ -597,7 +594,6 @@ def plot_spatial_feature(
         fig = axs.flat[0].get_figure()
 
     # iterate over features to plot
-    del nrow, ncol
 
     for ax, feature in zip(axs.flat, feat_ls):
         legend_kwds_ = deepcopy(legend_kwds)
