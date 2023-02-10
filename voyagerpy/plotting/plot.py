@@ -45,7 +45,7 @@ options.mode.chained_assignment = None  # default='warn'
 plt.style.use("ggplot")
 plt.rcParams["axes.facecolor"] = "white"
 plt.rcParams["grid.color"] = "k"
-plt.rcParams["grid.alpha"] = 0.2
+plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["axes.edgecolor"] = "#00000050"
 plt.rcParams["axes.grid.which"] = "both"
 
@@ -253,7 +253,16 @@ def plot_barcode_data(
         else:
             sharey = False
 
-    fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey)
+    with plt.rc_context(
+        {
+            "axes.spines.bottom": True,
+            "axes.spines.top": False,
+            "axes.spines.left": True,
+            "axes.spines.right": False,
+            "axes.grid": False,
+        }
+    ):
+        fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey)
 
     feature_iterator = ((y_feat, x_feat) for y_feat in y_features for x_feat in x_features)
 
@@ -335,7 +344,8 @@ def plot_bin2d(
         myfilt: Any = Ellipsis if filt is None else obs[filt].astype(bool)
 
         im = plot_fun(x[myfilt], y[myfilt], **plot_kwargs)  # type: ignore
-        plt.colorbar(im[-1] if isinstance(im, tuple) else im)
+        cbar = plt.colorbar(im[-1] if isinstance(im, tuple) else im)
+        cbar.ax.set_title("count")
 
     else:
         subset_name = subset
@@ -585,7 +595,21 @@ def plot_spatial_feature(
     # create the subplots with right cols and rows
 
     if _ax is None:
-        fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **subplot_kwds)
+        with plt.rc_context(
+            {
+                "axes.grid": False,
+                "figure.frameon": False,
+                "axes.spines.bottom": False,
+                "axes.spines.top": False,
+                "axes.spines.left": False,
+                "axes.spines.right": False,
+                "xtick.bottom": False,
+                "xtick.labelbottom": False,
+                "ytick.left": False,
+                "ytick.labelleft": False,
+            }
+        ):
+            fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **subplot_kwds)
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
@@ -862,12 +886,14 @@ def spatial_reduced_dim(
     if _ax is not None:
         fig = ax.get_figure()
     axs = fig.get_axes()
+
+    fig.suptitle(dimred, x=0, ha="left", fontsize="xx-large", va="bottom")
     for i in range(len(axs)):
         if axs[i].properties()["label"] == "<colorbar>" and axs[i].properties()["ylabel"] != "":
             axs[i].set_title(axs[i].properties()["ylabel"], ha="left")
             axs[i].set_ylabel("")
 
-    return axs  # ,fig
+    return axs
 
 
 def add_colorbar_discrete(
@@ -892,20 +918,22 @@ def add_colorbar_discrete(
     cbar = fig.colorbar(
         cm.ScalarMappable(cmap=colormap, norm=norm),
         ax=ax,
-        # extend="both",
         extendfrac="auto",
         ticks=ticks,
         spacing="uniform",
         orientation="vertical",
-        drawedges=False,
-        # label=catname,
+        drawedges=True,
         shrink=0.3,
     )
-    # dd = list(adata.obs[feat_ls[i]].cat.categories)
-    cc = cbar.ax.set_yticklabels(cat_names)
+
     title_kwargs = title_kwargs or {}
     cbar.ax.set_title(cbar_title, **title_kwargs)
-    cbar.ax.grid(None, which="major")
+    cbar.ax.grid(False, "both")
+    cbar.ax.set_yticklabels(cat_names)
+
+    cbar.outline.set_visible(False)
+    cbar.dividers.set_color("white")
+    cbar.dividers.set_linewidth(5)
 
     return cbar
 
