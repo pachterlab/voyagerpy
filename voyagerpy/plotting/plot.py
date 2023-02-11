@@ -860,7 +860,7 @@ def spatial_reduced_dim(
     fig.suptitle(dimred, x=0, ha="left", fontsize="xx-large", va="bottom")
     for dim in range(len(axs)):
         if axs[dim].properties()["label"] == "<colorbar>" and axs[dim].properties()["ylabel"] != "":
-            axs[dim].set_title(axs[dim].properties()["ylabel"], ha="left")
+            axs[dim].set_title(axs[dim].properties()["ylabel"], loc="left")
             axs[dim].set_ylabel("")
 
     return axs
