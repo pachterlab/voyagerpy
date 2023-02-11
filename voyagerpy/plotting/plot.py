@@ -48,6 +48,7 @@ plt.rcParams["grid.color"] = "k"
 plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["axes.edgecolor"] = "#00000050"
 plt.rcParams["axes.grid.which"] = "both"
+plt.rcParams["image.origin"] = "lower"
 
 
 def imshow(
