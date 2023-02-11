@@ -753,8 +753,8 @@ def spatial_reduced_dim(
     # create df for dimension reduction
 
     ls = []
-    for i in range(adata.obsm[dimred].shape[1]):
-        ls.append(dimred + str(i))
+    for dim in range(adata.obsm[dimred].shape[1]):
+        ls.append(dimred + str(dim))
     red_arr = gpd.GeoDataFrame(adata.obsm[dimred], columns=ls, index=adata.obs.index)
     # check if barcode geometry exists
     if barcode_geom is not None:
@@ -816,23 +816,12 @@ def spatial_reduced_dim(
         fig = axs.flat[0].get_figure()
 
     # iterate over features to plot
-    x = 0
-    y = 0
 
-    for i in dims:
+    for dim, ax in zip(dims, axs.flat):
         legend_kwds_ = deepcopy(legend_kwds)
         _legend = legend
 
-        if ncols > 1 and nrows > 1:
-            ax = axs[x, y]
-        if ncols == 1 and nrows > 1:
-            ax = axs[x]
-        if nrows == 1 and ncols > 1:
-            ax = axs[y]
-        if ncols == 1 and nrows == 1:
-            ax = axs
-
-        legend_kwds_.setdefault("label", red_arr.columns[i])
+        legend_kwds_.setdefault("label", red_arr.columns[dim])
         legend_kwds_.setdefault("orientation", "vertical")
         legend_kwds_.setdefault("shrink", 0.3)
 
@@ -840,7 +829,7 @@ def spatial_reduced_dim(
             cmap = None
 
         red_arr.plot(
-            red_arr.columns[i],
+            red_arr.columns[dim],
             ax=ax,
             color=color,
             legend=_legend,
@@ -861,22 +850,16 @@ def spatial_reduced_dim(
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
-            pass
-
-        y = y + 1
-        if y >= ncols:
-            y = 0
-            x = x + 1
     # colorbar title
     if _ax is not None:
         fig = ax.get_figure()
     axs = fig.get_axes()
 
     fig.suptitle(dimred, x=0, ha="left", fontsize="xx-large", va="bottom")
-    for i in range(len(axs)):
-        if axs[i].properties()["label"] == "<colorbar>" and axs[i].properties()["ylabel"] != "":
-            axs[i].set_title(axs[i].properties()["ylabel"], ha="left")
-            axs[i].set_ylabel("")
+    for dim in range(len(axs)):
+        if axs[dim].properties()["label"] == "<colorbar>" and axs[dim].properties()["ylabel"] != "":
+            axs[dim].set_title(axs[dim].properties()["ylabel"], ha="left")
+            axs[dim].set_ylabel("")
 
     return axs
 
