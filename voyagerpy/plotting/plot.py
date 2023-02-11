@@ -827,13 +827,14 @@ def spatial_reduced_dim(
 
         if color is not None:
             cmap = None
-
+        norm = colors.CenteredNorm(vcenter=0) if divergent else None
         red_arr.plot(
             red_arr.columns[dim],
             ax=ax,
             color=color,
             legend=_legend,
             cmap=cmap,
+            norm=norm,
             legend_kwds=legend_kwds_,
             **geom_style,
             **kwds,
