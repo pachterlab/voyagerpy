@@ -773,11 +773,11 @@ def spatial_reduced_dim(
     # Check if too many subplots
     if dim_nr > 6:
         raise ValueError("Too many components to plot, reduce the number of components")
-    if ncol is not None:
-        if ncol > 3:
-            raise ValueError("Too many columns for subplots")
-        if ncol > dim_nr:
-            raise ValueError("Too many columns")
+
+    ncol = min(ncol or 3, dim_nr)
+    if ncol > 3:
+        raise ValueError("Too many columns for subplots")
+
     # only work with spots in tissue
     if tissue:
         red_arr = red_arr[adata.obs["in_tissue"] == 1]
@@ -785,48 +785,36 @@ def spatial_reduced_dim(
     if divergent:
         cmap = "Spectral_r"
 
+    subplot_kwds = subplot_kwds or {}
+
     # create the subplots with right cols and rows
     if _ax is None:
-        plt_nr = dim_nr
-        nrows = 1
-        # ncols = ncol if ncol is not None else 1
-
-        # defaults
-        if ncol is None:
-            if plt_nr < 4:
-                ncols = plt_nr
-            if plt_nr >= 4:
-                nrows = 2
-                ncols = 3
-
-        else:
-            ncols = ncol
-            nrows = ceil(plt_nr / ncols)
-
-        # if(subplot_kwds is None):
-        #     fig, axs = plt.subplots(nrows=nrows, ncols=ncols,figsize=(10,10))
-
-        if "figsize" in subplot_kwds:
-            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, **subplot_kwds)
-        else:
-
-            # rat = row /col
-            if nrows >= 2 and ncols == 3:
-                _figsize = (10, 7)
-
-            else:
-                _figsize = (10, 10)
-            fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=_figsize, **subplot_kwds)
-            # last axis not used
-            if (ncols * nrows) - 1 == dim_nr:
-                axs[-1, -1].axis("off")
+        with plt.rc_context(
+            {
+                "axes.grid": False,
+                "figure.frameon": False,
+                "axes.spines.bottom": False,
+                "axes.spines.top": False,
+                "axes.spines.left": False,
+                "axes.spines.right": False,
+                "xtick.bottom": False,
+                "xtick.labelbottom": False,
+                "ytick.left": False,
+                "ytick.labelleft": False,
+            }
+        ):
+            fig, axs = configure_subplots(dim_nr, ncol, **subplot_kwds)
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
-
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
-        ncols = 1
-        nrows = 1
-        axs = _ax
+        if isinstance(_ax, Axes):
+            axs = np.array([_ax])
+        elif not isinstance(_ax, np.ndarray):
+            axs = np.array(_ax)
+        else:
+            axs = _ax
+        fig = axs.flat[0].get_figure()
+
     # iterate over features to plot
     x = 0
     y = 0
