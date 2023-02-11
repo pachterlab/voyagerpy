@@ -25,10 +25,12 @@ def set_default_cmap(cmap_name: str) -> None:
     rcParams["image.cmap"] = cmap_name
 
 
+# https://github.com/thomasp85/scico
 register_segmented_cmap("roma", "roma_colors.txt", reverse=True)
+
+# https://github.com/dtm2451/dittoSeq
 register_listed_cmap("dittoseq", "ditto_colors.txt", reverse=False)
 set_default_cmap("dittoseq")
-
 
 __all__ = [
     "elbow_plot",
