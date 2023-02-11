@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from matplotlib.pyplot import rc_context, rcParams
+from matplotlib.pyplot import rcParams
 
-from voyagerpy.plotting.ditto_colors import register_dittoseq
+from voyagerpy.plotting.ditto_colors import register_listed_cmap, register_segmented_cmap
 from voyagerpy.plotting.plot import (
     elbow_plot,
     grouped_violinplot,
@@ -25,7 +25,9 @@ def set_default_cmap(cmap_name: str) -> None:
     rcParams["image.cmap"] = cmap_name
 
 
-set_default_cmap(register_dittoseq())
+register_segmented_cmap("roma", "roma_colors.txt", reverse=True)
+register_listed_cmap("dittoseq", "ditto_colors.txt", reverse=False)
+set_default_cmap("dittoseq")
 
 
 __all__ = [
