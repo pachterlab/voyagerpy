@@ -1,0 +1,30 @@
+:root {
+	/* --bs-emphasis-color-rgb: #222, */
+}
+
+.navbar {
+	--bs-navbar-padding-y: 0rem;
+	/* --bs-navbar-color: aquamarine; */
+}
+
+.background-hi {
+	background-color: #10099F;
+	color: #F5F5F5;
+}
+
+.nav-link-banner {
+	color: #F5F5F566;
+}
+
+.nav-home {
+	color: #F5F5F5;
+}
+
+#toc {
+	box-sizing: border-box;
+	position: sticky;
+	top: 56px;
+	display: block;
+	overflow-y: auto;
+	max-height: calc(100vh - 56px - 1rem);
+}
