@@ -1,5 +1,5 @@
 ---
-
+ghost_base: /voyager
 ---
 
 <html lang="en">
@@ -53,7 +53,7 @@
 		crossorigin="anonymous"></script>
 	<meta property="og:title" content="From geospatial to spatial omics">
 	<meta property="og:description" content="{{site.description}}">
-	<link rel="stylesheet" href="{{site.base_url}}/dep/style.css">
+	<link rel="stylesheet" href="{{page.ghost_base}}/dep/style.css">
 </head>
 
 <body data-new-gr-c-s-check-loaded="14.1096.0" data-gr-ext-installed="">
@@ -73,7 +73,7 @@
 	</footer>
 </body>
 
-<script src="{{ site.base_url }}/jekyll_toc/toc.js"></script>
+<script src="{{ page.ghost_base }}/jekyll_toc/toc.js"></script>
 <script type="text/javascript">
 	$(document).ready(function () {
 		$('#toc').toc({

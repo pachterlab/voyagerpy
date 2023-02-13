@@ -2,7 +2,7 @@
 layout: default
 title: Installing VoyagerPy
 name: Install
-permalink: /voygerpy/install/
+permalink: /install/
 order: 1
 ---
 

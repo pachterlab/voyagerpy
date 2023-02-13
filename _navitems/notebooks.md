@@ -2,7 +2,7 @@
 layout: technology
 name: Notebooks
 title: All notebooks
-permalink: /voygerpy/notebooks/
+permalink: /notebooks/
 order: 3
 ---
 
