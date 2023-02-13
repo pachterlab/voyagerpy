@@ -472,6 +472,7 @@ def plot_spatial_feature(
     colorbar: bool = False,
     cmap: Optional[str] = "Blues",
     cat_cmap: Optional[str] = "dittoseq",
+    div_cmap: str = "roma",
     categ_type: Union[str, Collection[str]] = {},
     geom_style: Optional[Dict] = {},
     annot_style: Optional[Dict] = {},
@@ -587,7 +588,8 @@ def plot_spatial_feature(
 
     # use a divergent colormap
     if divergent:
-        cmap = "Spectral_r"
+        cmap = div_cmap
+        # cmap = "Spectral_r"
 
     subplot_kwds = subplot_kwds or {}
     # create the subplots with right cols and rows
@@ -724,7 +726,8 @@ def spatial_reduced_dim(
     ncol: Optional[int] = None,
     annot_geom: Optional[str] = None,
     tissue: bool = True,
-    cmap: Optional[str] = "Blues",
+    cmap: Optional[str] = None,
+    div_cmap: str = "roma",
     geom_style: Optional[Dict] = {},
     annot_style: Optional[Dict] = {},
     alpha: float = 0.2,
@@ -784,7 +787,10 @@ def spatial_reduced_dim(
         red_arr = red_arr[adata.obs["in_tissue"] == 1]
     # use a divergent colormap
     if divergent:
-        cmap = "Spectral_r"
+        cmap = div_cmap or cmap
+    elif cmap is None:
+        cmap = "Blues"
+        # cmap = "Spectral_r"
 
     subplot_kwds = subplot_kwds or {}
 
@@ -828,7 +834,17 @@ def spatial_reduced_dim(
 
         if color is not None:
             cmap = None
-        norm = colors.CenteredNorm(vcenter=0) if divergent else None
+        norm = None
+        vmin = vmax = None
+        if divergent:
+            # TODO: center the cmap
+            colname = red_arr.columns[dim]
+            extreme_val = np.abs(red_arr[colname].values).max()
+
+            vmin = red_arr[colname].min()
+            vmax = red_arr[colname].max()
+            norm = colors.CenteredNorm()
+        norm = None
         red_arr.plot(
             red_arr.columns[dim],
             ax=ax,
@@ -836,6 +852,8 @@ def spatial_reduced_dim(
             legend=_legend,
             cmap=cmap,
             norm=norm,
+            vmin=vmin,
+            vmax=vmax,
             legend_kwds=legend_kwds_,
             **geom_style,
             **kwds,
