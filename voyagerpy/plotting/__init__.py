@@ -26,10 +26,12 @@ def set_default_cmap(cmap_name: str) -> None:
 
 
 # https://github.com/thomasp85/scico
-register_segmented_cmap("roma", "roma_colors.txt", reverse=True)
+from .roma_colors import roma_colors
+register_segmented_cmap("roma", roma_colors, reverse=True)
 
 # https://github.com/dtm2451/dittoSeq
-register_listed_cmap("dittoseq", "ditto_colors.txt", reverse=False)
+from .ditto_colors import ditto_colors
+register_listed_cmap("dittoseq", ditto_colors, reverse=False)
 set_default_cmap("dittoseq")
 
 __all__ = [
