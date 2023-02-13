@@ -5,18 +5,8 @@ layout: default
 title: VoyagerPy
 ---
 
-## {{ "Hello World!" | downcase }}
+## {{ "Hello World!" }}
 
 {{ site.description }}
 
-<div class="container-fluid">
-	<div class="collapse navbar-collapse">
-		<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-		{% for nav in site.navitems %}
-			<li class="nav-item">
-			<a href="{{ nav.url }}"> {{ nav.name }} </a>
-			</li>
-		{% endfor %}
-		</ul>
-	</div>
-</div>
+{{ site.github["repository_url"] }}

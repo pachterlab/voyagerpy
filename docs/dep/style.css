@@ -1,16 +1,18 @@
-:root {
-	/* --bs-emphasis-color-rgb: #222, */
-}
+/* :root {
+	--bs-emphasis-color-rgb: #222,
+} */
 
-.navbar {
-	--bs-navbar-padding-y: 0rem;
-	/* --bs-navbar-color: aquamarine; */
-}
 
 .background-hi {
 	background-color: #10099F;
 	color: #F5F5F5;
 }
+
+/* 
+.navbar {
+	--bs-navbar-color: aquamarine;
+	--bs-navbar-padding-y: 2.5rem;
+} */
 
 .nav-link-banner {
 	color: #F5F5F566;

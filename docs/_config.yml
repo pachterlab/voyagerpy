@@ -22,18 +22,22 @@ title: VoyagerPy
 markdown: kramdown
 kramdown:
   input: GFM
-  parse_block_html: false
-  syntax_highlighter: coderay
+  parse_block_html: true
+  syntax_highlighter: rouge
 
-email: your-email@example.com
+# email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
-  The VoyagerPy package is nice. Very nice.
+  VoyagerPy is a Python package which aims to provide the same functionality 
+  for the Python community as [Voyager](https://pachterlab.github.io/voyager) 
+  does for the R community. We use [AnnData](https://anndata.rtfd.io) as our 
+  data structure which should be familiar to some. The package provides plotting 
+  functions useful for analysing spatial single-cell genomics data.
 
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 
 # twitter_username: jekyllrb
-github_username: "pmelsted/voyagerpy"
+# github: pmelsted/voyagerpy
 
 # Build settings
 # theme: minima

@@ -52,61 +52,12 @@
 		integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww=="
 		crossorigin="anonymous"></script>
 	<meta property="og:title" content="From geospatial to spatial omics">
-	<meta property="og:description" content="SpatialFeatureExperiment (SFE) is a new S4 class for working
-	    with spatial single-cell genomics data. The voyager package implements
-	    basic exploratory spatial data analysis (ESDA) methods for SFE. This
-	    first version supports univariate global spatial ESDA methods such as
-	    Morans I, permutation testing for Morans I, and correlograms. The
-	    Voyager package also implements plotting functions to plot SFE data
-	    and ESDA results. Multivariate ESDA and univariate local metrics will
-	    be added in later versions.">
+	<meta property="og:description" content="{{site.description}}">
 	<link rel="stylesheet" href="/dep/style.css">
 </head>
 
-<body data-new-gr-c-s-check-loaded="14.1096.0" data-gr-ext-installed="" data-bs-spy="scroll" data-bs-target="#toc">
-	<div role="navigation" class="navbar navbar-expand navbar-light">
-		<div class="container-fluid background-hi">
-			<a class="navbar-brand" href="#">{{ site.name }}</a>
-			<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-				data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
-				aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
-			<div class="collapse navbar-collapse" id="navbarSupportedContent">
-				<ul class="navbar-nav me-auto mb-2 mb-lg-0">
-					<li class="nav-item">
-						<a class="nav-link nav-home" aria-current="page" href="/">{{site.title}}</a>
-					</li>
-
-					{% assign sorted_navitems = site.navitems | sort: "order" %}
-					{% for nav in sorted_navitems %}
-					{% if nav.is_technology%}
-					<li class="nav-item dropdown">
-						<a class="nav-link nav-link-banner dropdown-toggle" href="#" role="button"
-							data-bs-toggle="dropdown" aria-expanded="false">
-							{{ nav.name -}}
-						</a>
-						<ul class="dropdown-menu">
-							{% for tech in site.technologies %}
-							<li><a class="dropdown-item" href="{{tech.url}}">{{ tech.name -}}</a></li>
-							{% endfor %}
-							<li><a class="dropdown-item" href="{{nav.url}}">{{ nav.name -}}</a></li>
-						</ul>
-					</li>
-					{% else %}
-					<li class="nav-item">
-						<a class="nav-link nav-link-banner" href="{{ nav.url }}"> {{ nav.name }}</a>
-					</li>
-					{% endif %}
-					{% endfor %}
-				</ul>
-				<form class="d-flex" role="search">
-					<input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-					<button class="btn btn-outline-success" type="submit">Search</button>
-				</form>
-			</div>
-		</div>
-	</div>
+<body data-new-gr-c-s-check-loaded="14.1096.0" data-gr-ext-installed="">
+	{% include navbar.html%}
 	<br>
 	<div class="container">
 		<div class="container-fluid">
