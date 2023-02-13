@@ -17,9 +17,11 @@ gem "minima", "~> 2.5"
 
 gem "github-pages", "~> 228", group: :jekyll_plugins
 # If you have any plugins, put them here!
-group :jekyll_plugins do
-  gem "jekyll-feed", "~> 0.12"
-end
+
+# We don't need RSS feed for now
+#group :jekyll_plugins do
+#  gem "jekyll-feed", "~> 0.12"
+#end
 
 # Windows and JRuby does not include zoneinfo files, so bundle the tzinfo-data gem
 # and associated library.
@@ -37,4 +39,5 @@ gem "http_parser.rb", "~> 0.6.0", :platforms => [:jruby]
 
 gem "webrick", "~> 1.8"
 
-gem "jekyll-toc", "~> 0.18.0"
+# We're not using the jekyll-toc gem
+#gem "jekyll-toc", "~> 0.18.0"

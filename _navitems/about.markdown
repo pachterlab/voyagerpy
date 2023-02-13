@@ -2,7 +2,7 @@
 layout: default
 title: About
 name: About
-permalink: /about/
+permalink: /voygerpy/about/
 order: 6
 published: false
 ---

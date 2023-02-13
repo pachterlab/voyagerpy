@@ -2,7 +2,7 @@
 layout: default
 title: Documentation
 name: Docs
-permalink: /docs/
+permalink: /voygerpy/docs/
 order: 4
 ---
 

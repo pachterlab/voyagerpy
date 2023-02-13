@@ -2,7 +2,7 @@
 layout: default
 title: Changelog
 name: Changelog
-permalink: /changelog/
+permalink: /voygerpy/changelog/
 order: 5
 ---
 

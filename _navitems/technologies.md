@@ -2,7 +2,7 @@
 name: Technologies
 order: 2
 is_technology: true
-permalink: /technologies/
+permalink: /voygerpy/technologies/
 ---
 
 This is the tech site
