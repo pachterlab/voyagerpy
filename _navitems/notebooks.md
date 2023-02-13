@@ -1,9 +1,12 @@
 ---
 layout: technology
 name: Notebooks
-title: Example notebooks
+title: All notebooks
 permalink: /voygerpy/notebooks/
 order: 3
 ---
 
-{% include Visium.html %}
+<div>
+<a href="{{ site.base_url }}/notebooks/visium_10x.html">Basix analysis of 10X example Visium dataset</a>
+
+</div>
