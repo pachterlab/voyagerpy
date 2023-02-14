@@ -5,8 +5,9 @@ layout: default
 title: VoyagerPy
 ---
 
-## {{ "Hello World!" }}
-
+<div class="row">
+<div class="col-md-8">
+## {{ site.title }}
 {{ site.description }}
-
-{{ site.github["repository_url"] }}
+</div>
+</div>
