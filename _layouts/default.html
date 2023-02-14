@@ -49,9 +49,20 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js"
 		integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww=="
 		crossorigin="anonymous"></script>
-	<meta property="og:title" content="From geospatial to spatial omics">
-	<meta property="og:description" content="{{site.description}}">
-	<link rel="stylesheet" href="{{site.baseurl}}/dep/style.css">
+
+	<!-- Custom CSS -->
+	<link rel="stylesheet" href="{{site.baseurl}}/styles/main.css">
+	{% if page.layout == "notebook"%}
+	<!-- Notebook specific includes -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+	<!-- Jupyter stylesheets -->
+	<link rel="stylesheet" href="{{site.baseurl | append: '/styles/ipynb1.css'}}">
+	<link rel="stylesheet" href="{{site.baseurl | append: '/styles/ipynb2.css'}}">
+	<link rel="stylesheet" href="{{site.baseurl | append: '/styles/ipynb3.css'}}">
+	<link rel="stylesheet" href="{{site.baseurl | append: '/styles/ipynb4.css'}}">
+	<!-- Conigure mathjax -->
+	{% include mathjax_scripts.html %}
+	{% endif %}
 </head>
 
 <body data-new-gr-c-s-check-loaded="14.1096.0" data-gr-ext-installed="">
