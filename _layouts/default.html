@@ -74,15 +74,15 @@
 <script src="{{site.baseurl}}/jekyll_toc/toc.js"></script>
 <script type="text/javascript">
 	$(document).ready(function () {
+		let header_var = "{{ layout.toc_header }}" || "h2";
 		$('#toc').toc({
 			listType: 'ul',
 			classes: {
 				list: 'list-group',
-				// item: 'nav-link'
-				item: 'list-group-item list-group-item-action list-group-item-light',
+				item: 'list-group-item list-group-item-light', //  list-group-item-action list-group-item-light
 				link: 'nav-link'
 			},
-			headers: 'h2',
+			headers: header_var,
 			title: 'On this page',
 			minimumHeaders: 2,
 			showSpeed: 0
