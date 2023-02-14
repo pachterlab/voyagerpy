@@ -8,20 +8,6 @@
 	color: #F5F5F5;
 }
 
-/* 
-.navbar {
-	--bs-navbar-color: aquamarine;
-	--bs-navbar-padding-y: 2.5rem;
-} */
-
-.nav-link-banner {
-	color: #F5F5F566;
-}
-
-.nav-home {
-	color: #F5F5F5;
-}
-
 #toc {
 	box-sizing: border-box;
 	position: sticky;
