@@ -50,8 +50,6 @@
 		integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww=="
 		crossorigin="anonymous"></script>
 
-	<!-- Custom CSS -->
-	<link rel="stylesheet" href="{{site.baseurl}}/styles/main.css">
 	{% if page.layout == "notebook"%}
 	<!-- Notebook specific includes -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
@@ -63,6 +61,8 @@
 	<!-- Conigure mathjax -->
 	{% include mathjax_scripts.html %}
 	{% endif %}
+	<!-- Custom CSS -->
+	<link rel="stylesheet" href="{{site.baseurl}}/styles/main.css">
 </head>
 
 <body data-new-gr-c-s-check-loaded="14.1096.0" data-gr-ext-installed="">
