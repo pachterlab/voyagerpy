@@ -1,11 +1,16 @@
-/* :root {
-	--bs-emphasis-color-rgb: #222,
-} */
+:root {
+	/* --bs-body-text-align: justify; */
+}
 
 
 .background-hi {
 	background-color: #10099F;
 	color: #F5F5F5;
+}
+
+.text-justify {
+	text-align: justify;
+	text-justify: auto;
 }
 
 #toc {
@@ -15,4 +20,9 @@
 	display: block;
 	overflow-y: auto;
 	max-height: calc(100vh - 56px - 1rem);
+}
+
+.h1 .h2 .h3 .h4 .h5 .h6 h1 h2 h3 h4 h5 h6 {
+	font-weight: 300;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
