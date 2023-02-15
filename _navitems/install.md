@@ -48,7 +48,7 @@ In most cases, this should work without errors. However, as we have [Geopandas](
 If you have a fresh environment and want to run the [example notebooks]({{site.baseurl | append: "/notebooks" }}), there are some packages you might want to install.
 
 ```shell
-$ pip install jupyter scanpy
+$ pip install jupyter scanpy requests
 ```
 
 Note that Scanpy version 1.9.1 requires Matplotlib <3.7, and is that reflected in the setup of VoyagerPy.
