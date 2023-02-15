@@ -86,7 +86,7 @@
 <script src="{{site.baseurl}}/jekyll_toc/toc.js"></script>
 <script type="text/javascript">
 	$(document).ready(function () {
-		let header_var = "{{ layout.toc_header }}" || "h2";
+		let header_var = "{{ page.toc_header }}" | "{{ layout.toc_header }}" || "h2";
 		$('#toc').toc({
 			listType: 'ul',
 			classes: {
