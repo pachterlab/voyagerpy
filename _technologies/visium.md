@@ -5,18 +5,21 @@ name: Visium
 published: true
 ---
 
-The Visium spatial transcriptomics platform by 10X Genomics is based on Spatial Transcriptomics (ST) technology that was originally published in 2016. In both methods, mRNA from tissue sections is captured on spatially barcoded spots that are immobilized on a microarray slide. Following construction of a barcoded cDNA library, mRNA transcripts can be mapped to specific spots on the microarray slide and overlayed with a high-resolution image of the tissue, allowing for visualization and analysis of gene expression in a spatial context.
+<p class="text-justify">
+The Visium spatial transcriptomics platform by 10X Genomics is based on Spatial Transcriptomics (ST) technology that was originally published in 2016. In both methods, mRNA from tissue sections is captured on spatially barcoded spots that are immobilized on a microarray slide. Following construction of a barcoded cDNA library, mRNA transcripts can be mapped to specific spots on the microarray slide and overlayed with a high-resolution image of the tissue, allowing for visualization and analysis of gene expression in a spatial context.</p>
 
 ### Getting started
-#### Download Data
+#### Download Data Visium
 
 Several publicly available Visium datasets are available from 10X Genomics on their [website](https://www.10xgenomics.com/resources/datasets).
 
 ### Analysis Workflows
 
-The notebooks below demonstrate workflows that can be implemented with VoyagerPy using a variety of Visium datasets. The analysis tasks include basic quality control, spatial exploratory data analysis, identification of spatially variable genes, and computation of global and local spatial statistics.
+<p class="text-justify">
+The notebooks below demonstrate workflows that can be implemented with VoyagerPy using a variety of Visium datasets. The analysis tasks include basic quality control, spatial exploratory data analysis, identification of spatially variable genes, and computation of global and local spatial statistics.</p>
 
-<table class="table">
+<table class="table table-hover">
+<caption>Available notebooks for Visium</caption>
 <thead>
     <tr>
       <th scope="col">Jupyter Notebook</th>
