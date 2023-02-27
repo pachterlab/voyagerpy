@@ -417,6 +417,8 @@ def plot_expression(
     ncol: Optional[int] = 2,
     show_symbol: bool = False,
     layer: Optional[str] = "logcounts",
+    figsize: Optional[Tuple[float, float]] = None,
+    cmap: Optional[str] = None,
 ):
     genes = [genes] if isinstance(genes, str) else genes[:]
     gene_ids = []
