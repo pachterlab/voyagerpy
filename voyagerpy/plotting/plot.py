@@ -1343,3 +1343,177 @@ def moran_plot(
     ax.set_aspect("equal")
     return ax
 
+
+
+def plot_barcode_histogram(
+    adata: AnnData,
+    features: Union[str, Sequence[str]],
+    fill_by: Optional[str] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    ncol: int = 1,
+    cmap: Optional[str] = None,
+    bins: int = 100,
+    log: bool = True,
+    stacked: bool = False,
+    histtype: str = "step",
+    **hist_kwargs,
+) -> np.ndarray[Axes]:
+
+    features = [features] if isinstance(features, str) else features
+    nplot = len(features)
+    ncol = min(ncol, nplot)
+    nrow = int(np.ceil(nplot / ncol))
+
+    if fill_by is not None:
+        fig, axs, cax = subplots_single_colorbar(nrow, ncol, figsize=figsize)
+        all_feats = features + [fill_by]
+        keys, groups = zip(*adata.obs[all_feats].groupby(fill_by).groups.items())
+
+        colormap = plt.get_cmap(cmap)
+        colors = [colormap(i) for i in range(len(keys))]
+
+        for feat, ax in zip(features, axs.flat):
+            hist_range = np.array([adata.obs[feat].min(), adata.obs[feat].max()])
+            hist_mid = hist_range.mean()
+            hist_range = tuple((hist_range - hist_mid) * 1.05 + hist_mid)
+
+            # dat = [adata.obs.loc[group, feat].values for group in groups]
+
+            hist_data = [
+                np.histogram(
+                    adata.obs.loc[group, feat].values,
+                    bins=bins,
+                    range=hist_range,
+                )
+                for group in groups
+            ]
+
+            counts, bin_edges = zip(*hist_data)
+            bin_edges = np.array(bin_edges)
+            counts = np.array(counts)
+            if histtype != "line":
+                n, bins_, rects = ax.hist(
+                    bin_edges[:, :-1].T,
+                    bins=bins,
+                    range=hist_range,
+                    log=log,
+                    label=keys,
+                    stacked=stacked,
+                    weights=counts.T,
+                    color=colors[: len(keys)],
+                    histtype=histtype,
+                    **hist_kwargs,
+                )
+            else:
+                ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
+
+                centers = np.diff(bin_edges) / 2 + bin_edges[:, :-1]
+                rects = ax.plot(centers.T, np.maximum(0.2, counts.T))
+
+                if log:
+                    ax.set_yscale("log")
+
+                ax.set_ylim(0.2, None)
+
+            ax.grid(False, "minor")
+            ax.set_xlabel(feat, size=10)
+
+        if histtype.startswith("step"):
+            # Hack to get the actual handles
+            handles = [patch[0] for patch in rects]
+        else:
+            handles = rects
+        cax.legend(handles=handles, labels=keys, loc="center left", title=fill_by, frameon=False)
+    else:
+        fig, axs = configure_subplots(nplot, ncol)
+        # TODO
+
+    fig.supylabel("count")
+
+    return axs
+
+
+def plot_features_histogram(
+    adata: AnnData,
+    features: Union[str, Sequence[str]],
+    fill_by: Optional[str] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    ncol: int = 1,
+    cmap: Optional[str] = None,
+    bins: int = 100,
+    log: bool = True,
+    stacked: bool = False,
+    histtype: str = "step",
+    **hist_kwargs,
+) -> np.ndarray[Axes]:
+
+    features = [features] if isinstance(features, str) else features
+    nplot = len(features)
+    ncol = min(ncol, nplot)
+    nrow = int(np.ceil(nplot / ncol))
+
+    if fill_by is not None:
+        fig, axs, cax = subplots_single_colorbar(nrow, ncol, figsize=figsize)
+        all_feats = features + [fill_by]
+        keys, groups = zip(*adata.obs[all_feats].groupby(fill_by).groups.items())
+
+        colormap = plt.get_cmap(cmap)
+        colors = [colormap(i) for i in range(len(keys))]
+
+        for feat, ax in zip(features, axs.flat):
+            hist_range = np.array([adata.obs[feat].min(), adata.obs[feat].max()])
+            hist_mid = hist_range.mean()
+            hist_range = tuple((hist_range - hist_mid) * 1.05 + hist_mid)
+
+            # dat = [adata.obs.loc[group, feat].values for group in groups]
+
+            hist_data = [np.histogram(adata.obs.loc[group, feat].values, bins=bins, range=hist_range, **hist_kwargs) for group in groups]
+
+            counts, bin_edges = zip(*hist_data)
+            bin_edges = np.array(bin_edges)
+            counts = np.array(counts)
+            if histtype != "line":
+                n, bins_, rects = ax.hist(
+                    bin_edges[:, :-1].T,
+                    bins=bins,
+                    range=hist_range,
+                    log=log,
+                    label=keys,
+                    stacked=stacked,
+                    weights=counts.T,
+                    color=colors[: len(keys)],
+                    histtype=histtype,
+                    **hist_kwargs,
+                )
+            else:
+                ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
+
+                centers = np.diff(bin_edges) / 2 + bin_edges[:, :-1]
+                rects = ax.plot(centers.T, np.maximum(0.2, counts.T))
+
+                if log:
+                    ax.set_yscale("log")
+
+                ax.set_ylim(0.2, None)
+
+            ax.grid(False, "minor")
+            ax.set_xlabel(feat, size=10)
+
+        if histtype.startswith("step"):
+            # Hack to get the actual handles
+            handles = [patch[0] for patch in rects]
+        else:
+            handles = rects
+        cax.legend(handles=handles, labels=keys, loc="center left", title=fill_by, frameon=False)
+    else:
+        fig, axs = configure_subplots(nplot, ncol)
+
+        color = plt.get_cmap(cmap)(7 if cmap is None else 0)
+        for ax, feat in zip(axs.flat, features):
+            n, _, rects = ax.hist(adata.var[feat], bins=bins, log=log, histtype=histtype, color=color, **hist_kwargs)
+            print("sum of bins", n.sum())
+
+    fig.supylabel("count")
+
+    return axs
+
