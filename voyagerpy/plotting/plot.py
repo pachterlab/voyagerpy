@@ -1256,3 +1256,29 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
 
     fig.tight_layout(pad=0)
     return axs
+
+
+def contour_plot(
+    ax: Axes,
+    points: np.ndarray,
+    shape: Tuple[int, int] = (100, 100),
+    levels: int = 7,
+    colors: Union[str, Sequence[str]] = "cyan",
+    linewidths: Optional[float] = None,
+    origin: Optional[str] = None,
+) -> Axes:
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+
+    xdim, ydim = shape
+    xdim = complex(0, xdim)
+    ydim = complex(0, ydim)
+
+    X, Y = np.mgrid[xmin:xmax:xdim, ymin:ymax:ydim]
+    positions = np.vstack([X.ravel(), Y.ravel()])
+    kernel = gaussian_kde(points)
+    Z = np.reshape(kernel(positions), X.shape)
+
+    ax.contour(X, Y, Z, levels=levels, colors=colors, linewidths=linewidths, origin=origin)
+
+    return ax
