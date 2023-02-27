@@ -43,11 +43,12 @@ from voyagerpy import utils
 options.mode.chained_assignment = None  # default='warn'
 
 plt.style.use("ggplot")
-plt.rcParams["axes.facecolor"] = "white"
-plt.rcParams["grid.color"] = "k"
-plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["axes.edgecolor"] = "#00000050"
+plt.rcParams["axes.facecolor"] = "white"
 plt.rcParams["axes.grid.which"] = "both"
+plt.rcParams["axes.labelsize"] = 8
+plt.rcParams["grid.alpha"] = 0.1
+plt.rcParams["grid.color"] = "k"
 plt.rcParams["image.origin"] = "lower"
 
 
