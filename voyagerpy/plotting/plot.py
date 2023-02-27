@@ -173,6 +173,9 @@ def plot_single_barcode_data(
     ax: Optional[Axes] = None,
     legend: bool = False,
     color_by: Optional[str] = None,
+    x_label: Optional[str] = None,
+    y_label: Optional[str] = None,
+    contour_kwargs: Optional[Dict[str, Any]] = None,
 ):
     obs = adata.obs
     if ax is None:
@@ -196,8 +199,12 @@ def plot_single_barcode_data(
             colors = np.zeros_like(adata.obs[x], "int") if color_by is None else adata.obs[color_by].astype(int)
             colormap = plt.get_cmap(cmap)
             scat = ax.scatter(x, y, data=adata.obs, c=colors, cmap=colormap, vmin=0, vmax=colormap.N, alpha=0.5, s=8)
-            ax.set_xlabel(x)
-            ax.set_ylabel(y)
+            if contour_kwargs is not None:
+                points = adata.obs[[x, y]].values.T
+                contour_plot(ax, points, **contour_kwargs)
+
+            ax.set_xlabel(x_label or x)
+            ax.set_ylabel(y_label or y)
             if legend and color_by is not None:
                 ax.legend(*scat.legend_elements(), bbox_to_anchor=(1.04, 0.5), loc="center left", title=color_by, frameon=False)
 
@@ -233,9 +240,30 @@ def plot_barcode_data(
     sharex: Union[None, Literal["none", "all", "row", "col"], bool] = None,
     sharey: Union[None, str, bool] = None,
     figsize: Optional[Tuple[float, float]] = None,
+    x_labels: Union[None, str, Sequence[str]] = None,
+    y_labels: Union[None, str, Sequence[str]] = None,
+    contour_kwargs: Optional[Dict[str, Any]] = None,
+    rc_context: Optional[Dict[str, Any]] = None,
 ):
+    #  TODO: Allow ax argument
+
     x_features = x if isinstance(x, (list, tuple)) else [x]
     y_features = y if isinstance(y, (list, tuple)) else [y]
+
+    if x_labels is None:
+        x_labels = x_features[:]
+
+    x_labels = x_labels if isinstance(x_labels, (list, tuple)) else [x_labels]
+    if isinstance(x_labels, (list, tuple)) and len(x_labels) != len(x_features):
+        raise ValueError("x_labels must have the same length as x")
+
+    # if isinstance(x_label, str)
+
+    if y_labels is None:
+        y_labels = y_features[:]
+    y_labels = y_labels if isinstance(y_labels, (list, tuple)) else [y_labels]
+    if isinstance(y_labels, (list, tuple)) and len(y_labels) != len(y_features):
+        raise ValueError("y_labels must have the same length as y")
 
     del x, y
 
@@ -255,22 +283,26 @@ def plot_barcode_data(
         else:
             sharey = False
 
-    with plt.rc_context(
-        {
-            "axes.spines.bottom": True,
-            "axes.spines.top": False,
-            "axes.spines.left": True,
-            "axes.spines.right": False,
-            "axes.grid": False,
-        }
-    ):
+    default_rc_context = {
+        "axes.spines.bottom": True,
+        "axes.spines.top": False,
+        "axes.spines.left": True,
+        "axes.spines.right": False,
+        "axes.grid": False,
+    }
+
+    default_rc_context.update(rc_context or {})
+
+    with plt.rc_context(default_rc_context):
         fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey)
 
-    feature_iterator = ((y_feat, x_feat) for y_feat in y_features for x_feat in x_features)
+    feature_iterator = ((y_feat, x_feat) for y_feat in zip(y_labels, y_features) for x_feat in zip(x_labels, x_features))
 
     for i_plot, (y_feat, x_feat) in enumerate(feature_iterator):
         i_col = i_plot % ncol
         add_legend = i_col == ncol - 1
+        x_label, x_feat = x_feat
+        y_label, y_feat = y_feat
 
         axs_arr.flat[i_plot] = plot_single_barcode_data(
             adata,
@@ -280,6 +312,9 @@ def plot_barcode_data(
             ax=axs_arr.flat[i_plot],
             legend=add_legend,
             color_by=color_by,
+            x_label=x_label,
+            y_label=y_label,
+            contour_kwargs=contour_kwargs,
         )
 
     fig.tight_layout()
