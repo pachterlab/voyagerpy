@@ -61,6 +61,10 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
         adata.obs["detected"] = (adata.X > 0).sum(axis=1)
 
     for key, arr in subsets.items():
+        
+        if arr.dtype in ("bool", "O"):
+            arr = arr.astype(adata.X.dtype)
+
         sum_key = f"subsets_{key}_sum"
         det_key = f"subsets_{key}_detected"
         prc_key = f"subsets_{key}_percent"
