@@ -1282,3 +1282,64 @@ def contour_plot(
     ax.contour(X, Y, Z, levels=levels, colors=colors, linewidths=linewidths, origin=origin)
 
     return ax
+
+
+def moran_plot(
+    adata: AnnData,
+    feature: str,
+    distances: Union[None, str, np.ndarray],
+    color_by: Optional[str] = None,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    ax: Optional[Axes] = None,
+) -> Axes:
+    adata = adata.copy()
+
+    if distances is None:
+        dists = adata.obsp["distances"]
+    elif isinstance(distances, str):
+        dists = adata.obsp[distances]
+    elif isinstance(distances, np.ndarray):
+        dists = distances
+    else:
+        raise TypeError("Distances should be of type None, str, or np.ndarray.")
+
+    lagged_feature = f"lagged_{feature}"
+    if lagged_feature not in adata.obs:
+        adata.obs[lagged_feature] = dists.dot(adata.obs[feature])
+    rc_context = {
+        "axes.grid": True,
+        "axes.spines.bottom": True,
+        "axes.spines.top": True,
+        "axes.spines.left": True,
+        "axes.spines.right": True,
+    }
+
+    y_label = f"Spatially lagged {feature}"
+
+    contour_kwargs = dict(
+        shape=(150, 150),
+        levels=7,
+        colors="cyan",
+        linewidths=1,
+    )
+
+    (ax,) = plot_barcode_data(
+        adata, x=feature, y=lagged_feature, color_by=color_by, rc_context=rc_context, y_labels=y_label, contour_kwargs=contour_kwargs
+    )
+    points = adata.obs[[feature, lagged_feature]].values.T
+
+    ax.axvline(points[0].mean(), linestyle="--", c="k", alpha=0.5)
+    ax.axhline(points[1].mean(), linestyle="--", c="k", alpha=0.5)
+
+    reg = linregress(points[0], points[1], alternative="two-sided")  # default alternative. Can also be greater or less
+    ax.axline((0, reg.intercept), slope=reg.slope, color="blue")
+
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    ax.set_aspect("equal")
+    return ax
+
