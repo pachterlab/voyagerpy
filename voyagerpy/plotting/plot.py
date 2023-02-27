@@ -32,12 +32,14 @@ from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
+import matplotlib.ticker
 from pandas import DataFrame, options
 from pandas.api.types import is_categorical_dtype
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde, linregress
 from scipy import sparse as sp
 
 from voyagerpy import utils
+from .cmap_helper import DivergentNorm
 
 
 options.mode.chained_assignment = None  # default='warn'
