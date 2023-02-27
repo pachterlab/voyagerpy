@@ -1538,3 +1538,35 @@ def plot_fitline(x, y, alternative: str = "two-sided", ax: Optional[Axes] = None
 
     return ax
 
+
+def scatter(
+    x: str,
+    y: str,
+    color_by: Optional[str] = None,
+    ax: Optional[Axes] = None,
+    cmap: Optional[str] = None,
+    legend: Optional[bool] = None,
+    data: Optional[DataFrame] = None,
+):
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    scatter_kwargs = dict(cmap=cmap)
+    legend_kwargs = dict(title=color_by, bbox_to_anchor=(1.04, 0.5), loc="center left", frameon=False)
+
+    if color_by and data is not None and data[color_by].dtype == "category":
+        legend = True if legend is None else legend
+        scatter_kwargs.update(dict(vmax=plt.get_cmap(cmap).N, c=color_by))
+    elif color_by:
+        pass
+
+    scat = ax.scatter(x, y, data=data, s=8, **scatter_kwargs)
+    ax.legend(
+        *scat.legend_elements(),
+        title=color_by,
+        bbox_to_anchor=(1.04, 0.5),
+        loc="center left",
+        frameon=False,
+    )
+
+    return ax
