@@ -1058,6 +1058,138 @@ def plot_dim_loadings(
     return axs
 
 
+def plot_barcode_data_with_reduction(
+    adata: AnnData,
+    features: Union[str, Sequence[str]],
+    reduction: str = "X_pca",
+    ncol: int = 2,
+    layout="tight",
+    cmap_continuous: str = "Blues",
+    cmap_discrete: str = "dittoseq",
+    cmap_divergent: str = "roma",
+    divergent: bool = False,
+    figsize: Optional[Tuple[float, float]] = None,
+    title: Optional[str] = None,
+    feature_labels: Optional[Sequence[str]] = None,
+):
+
+    x, y = adata.obsm[reduction][:, :2].T
+    features = [features] if isinstance(features, str) else features[:]
+    feature_labels = feature_labels[:] if feature_labels is not None else features[:]
+
+    fig, axs = configure_subplots(len(features), ncol, layout=layout, sharex=True, sharey=True, figsize=figsize)
+    obs = adata.obs.copy()
+
+    cbar_kwargs = {"loc": "left", "fontsize": 8}
+
+    for feature, feature_label, ax in zip(features, feature_labels, axs.flat):
+        values = obs[feature].values
+        is_discrete = values.dtype == "category"
+
+        if is_discrete:
+            norm = None
+            cmap = cmap_discrete
+            colors = values.astype(int)
+            alpha = 0.5
+        else:
+            cmap = cmap_divergent if divergent else cmap_continuous
+            norm = None
+            if divergent:
+                vmin = values.min()
+                vmax = values.max()
+                norm = DivergentNorm(vmin, vmax)
+            colors = values
+            alpha = 1
+
+        scatter_kwargs = dict(s=4, c=colors, cmap=cmap, alpha=alpha, norm=norm)
+        scat = ax.scatter(x, y, **scatter_kwargs)
+        if is_discrete:
+            ax.legend(
+                *ax.collections[0].legend_elements(),
+                bbox_to_anchor=(1.04, 0.5),
+                loc="center left",
+                frameon=False,
+                title=feature_label,
+            )
+        else:
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = fig.colorbar(scat, cax=cax, shrink=0.4, label=feature_label)
+            # cbar = fig.colorbar(scat, ax=ax, shrink=0.4)
+            # cbar.ax.set_title(feature, **cbar_kwargs)
+
+        ax.set_aspect("equal")
+    fig.suptitle(title, ha="left", x=0)
+
+    return axs
+
+
+def plot_feature_data_with_reduction(
+    adata: AnnData,
+    features: Union[str, Sequence[str]],
+    reduction: str = "X_pca",
+    ncol: int = 2,
+    layout="tight",
+    cmap_continuous: str = "Blues",
+    cmap_discrete: str = "dittoseq",
+    cmap_divergent: str = "roma",
+    divergent: bool = False,
+    figsize: Optional[Tuple[float, float]] = None,
+    title: Optional[str] = None,
+):
+    adata = adata.copy()
+
+    x, y = adata.obsm[reduction][:, :2].T
+    features = [features] if isinstance(features, str) else features[:]
+
+    fig, axs = configure_subplots(len(features), ncol, layout=layout, sharex=True, sharey=True, figsize=figsize)
+    var = adata.var.copy()
+    feature_idx = [var.index.get_loc(feature) for feature in features]
+
+    cbar_kwargs = {"loc": "left", "fontsize": 8}
+
+    for feature, ax in zip(features, axs.flat):
+        feature_idx = var.index.get_loc(feature)
+        feature = adata.var.loc[feature, adata.uns["config"]["secondary_var_names"]]
+        values = adata.layers["logcounts"][:, feature_idx].toarray()
+        is_discrete = values.dtype == "category"
+
+        if is_discrete:
+            norm = None
+            cmap = cmap_discrete
+            colors = values.astype(int)
+            alpha = 0.5
+        else:
+            cmap = cmap_divergent if divergent else cmap_continuous
+            norm = None
+            if divergent:
+                vmin = values.min()
+                vmax = values.max()
+                norm = DivergentNorm(vmin, vmax)
+            colors = values
+            alpha = 1
+
+        scatter_kwargs = dict(s=4, c=colors, cmap=cmap, alpha=alpha, norm=norm)
+        scat = ax.scatter(x, y, **scatter_kwargs)
+        if is_discrete:
+            ax.legend(*ax.collections[0].legend_elements(), bbox_to_anchor=(1.04, 0.5), loc="center left", frameon=False, title=feature)
+        else:
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = fig.colorbar(scat, cax=cax, shrink=0.4, label=feature)
+            # cbar = fig.colorbar(scat, ax=ax, shrink=0.4)
+            # cbar.ax.set_title(feature, **cbar_kwargs)
+
+        ax.set_aspect("equal")
+    fig.suptitle(title, ha="left", x=0)
+
+    return axs
+
+
 def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Optional[Axes] = None):
     if ax is None:
         fig, ax = plt.subplots()
