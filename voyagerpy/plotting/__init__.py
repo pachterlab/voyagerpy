@@ -8,16 +8,23 @@ from voyagerpy.plotting.plot import (
     elbow_plot,
     grouped_violinplot,
     imshow,
+    moran_plot,
     plot_barcode_data,
+    plot_barcode_data_with_reduction,
+    plot_barcode_histogram,
     plot_barcodes_bin2d,
     plot_bin2d,
     plot_dim_loadings,
     plot_expression,
     plot_features_bin2d,
+    plot_feature_data_with_reduction,
+    plot_features_histogram,
     plot_pca,
     plot_spatial_feature,
     simple_violinplot,
     spatial_reduced_dim,
+    scatter,
+    plot_fitline,
 )
 
 
@@ -27,10 +34,12 @@ def set_default_cmap(cmap_name: str) -> None:
 
 # https://github.com/thomasp85/scico
 from .roma_colors import roma_colors
+
 register_segmented_cmap("roma", roma_colors, reverse=True)
 
 # https://github.com/dtm2451/dittoSeq
 from .ditto_colors import ditto_colors
+
 register_listed_cmap("dittoseq", ditto_colors, reverse=False)
 set_default_cmap("dittoseq")
 
@@ -38,14 +47,21 @@ __all__ = [
     "elbow_plot",
     "grouped_violinplot",
     "imshow",
+    "moran_plot",
     "plot_barcode_data",
+    "plot_barcode_data_with_reduction",
+    "plot_barcode_histogram",
     "plot_barcodes_bin2d",
     "plot_bin2d",
     "plot_dim_loadings",
     "plot_expression",
     "plot_features_bin2d",
+    "plot_feature_data_with_reduction",
+    "plot_features_histogram",
     "plot_pca",
     "plot_spatial_feature",
     "simple_violinplot",
     "spatial_reduced_dim",
+    "scatter",
+    "plot_fitline",
 ]
