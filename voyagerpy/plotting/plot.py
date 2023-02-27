@@ -444,27 +444,51 @@ def plot_expression(
             counts = counts.todense()
         obs[gene_id] = counts.copy()
 
-    nplots = len(gene_ids)
-    fig, axs = configure_subplots(nplots, ncol, sharey=True)
+    nplots = len(gene_ids) if groupby is not None else 1
+    fig, axs = configure_subplots(nplots, ncol, sharey=True, figsize=figsize)
+
+    if groupby is None:
+        gene_ids = [gene_ids]
+
+    # if groupby is not None:
+    #     for ax, gene_id in zip(axs.flat, gene_ids):
+    #         grouped_violinplot(ax, obs, groupby, gene_id, legend=False)
+    #         title = gene_id
+    #         if show_symbol and secondary_column == "symbol":
+    #             title = adata.var.at[gene_id, secondary_column]
+
+    #         ax.set_title(title, fontsize=10)
+    #         ax.set_ylabel("")
+    #         ax.set_xlabel("")
+    # else:
+    #     for ax, genes in zip(axs.flat, gene_ids):
+    #         simple_violinplot(ax, obs, genes, legend=False)
 
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
-            grouped_violinplot(ax, obs, groupby, gene_id, legend=False)
-        else:
-            simple_violinplot(ax, obs, gene_id, legend=False)
-        title = gene_id
-        if show_symbol and secondary_column == "symbol":
-            title = adata.var.at[gene_id, secondary_column]
-        elif show_symbol:
+            grouped_violinplot(ax, obs, groupby, gene_id, legend=False, cmap=cmap)
             title = gene_id
+            if show_symbol and secondary_column == "symbol":
+                title = adata.var.at[gene_id, secondary_column]
+            elif show_symbol:
+                title = gene_id
 
-        ax.set_title(title, fontsize=10)
+            ax.set_title(title, fontsize=10)
+        else:
+            simple_violinplot(ax, obs, gene_id, legend=False, cmap=cmap)
+            labels = gene_id
+            if show_symbol and secondary_column == "symbol":
+                labels = adata.var.loc[gene_id, "symbol"]
+            elif show_symbol:
+                labels = gene_id
+            ax.set_xticks(np.arange(len(gene_id)) + 1, labels=labels, rotation=60)
+
         ax.set_ylabel("")
         ax.set_xlabel("")
 
-    fig.supylabel("Expression" + f" ({layer})" if layer is not None else "", fontsize=14)
+    fig.supylabel("Expression" + f" ({layer})" if layer is not None else "", fontsize=10)
     if groupby is not None:
-        fig.supxlabel(groupby, fontsize=14)
+        fig.supxlabel(groupby, fontsize=10)
     fig.tight_layout()
     return axs
 
