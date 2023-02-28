@@ -124,8 +124,8 @@ def scale(X, center=True, unit_variance: bool = True, center_before_scale: bool 
         X -= X.mean(**kwargs)
 
     if unit_variance:
-        std = X.std(**kwargs)
-        w = np.where(std == 0)
+        std = X.std(ddof=1, **kwargs)
+        w = np.where(std < 1e-8)
         std[w] = 1
         X = np.divide(X, std)
 
