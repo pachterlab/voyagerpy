@@ -1071,57 +1071,62 @@ def plot_barcode_data_with_reduction(
     cmap_discrete: str = "dittoseq",
     cmap_divergent: str = "roma",
     divergent: bool = False,
+    divergence_center: Union[float, Sequence[float]] = 0,
     figsize: Optional[Tuple[float, float]] = None,
     title: Optional[str] = None,
     feature_labels: Optional[Sequence[str]] = None,
 ):
-
+    obs = adata.obs.copy()
     x, y = adata.obsm[reduction][:, :2].T
+    del adata
     features = [features] if isinstance(features, str) else features[:]
     feature_labels = feature_labels[:] if feature_labels is not None else features[:]
 
-    fig, axs = configure_subplots(len(features), ncol, layout=layout, sharex=True, sharey=True, figsize=figsize)
-    obs = adata.obs.copy()
+    fig, axs = configure_subplots(
+        len(features),
+        ncol,
+        layout=layout,
+        sharex=True,
+        sharey=True,
+        figsize=figsize,
+    )
 
-    cbar_kwargs = {"loc": "left", "fontsize": 8}
-
+    vcenters = [divergence_center] * len(features) if isinstance(divergence_center, (float, int)) else divergence_center[:]
+    i_div = 0
     for feature, feature_label, ax in zip(features, feature_labels, axs.flat):
         values = obs[feature].values
-        is_discrete = values.dtype == "category"
 
-        if is_discrete:
-            norm = None
+        extra_kwargs = {}
+        if values.dtype == "category":
             cmap = cmap_discrete
-            colors = values.astype(int)
-            alpha = 0.5
+            alpha = 0.7
         else:
             cmap = cmap_divergent if divergent else cmap_continuous
-            norm = None
             if divergent:
                 vmin = values.min()
                 vmax = values.max()
-                norm = DivergentNorm(vmin, vmax)
-            colors = values
+                vcenter = vcenters[i_div]
+                i_div += 1
+                extra_kwargs["norm"] = DivergentNorm(vmin, vmax, vcenter)
             alpha = 1
 
-        scatter_kwargs = dict(s=4, c=colors, cmap=cmap, alpha=alpha, norm=norm)
-        scat = ax.scatter(x, y, **scatter_kwargs)
-        if is_discrete:
-            ax.legend(
-                *ax.collections[0].legend_elements(),
-                bbox_to_anchor=(1.04, 0.5),
-                loc="center left",
-                frameon=False,
-                title=feature_label,
-            )
-        else:
-            from mpl_toolkits.axes_grid1 import make_axes_locatable
+        scatter_kwargs = dict(
+            s=4,
+            cmap=cmap,
+            alpha=alpha,
+            **extra_kwargs,
+        )
 
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            cbar = fig.colorbar(scat, cax=cax, shrink=0.4, label=feature_label)
-            # cbar = fig.colorbar(scat, ax=ax, shrink=0.4)
-            # cbar.ax.set_title(feature, **cbar_kwargs)
+        _legend_kwargs = dict(title=feature_label)
+        ax = scatter(
+            x,
+            y,
+            ax=ax,
+            color_by=feature,
+            data=obs,
+            legend_kwargs=_legend_kwargs,
+            **scatter_kwargs,
+        )
 
         ax.set_aspect("equal")
     fig.suptitle(title, ha="left", x=0)
