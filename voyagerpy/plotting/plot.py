@@ -1545,28 +1545,111 @@ def scatter(
     color_by: Optional[str] = None,
     ax: Optional[Axes] = None,
     cmap: Optional[str] = None,
-    legend: Optional[bool] = None,
+    legend: bool = True,
+    legend_kwargs: Optional[Dict[str, Any]] = None,
     data: Optional[DataFrame] = None,
+    labels: Optional[Dict[str, Any]] = None,
+    rc_context: Optional[Dict[str, Any]] = None,
+    fitline_kwargs: Optional[Dict[str, Any]] = None,
+    contour_kwargs: Optional[Dict[str, Any]] = None,
+    figsize: Optional[Tuple[float, float]] = None,
+    **scatter_kwargs,
 ):
     if ax is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
 
-    scatter_kwargs = dict(cmap=cmap)
-    legend_kwargs = dict(title=color_by, bbox_to_anchor=(1.04, 0.5), loc="center left", frameon=False)
+    # cmap cannot be passed to plt.scatter if color_by is None
+    if color_by is None:
+        cmap = None
+        scatter_kwargs.pop("vmin", None)
+        scatter_kwargs.pop("vmax", None)
 
-    if color_by and data is not None and data[color_by].dtype == "category":
-        legend = True if legend is None else legend
-        scatter_kwargs.update(dict(vmax=plt.get_cmap(cmap).N, c=color_by))
-    elif color_by:
-        pass
+    _scatter_kwargs = dict(cmap=cmap, s=8)
+    cmap_kwargs = dict()
 
-    scat = ax.scatter(x, y, data=data, s=8, **scatter_kwargs)
-    ax.legend(
-        *scat.legend_elements(),
-        title=color_by,
-        bbox_to_anchor=(1.04, 0.5),
-        loc="center left",
-        frameon=False,
-    )
+    is_categorical = False
+    if data is None:
+        if isinstance(color_by, str):
+            raise ValueError("data must not be None if color_by is str")
+        if isinstance(x, str):
+            raise ValueError("data must not be None if x is str")
+        if isinstance(y, str):
+            raise ValueError("data must not be None if y is str")
 
+    xdat, xstr = (data[x], x) if isinstance(x, str) else (x, None)
+    ydat, ystr = (data[y], y) if isinstance(y, str) else (y, None)
+    color_dat, color_str = (data[color_by], color_by) if isinstance(color_by, str) else (color_by, None)
+
+    del color_by, x, y
+
+    # if color_dat is not None and data is not None and data[color_dat].dtype == "category":
+    if color_dat is not None and color_dat.dtype == "category":
+        is_categorical = True
+        _scatter_kwargs.update(
+            dict(
+                vmax=plt.get_cmap(cmap).N,
+                c=color_dat.astype(int),
+            )
+        )
+
+    elif color_dat is not None:
+        is_categorical = False
+        _scatter_kwargs.update(dict(c=color_dat))
+
+    _rc_context = {}
+    _rc_context.update(rc_context or {})
+
+    with plt.rc_context(_rc_context):
+        _scatter_kwargs.update(scatter_kwargs)
+        scat = ax.scatter(xdat, ydat, **_scatter_kwargs)
+
+    if contour_kwargs is not None:
+        _contour_kwargs = dict(x=xdat, y=ydat, data=data)
+        _contour_kwargs.update(contour_kwargs)
+        contour_plot(ax, **_contour_kwargs)
+
+    if fitline_kwargs is not None:
+        _fitline_kwargs = dict(x=xdat, y=ydat, ax=ax)
+        _fitline_kwargs.update(fitline_kwargs)
+        ax = plot_fitline(**_fitline_kwargs)
+
+    labels = labels or {}
+
+    ax.set_xlabel(labels.get("x", xstr))
+    ax.set_ylabel(labels.get("y", ystr))
+    ax.set_title(labels.get("title", None))
+
+    legend_kwargs = legend_kwargs or {}
+    if legend and is_categorical:
+        _legend_kwargs = dict(
+            bbox_to_anchor=(1.04, 0.5),
+            loc="center left",
+            frameon=False,
+            title=color_str,
+        )
+        legend_kwargs.pop("label", None)
+        _legend_kwargs.update(legend_kwargs)
+
+        ax.legend(*scat.legend_elements(), **_legend_kwargs)
+    elif legend and color_dat is not None:
+        # TODO: compare:
+        """
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = fig.colorbar(scat, cax=cax, shrink=0.4, label=feature_label)
+        """
+        cmap_kwargs = dict(
+            label=legend_kwargs.pop("title", color_str),
+            ax=ax,
+            cax=None,
+        )
+
+        cmap_kwargs.update(legend_kwargs or {})
+        cbar_title = cmap_kwargs.pop("title", None)
+        cbar = fig.colorbar(scat, **cmap_kwargs)
+        if cbar_title is not None:
+            cbar.ax.set_title(cbar_title, fontsize=8)
     return ax
