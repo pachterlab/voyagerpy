@@ -212,6 +212,7 @@ def read_10x_visium(
     else:
         raise ValueError("Cannot read file tissue_positions.csv")
 
+    adata = read_img_data(path, adata, res=res)
     scale = get_scale(adata, res)
     spot_diam = adata.uns["spatial"]["scale"]["spot_diam_fullres"]
     visium_spots = to_points(
@@ -222,5 +223,4 @@ def read_10x_visium(
         radius=scale * spot_diam / 2,
     )
     set_geometry(adata, "spot_poly", visium_spots)
-    adata = read_img_data(path, adata, res=res)
     return adata
