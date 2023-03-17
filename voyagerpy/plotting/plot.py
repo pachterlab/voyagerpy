@@ -33,12 +33,12 @@ from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
 import matplotlib.ticker
-from pandas import DataFrame, options
+from pandas import DataFrame, Series, options
 from pandas.api.types import is_categorical_dtype
 from scipy.stats import gaussian_kde, linregress
 from scipy import sparse as sp
 
-from voyagerpy import utils
+from voyagerpy import spatial, utils
 from .cmap_helper import DivergentNorm
 
 
