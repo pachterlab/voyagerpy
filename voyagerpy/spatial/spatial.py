@@ -5,7 +5,9 @@ from typing import (
     Any,
     Dict,
     Iterable,
+    Literal,
     Optional,
+    Sequence,
     Tuple,
     Union,
 )
@@ -26,6 +28,7 @@ from cv2 import (
     pointPolygonTest,
     threshold,
 )
+from scipy import sparse
 from shapely.geometry import Point, Polygon
 
 from voyagerpy import utils as utl
@@ -229,6 +232,62 @@ def get_tissue_boundary(
     return polygon  # ,out
 
     # create outline of tissue sample
+
+
+def set_geometry(
+    adata: AnnData,
+    geom: str,
+    values: Optional[gpd.GeoSeries] = None,
+    index: Optional[pd.Index] = None,
+    dim: Union[str, Literal["barcode", "gene"]] = "barcode",
+    inplace: bool = True,
+) -> AnnData:
+    if not inplace:
+        adata = adata.copy()
+
+    if dim == "barcode":
+        adata.obsm.setdefault("geometry", gpd.GeoDataFrame(index=adata.obs_names))
+        if not isinstance(adata.obsm["geometry"], gpd.GeoDataFrame):
+            adata.obsm["geometry"] = gpd.GeoDataFrame(adata.obsm["geometry"])
+        df: gpd.GeoDataFrame = adata.obsm["geometry"]
+    elif dim == "gene":
+        adata.varm.setdefault("geometry", gpd.GeoDataFrame(index=adata.var_names))
+        if not isinstance(adata.varm["geometry"], gpd.GeoDataFrame):
+            adata.varm["geometry"] = gpd.GeoDataFrame(adata.varm["geometry"])
+        df: gpd.GeoDataFrame = adata.varm["geometry"]
+    else:
+        adata.uns["spatial"].setdefault("geometry", {})
+        adata.uns["spatial"]["geometry"].setdefault(dim, gpd.GeoDataFrame(columns=[geom], index=index))
+        if not isinstance(adata.uns["geometry"][dim], gpd.GeoDataFrame):
+            adata.uns["geometry"][dim] = gpd.GeoDataFrame(adata.uns["geometry"][dim])
+        df: gpd.GeoDataFrame = adata.uns["spatial"]["geometry"][dim]
+
+    if geom not in df and values is None:
+        raise ValueError("values must not be None when geom does not exist in the DataFrame")
+    if values is not None:
+        df[geom] = values
+
+    df.set_geometry(geom, inplace=True)
+
+    return adata
+
+
+def to_points(
+    x: Union[str, pd.Series, np.ndarray],
+    y: Union[str, pd.Series, np.ndarray],
+    data: Union[gpd.GeoDataFrame, pd.DataFrame, None] = None,
+    scale: float = 1,
+    radius: Optional[float] = None,
+) -> gpd.GeoSeries:
+    if data is None and (isinstance(x, str) or isinstance(y, str)):
+        raise ValueError("data must not be None if either x or y is str")
+    xdat = data[x] if isinstance(x, str) else x
+    ydat = data[y] if isinstance(y, str) else y
+
+    points = gpd.GeoSeries.from_xy(xdat, ydat).scale(scale, scale, origin=(0, 0))
+    if radius:
+        return points.buffer(radius)
+    return points
 
 
 def get_geom(adata: AnnData, threshold: int = None, inplace: bool = False, res: str = "hires") -> AnnData:
