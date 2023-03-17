@@ -61,7 +61,7 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
         adata.obs["detected"] = (adata.X > 0).sum(axis=1)
 
     for key, arr in subsets.items():
-        
+
         if arr.dtype in ("bool", "O"):
             arr = arr.astype(adata.X.dtype)
 
@@ -109,7 +109,7 @@ def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool =
     return adata
 
 
-def scale(X, center=True, unit_variance: bool = True, center_before_scale: bool = True):
+def scale(X, center=True, unit_variance: bool = True, center_before_scale: bool = True, ddof: int = 1):
     is_sparse = isinstance(X, sp.csr_matrix)
     if is_sparse:
         X = X.todense()
@@ -124,7 +124,7 @@ def scale(X, center=True, unit_variance: bool = True, center_before_scale: bool 
         X -= X.mean(**kwargs)
 
     if unit_variance:
-        std = X.std(ddof=1, **kwargs)
+        std = X.std(ddof=ddof, **kwargs)
         w = np.where(std < 1e-8)
         std[w] = 1
         X = np.divide(X, std)
