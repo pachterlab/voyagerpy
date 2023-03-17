@@ -11,6 +11,8 @@ import h5py
 import pandas as pd
 from anndata import AnnData, read_mtx
 from matplotlib.pyplot import imread
+from .spatial import set_geometry, to_points
+from .utils import get_scale
 
 
 def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high") -> AnnData:
@@ -31,7 +33,7 @@ def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high"
     return adata
 
 
-def _read_10x_h5(path: PathLike, symbol_as_index: bool = False, dtype: str = 'float64') -> Optional[AnnData]:
+def _read_10x_h5(path: PathLike, symbol_as_index: bool = False, dtype: str = "float64") -> Optional[AnnData]:
     """
     Parameters
     ----------
@@ -86,7 +88,7 @@ def _read_10x_h5(path: PathLike, symbol_as_index: bool = False, dtype: str = 'fl
                     "feature_types": features["feature_type"][()].astype("str"),
                     "genome": features["genome"][()].astype("str"),
                 },
-                dtype=dtype
+                dtype=dtype,
             )
 
         return adata
@@ -102,7 +104,7 @@ def read_10x_counts(
     raw: bool = True,
     prefix: Optional[str] = None,
     symbol_as_index: bool = False,
-    dtype: str = 'float64',
+    dtype: str = "float64",
 ) -> AnnData:
     path = Path(path)
     if not path.exists():
@@ -133,7 +135,7 @@ def read_10x_counts(
     return adata
 
 
-def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False, dtype: str = 'float64') -> AnnData:
+def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False, dtype: str = "float64") -> AnnData:
     path = Path(path)
     genes = pd.read_csv(path / "features.tsv.gz", header=None, sep="\t")
     cells = pd.read_csv(path / "barcodes.tsv.gz", header=None, sep="\t")
@@ -154,7 +156,7 @@ def _read_10x_mtx(path: PathLike, symbol_as_index: bool = False, dtype: str = 'f
             gene_column_key: genes[geneids_pos].to_numpy(),
             "feature_types": genes[2].to_numpy(),
         },
-        dtype=dtype
+        dtype=dtype,
     )
 
     return adata
@@ -166,7 +168,8 @@ def read_10x_visium(
     raw: bool = True,
     prefix: Optional[str] = None,
     symbol_as_index: bool = False,
-    dtype: str = 'float64'
+    dtype: str = "float64",
+    res: str = "hires",
 ) -> AnnData:
     """
 
@@ -208,5 +211,16 @@ def read_10x_visium(
         adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path, header=None, names=colnames).set_index(["barcode"])], axis=1)
     else:
         raise ValueError("Cannot read file tissue_positions.csv")
-    adata = read_img_data(path, adata)
+
+    scale = get_scale(adata, res)
+    spot_diam = adata.uns["spatial"]["scale"]["spot_diam_fullres"]
+    visium_spots = to_points(
+        "pxl_col_in_fullres",
+        "pxl_row_in_fullres",
+        adata.obs,
+        scale=scale,
+        radius=scale * spot_diam / 2,
+    )
+    set_geometry(adata, "spot_poly", visium_spots)
+    adata = read_img_data(path, adata, res=res)
     return adata
