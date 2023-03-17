@@ -1292,21 +1292,16 @@ def moran_plot(
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
     ax: Optional[Axes] = None,
+    contour_kwargs: Optional[Dict[str, Any]] = None,
+    # cmap: Optional[str] = None
+    **scatter_kwargs,
 ) -> Axes:
     adata = adata.copy()
 
-    if distances is None:
-        dists = adata.obsp["distances"]
-    elif isinstance(distances, str):
-        dists = adata.obsp[distances]
-    elif isinstance(distances, np.ndarray):
-        dists = distances
-    else:
-        raise TypeError("Distances should be of type None, str, or np.ndarray.")
-
     lagged_feature = f"lagged_{feature}"
     if lagged_feature not in adata.obs:
-        adata.obs[lagged_feature] = dists.dot(adata.obs[feature])
+        spatial.compute_spatial_lag(adata, feature, distances, inplace=True)
+
     rc_context = {
         "axes.grid": True,
         "axes.spines.bottom": True,
@@ -1317,28 +1312,34 @@ def moran_plot(
 
     y_label = f"Spatially lagged {feature}"
 
-    contour_kwargs = dict(
+    _contour_kwargs = dict(
         shape=(150, 150),
         levels=7,
         colors="cyan",
         linewidths=1,
     )
-
-    (ax,) = plot_barcode_data(
-        adata, x=feature, y=lagged_feature, color_by=color_by, rc_context=rc_context, y_labels=y_label, contour_kwargs=contour_kwargs
-    )
+    _contour_kwargs.update(contour_kwargs or {})
     points = adata.obs[[feature, lagged_feature]].values.T
 
-    ax.axvline(points[0].mean(), linestyle="--", c="k", alpha=0.5)
-    ax.axhline(points[1].mean(), linestyle="--", c="k", alpha=0.5)
-
-    reg = linregress(points[0], points[1], alternative="two-sided")  # default alternative. Can also be greater or less
-    ax.axline((0, reg.intercept), slope=reg.slope, color="blue")
+    ax = scatter(
+        x=feature,
+        y=lagged_feature,
+        color_by=color_by,
+        labels=dict(y=y_label),
+        rc_context=rc_context,
+        fitline_kwargs=dict(color="b"),
+        contour_kwargs={"colors": "cyan"},
+        data=adata.obs,
+        **scatter_kwargs,
+    )
 
     if xlim is not None:
         ax.set_xlim(*xlim)
     if ylim is not None:
         ax.set_ylim(*ylim)
+
+    ax.axvline(adata.obs[feature].mean(), linestyle="--", c="k", alpha=0.5)
+    ax.axhline(adata.obs[lagged_feature].mean(), linestyle="--", c="k", alpha=0.5)
 
     ax.set_aspect("equal")
     return ax
