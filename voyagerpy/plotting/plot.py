@@ -1518,7 +1518,14 @@ def plot_features_histogram(
     return axs
 
 
-def plot_fitline(x, y, alternative: str = "two-sided", ax: Optional[Axes] = None, color: Optional[str] = None, data: Any = None):
+def plot_fitline(
+    x,
+    y,
+    alternative: str = "two-sided",
+    ax: Optional[Axes] = None,
+    color: Optional[str] = None,
+    data: Any = None,
+):
 
     xlim = ylim = None
     if ax is None:
@@ -1535,6 +1542,11 @@ def plot_fitline(x, y, alternative: str = "two-sided", ax: Optional[Axes] = None
     reg = linregress(x[non_nans], y[non_nans], alternative=alternative)
 
     ax.axline((0, reg.intercept), slope=reg.slope, color=color)
+
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
 
     return ax
 
