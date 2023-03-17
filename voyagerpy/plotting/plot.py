@@ -203,7 +203,10 @@ def plot_single_barcode_data(
             scat = ax.scatter(x, y, data=adata.obs, c=colors, cmap=colormap, vmin=0, vmax=colormap.N, alpha=0.5, s=8)
             if contour_kwargs is not None:
                 points = adata.obs[[x, y]].values.T
-                contour_plot(ax, points, **contour_kwargs)
+                # contour_plot(ax, points, **contour_kwargs)
+                _contour_kwargs = dict(x=x, y=y, data=adata.obs)
+                _contour_kwargs.update(contour_kwargs)
+                contour_plot(ax, **_contour_kwargs)
 
             ax.set_xlabel(x_label or x)
             ax.set_ylabel(y_label or y)
