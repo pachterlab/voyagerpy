@@ -1268,13 +1268,27 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
 
 def contour_plot(
     ax: Axes,
-    points: np.ndarray,
+    x: Union[str, np.ndarray, Series],
+    y: Union[str, np.ndarray, Series],
+    data: Any = None,
     shape: Tuple[int, int] = (100, 100),
     levels: int = 7,
     colors: Union[str, Sequence[str]] = "cyan",
-    linewidths: Optional[float] = None,
+    linewidths: Optional[float] = 1,
     origin: Optional[str] = None,
 ) -> Axes:
+
+    if data is not None:
+        xdat = data[x] if isinstance(x, str) else x[:]
+        ydat = data[y] if isinstance(y, str) else y[:]
+    elif not (isinstance(x, str) or isinstance(y, str)):
+        xdat = x
+        ydat = y
+    else:
+        raise ValueError("x and y must both be arrays if data is None")
+
+    points = np.vstack([xdat, ydat])
+
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
 
