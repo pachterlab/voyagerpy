@@ -554,3 +554,129 @@ def rollback_transforms(adata: AnnData, apply: bool = True):
 
 
 # %%
+
+
+def to_spatial_weights(adata: AnnData, dist_key: "str" = "distances"):
+    import libpysal
+
+    distances = adata.obsp[dist_key].copy()
+    if isinstance(distances, sparse.csr_matrix):
+        distances = distances.A
+
+    assert isinstance(distances, np.ndarray)
+
+    focal, neighbors = np.where(distances > 0)
+    idx = adata.obs_names
+    graph_df = pd.DataFrame({"focal": idx[focal], "neighbor": idx[neighbors], "weight": distances[focal, neighbors]})
+
+    W = libpysal.weights.W.from_adjlist(graph_df)
+    W.set_transform("r")
+
+    adata.uns.setdefault("spatial", {})
+    adata.uns["spatial"][dist_key] = W
+    return adata
+
+
+def compute_spatial_lag(adata: AnnData, feature: str, distances: Union[None, str, np.ndarray], inplace: bool = False) -> AnnData:
+    if not inplace:
+        adata = adata.copy()
+
+    if distances is None:
+        dists = adata.obsp["distances"]
+    elif isinstance(distances, str):
+        dists = adata.obsp[distances]
+    elif isinstance(distances, np.ndarray):
+        dists = distances
+    else:
+        raise TypeError("Distances should be of type None, str, or np.ndarray.")
+    del distances
+
+    features = [feature] if isinstance(feature, str) else feature[:]
+    for feat in features:
+        lagged_feat = f"lagged_{feat}"
+        adata.obs[lagged_feat] = dists.dot(adata.obs[feat])
+
+    return adata
+
+
+def moran(adata: AnnData, feature: Union[str, Sequence[str]], dist_key: str = "distances", permutations: int = 0):
+    import esda
+
+    if dist_key not in adata.uns.get("spatial", {}):
+        to_spatial_weights(adata, dist_key)
+
+    features = [feature] if isinstance(feature, str) else list(feature[:])
+
+    W = adata.uns["spatial"][dist_key]
+    morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
+
+    adata.uns["spatial"].setdefault("moran", {})
+    adata.uns["spatial"]["moran"].setdefault(dist_key, pd.DataFrame(columns=["I", "EI"]))
+    df = adata.uns["spatial"]["moran"][dist_key]
+    for feat in features:
+        moran = esda.Moran(adata.obs[feat], W, permutations=permutations)
+        df.at[feat, "I"] = moran.I
+        df.at[feat, "EI"] = moran.EI
+
+    return morans[0] if isinstance(feature, str) else morans
+
+
+def local_moran(
+    adata: AnnData,
+    feature: Union[str, Sequence[str]],
+    inplace: bool = True,
+    permutations: int = 0,
+    key_added: str = "local_moran",
+    dist_key: str = "distances",
+    keep_simulations: bool = False,
+    **kwargs,
+) -> AnnData:
+    import esda
+
+    if not inplace:
+        adata = adata.copy()
+    features = [feature] if isinstance(feature, str) else list(feature)
+
+    adata.uns.setdefault("spatial", {})
+    if dist_key not in adata.uns["spatial"]:
+        to_spatial_weights(adata, dist_key)
+
+    W = adata.uns["spatial"][dist_key]
+
+    local_morans = [
+        esda.Moran_Local(
+            adata.obs[feat],
+            W,
+            permutations=permutations,
+            keep_simulations=keep_simulations,
+            **kwargs,
+        )
+        for feat in features
+    ]
+
+    adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
+    moran_df = adata.obsm[key_added]
+    for feat, lm in zip(features, local_morans):
+        moran_df[f"{feat}"] = lm.Is
+
+    # Keep metadata for this run
+    adata.uns["spatial"].setdefault(key_added, {})
+
+    # Simulations
+    if permutations > 0 and keep_simulations:
+        for feat, lm in zip(features, local_morans):
+            adata.uns["spatial"][key_added].setdefault("sim", {})
+            sims_df = pd.DataFrame(lm.sim.T, index=adata.obs_names)
+            adata.uns["spatial"][key_added]["sim"][feat] = sims_df
+
+    # Parameters
+    adata.uns["spatial"][key_added].setdefault("params", {})
+    param_dict = adata.uns["spatial"][key_added]["params"]
+    param_dict["dist_key"] = dist_key
+    param_dict["permutations"] = permutations
+    param_dict["keep_simulations"] = keep_simulations
+    param_dict["seed"] = kwargs.get("seed", None)
+    return adata
+
+
+# %%
