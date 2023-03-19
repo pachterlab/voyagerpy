@@ -551,6 +551,8 @@ def plot_spatial_feature(
     plot: bool = True,
     subplot_kwds: Optional[Dict] = {},
     legend_kwds: Optional[Dict] = {},
+    dimension: str = "barcode",
+    image: bool = False,
     **kwds,
 ) -> Union[np.ndarray, Any]:
 
@@ -561,7 +563,7 @@ def plot_spatial_feature(
     else:
         raise TypeError("features must be a string or a list of strings")
 
-    assert_basic_spatial_features(adata, errors="raise")
+    assert_basic_spatial_features(adata, dimension, errors="raise")
 
     # copy observation dataframe so we can edit it without changing the inputs
     adata = adata.copy()
@@ -614,19 +616,14 @@ def plot_spatial_feature(
     # Retain the type of obs
     geo_obs = adata.obs.copy()
 
-    adata = adata[barcode_selection, gene_selection]
-    adata = AnnData(
-        X=adata.X,
-        layers=adata.layers,
-        var=adata.var,
-        varm=adata.varm,
-        varp=adata.varp,
-        obs=geo_obs,
-        obsm=adata.obsm,
-        obsp=adata.obsp,
-        dtype=adata.X.dtype,
-    )
+    if dimension == "barcode":
+        geo = adata.obsm["geometry"].loc[barcode_selection].copy()
+    elif dimension == "gene":
+        geo = adata.varm["geometry"].loc[gene_selection].copy()
+    else:
+        geo = adata.uns["spatial"]["geometry"][dimension]
 
+    adata = adata[barcode_selection, gene_selection].copy()
     obs = adata.obs
 
     if var_features:
@@ -639,43 +636,38 @@ def plot_spatial_feature(
 
     # check if barcode geometry exists
     if barcode_geom is not None:
-        if barcode_geom not in obs:
+        if barcode_geom not in geo:
             raise ValueError(f"Cannot find {barcode_geom!r} data in adata.obs")
 
         # if barcode_geom is not spot polygons, change the default
         # geometry of the observation matrix, so we can plot it
-        if barcode_geom != obs.geometry.name:
-            obs.set_geometry(barcode_geom)
+        if barcode_geom != geo.geometry.name:
+            geo.set_geometry(barcode_geom)
 
     n_features = len(labeled_features)
-
     ncol = min(ncol, n_features)
-    if ncol > 3:
-        raise ValueError("Too many columns for subplots, max 3 allowed.")
 
     # use a divergent colormap
     if divergent:
         cmap = div_cmap
-        # cmap = "Spectral_r"
 
     subplot_kwds = subplot_kwds or {}
     # create the subplots with right cols and rows
+    _rc_context = {
+        "axes.grid": False,
+        "figure.frameon": False,
+        "axes.spines.bottom": False,
+        "axes.spines.top": False,
+        "axes.spines.left": False,
+        "axes.spines.right": False,
+        "xtick.bottom": False,
+        "xtick.labelbottom": False,
+        "ytick.left": False,
+        "ytick.labelleft": False,
+    }
 
     if _ax is None:
-        with plt.rc_context(
-            {
-                "axes.grid": False,
-                "figure.frameon": False,
-                "axes.spines.bottom": False,
-                "axes.spines.top": False,
-                "axes.spines.left": False,
-                "axes.spines.right": False,
-                "xtick.bottom": False,
-                "xtick.labelbottom": False,
-                "ytick.left": False,
-                "ytick.labelleft": False,
-            }
-        ):
+        with plt.rc_context(_rc_context):
             fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **subplot_kwds)
         fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
@@ -697,8 +689,9 @@ def plot_spatial_feature(
         legend_kwds_ = deepcopy(legend_kwds)
         _legend = legend
         curr_cmap = cmap
+        values = obs[feature]
 
-        if adata.obs[feature].dtype != "category":
+        if values.dtype != "category":
             curr_cmap = cmap
             vmax = None
 
@@ -717,20 +710,30 @@ def plot_spatial_feature(
                 fig=fig,
                 cmap=curr_cmap,
                 cbar_title=feature,
-                cat_names=list(adata.obs[feature].cat.categories),
+                cat_names=list(values.cat.categories),
                 scale=False,
                 title_kwargs=cax_title_kwargs,
             )
 
+        norm = None
+        if divergent:
+            vmin = values.min()
+            vmax = values.max()
+            vcenter = 0
+            norm = DivergentNorm(vmin, vmax, vcenter)
         if color is not None:
             curr_cmap = None
 
-        obs.plot(
-            feature,
+        if image:
+            ax = imshow(adata, None, ax)
+
+        geo.plot(
+            column=values,
             ax=ax,
             color=color,
             legend=_legend,
             cmap=curr_cmap,
+            norm=norm,
             vmax=vmax,
             legend_kwds=legend_kwds_,
             **geom_style,
@@ -739,13 +742,12 @@ def plot_spatial_feature(
 
         if annot_geom is not None:
             if annot_geom in adata.uns["spatial"]["geom"]:
-
                 # check annot_style is dict with correct values
+                annot_kwargs = dict(ax=ax, color="blue", alpha=alpha, **kwds)
+                annot_kwargs.update(annot_style or {})
+
                 plg = adata.uns["spatial"]["geom"][annot_geom]
-                if len(annot_style) != 0:
-                    gpd.GeoSeries(plg).plot(ax=ax, **annot_style, **kwds)
-                else:
-                    gpd.GeoSeries(plg).plot(color="blue", ax=ax, alpha=alpha, **kwds)
+                gpd.GeoSeries(plg).plot(**annot_kwargs)
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
@@ -759,11 +761,27 @@ def plot_spatial_feature(
     return axs
 
 
-def assert_basic_spatial_features(adata, errors: str = "raise") -> Tuple[bool, str]:
+def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "raise") -> Tuple[bool, str]:
 
     ret = True
     errors_to_raise = []
     get_geom_prompt = "Consider run voyagerpy.spatial.get_geom(adata) first."
+    set_geom_prompt = "Consider running voyagerpy.spatial.set_geometry first"
+    if dimension == "barcode":
+        if "geometry" not in adata.obsm:
+            error_msg = "geometry dataframe does not exist. " + set_geom_prompt
+            if errors == "raise":
+                raise KeyError(error_msg)
+            return False, error_msg
+        try:
+            geom_name = adata.obsm["geometry"].geometry.name
+        except AttributeError as ex:
+            error_msg = ex.args[0]
+            if errors == "raise":
+                raise ex
+            return False, error_msg
+    # TODO: add checks for genes and annotgeom
+    return True, ""
 
     if not isinstance(adata.obs, gpd.GeoDataFrame):
         error_msg = "adata.obs must be a geopandas.GeoDataFrame. " + get_geom_prompt
