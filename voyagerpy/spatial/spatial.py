@@ -341,9 +341,10 @@ def get_spot_coords(
     tissue: bool = True,
     as_tuple: bool = True,
     as_df: bool = False,
+    res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
 
-    h_sc = utl.get_scale(adata)
+    h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
     if tissue:
         coords = adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc
