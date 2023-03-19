@@ -328,7 +328,7 @@ def get_geom(adata: AnnData, threshold: int = None, inplace: bool = False, res: 
 
     if not isinstance(tissue_poly, Polygon):
         # add boundary and tissue poly to geom
-        tissue_poly = get_tissue_boundary(adata, threshold)
+        tissue_poly = get_tissue_boundary(adata, threshold, size=res)
         geom["tissue_poly"] = tissue_poly
     if not isinstance(boundary, gpd.GeoSeries):
         geom["tissue_boundary"] = gpd.GeoSeries(tissue_poly).boundary
