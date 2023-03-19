@@ -808,7 +808,7 @@ def spatial_reduced_dim(
     dimred: str,
     ncomponents: Union[int, Sequence[int]],
     barcode_geom: Optional[str] = None,
-    ncol: Optional[int] = None,
+    ncol: int = 2,
     annot_geom: Optional[str] = None,
     tissue: bool = True,
     cmap: Optional[str] = None,
@@ -841,131 +841,33 @@ def spatial_reduced_dim(
 
     # create df for dimension reduction
 
-    ls = []
-    for dim in range(adata.obsm[dimred].shape[1]):
-        ls.append(dimred + str(dim))
-    red_arr = gpd.GeoDataFrame(adata.obsm[dimred], columns=ls, index=adata.obs.index)
-    # check if barcode geometry exists
-    if barcode_geom is not None:
-        if barcode_geom not in adata.obs:
-            raise ValueError(f"Cannot find {barcode_geom!r} data in adata.obs")
+    reductions = adata.obsm[dimred][:, dims]
+    feat_names = [f"{dimred}{i}" for i in dims]
+    adata.obs[feat_names] = reductions
 
-        # if barcode_geom is not spot polygons, change the default
-        # geometry of the observation matrix, so we can plot it
-        if barcode_geom != "spot_poly":
-            red_arr.set_geometry(adata.obs[barcode_geom], inplace=True)
-        else:
-            red_arr.set_geometry(adata.obs["spot_poly"], inplace=True)
+    axs = plot_spatial_feature(
+        adata=adata,
+        features=feat_names,
+        ncol=ncol,
+        barcode_geom=barcode_geom,
+        annot_geom=annot_geom,
+        tissue=tissue,
+        cmap=cmap,
+        div_cmap=div_cmap,
+        geom_style=geom_style,
+        annot_style=annot_style,
+        alpha=alpha,
+        divergent=divergent,
+        color=color,
+        _ax=_ax,
+        legend=legend,
+        subplot_kwds=subplot_kwds,
+        legend_kwds=legend_kwds,
+        **kwds,
+    )
 
-    # check if features are in rowdata
-
-    # Check if too many subplots
-    if dim_nr > 6:
-        raise ValueError("Too many components to plot, reduce the number of components")
-
-    ncol = min(ncol or 3, dim_nr)
-    if ncol > 3:
-        raise ValueError("Too many columns for subplots")
-
-    # only work with spots in tissue
-    if tissue:
-        red_arr = red_arr[adata.obs["in_tissue"] == 1]
-    # use a divergent colormap
-    if divergent:
-        cmap = div_cmap or cmap
-    elif cmap is None:
-        cmap = "Blues"
-        # cmap = "Spectral_r"
-
-    subplot_kwds = subplot_kwds or {}
-
-    # create the subplots with right cols and rows
-    if _ax is None:
-        with plt.rc_context(
-            {
-                "axes.grid": False,
-                "figure.frameon": False,
-                "axes.spines.bottom": False,
-                "axes.spines.top": False,
-                "axes.spines.left": False,
-                "axes.spines.right": False,
-                "xtick.bottom": False,
-                "xtick.labelbottom": False,
-                "ytick.left": False,
-                "ytick.labelleft": False,
-            }
-        ):
-            fig, axs = configure_subplots(dim_nr, ncol, **subplot_kwds)
-        fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
-        # plt.subplots_adjust(wspace = 1/ncols +  0.2)
-    else:
-        if isinstance(_ax, Axes):
-            axs = np.array([_ax])
-        elif not isinstance(_ax, np.ndarray):
-            axs = np.array(_ax)
-        else:
-            axs = _ax
-        fig = axs.flat[0].get_figure()
-
-    # iterate over features to plot
-
-    for dim, ax in zip(dims, axs.flat):
-        legend_kwds_ = deepcopy(legend_kwds)
-        _legend = legend
-
-        legend_kwds_.setdefault("label", red_arr.columns[dim])
-        legend_kwds_.setdefault("orientation", "vertical")
-        legend_kwds_.setdefault("shrink", 0.3)
-
-        if color is not None:
-            cmap = None
-        norm = None
-        vmin = vmax = None
-        if divergent:
-            # TODO: center the cmap
-            colname = red_arr.columns[dim]
-            extreme_val = np.abs(red_arr[colname].values).max()
-
-            vmin = red_arr[colname].min()
-            vmax = red_arr[colname].max()
-            norm = colors.CenteredNorm()
-        norm = None
-        red_arr.plot(
-            red_arr.columns[dim],
-            ax=ax,
-            color=color,
-            legend=_legend,
-            cmap=cmap,
-            norm=norm,
-            vmin=vmin,
-            vmax=vmax,
-            legend_kwds=legend_kwds_,
-            **geom_style,
-            **kwds,
-        )
-        if annot_geom is not None:
-            if annot_geom in adata.uns["spatial"]["geom"]:
-
-                # check annot_style is dict with correct values
-                plg = adata.uns["spatial"]["geom"][annot_geom]
-                if len(annot_style) != 0:
-                    gpd.GeoSeries(plg).plot(ax=ax, **annot_style, **kwds)
-                else:
-                    gpd.GeoSeries(plg).plot(color="blue", ax=ax, alpha=alpha, **kwds)
-            else:
-                raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
-
-    # colorbar title
-    if _ax is not None:
-        fig = ax.get_figure()
-    axs = fig.get_axes()
-
+    fig = axs[0].get_figure()
     fig.suptitle(dimred, x=0, ha="left", fontsize="xx-large", va="bottom")
-    for dim in range(len(axs)):
-        if axs[dim].properties()["label"] == "<colorbar>" and axs[dim].properties()["ylabel"] != "":
-            axs[dim].set_title(axs[dim].properties()["ylabel"], loc="left")
-            axs[dim].set_ylabel("")
-
     return axs
 
 
