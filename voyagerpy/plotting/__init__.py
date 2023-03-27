@@ -25,6 +25,7 @@ from voyagerpy.plotting.plot import (
     spatial_reduced_dim,
     scatter,
     plot_fitline,
+    plot_local_result,
 )
 
 
@@ -64,4 +65,5 @@ __all__ = [
     "spatial_reduced_dim",
     "scatter",
     "plot_fitline",
+    "plot_local_result",
 ]

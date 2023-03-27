@@ -817,6 +817,19 @@ def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "rai
     return True, ""
 
 
+def plot_local_result(adata: AnnData, locality: str, *args, figtitle: Optional[str] = None, **kwargs):
+
+    if locality not in adata.obsm:
+        raise KeyError(f"`{locality}` not found in adata.obsm.")
+
+    axs = plot_spatial_feature(adata, obsm=locality, *args, **kwargs)
+    fig = axs[0].get_figure()
+    title = locality.replace("_", " ").capitalize() if figtitle is None else figtitle
+
+    fig.suptitle(title, x=0, ha="left", fontsize="xx-large", va="bottom")
+    return axs
+
+
 def spatial_reduced_dim(
     adata: AnnData,
     dimred: str,
