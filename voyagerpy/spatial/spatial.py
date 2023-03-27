@@ -118,7 +118,7 @@ def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200,
         score = 0
         best_cntr = None
         for j in range(len(big_cntrs)):
-            new_score = get_tissue_contour_score(big_cntrs[j], adata)
+            new_score = get_tissue_contour_score(big_cntrs[j], adata, size=size)
             if new_score > score:
                 best_cntr = big_cntrs[j]
                 score = new_score
@@ -145,17 +145,21 @@ def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200,
 
 def get_tissue_boundary(
     adata: AnnData,
-    threshold_low: int = None,
-    size: str = "hires",
+    threshold_low: Optional[int] = None,
+    size: Optional[str] = "hires",
     strictness: Optional[int] = None,
     inplace: bool = False,
     # detect_threshold: bool = False,
 ) -> Polygon:
+    if size not in (None, "lowres", "hires"):
+        raise ValueError('Expected size to be one of None, "lowres", or "hires", but got `{size}`')
 
-    # TODO: Do we want assert that size is either 'lowres' or 'hires'?
-    res = "hires" if size == "hires" else "lowres"
+    if size is None:
+        res = "hires" if utl.is_highres(adata) else "lowres"
+    else:
+        res = size
+
     scl = utl.get_scale(adata, res=res)
-
     # load image
 
     bgr_img = cvtColor(adata.uns["spatial"]["img"][res], COLOR_RGB2BGR)
@@ -290,7 +294,7 @@ def to_points(
     return points
 
 
-def get_geom(adata: AnnData, threshold: int = None, inplace: bool = False, res: str = "hires") -> AnnData:
+def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = False, res: Optional[str] = None) -> AnnData:
 
     if not inplace:
         adata = adata.copy()
