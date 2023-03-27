@@ -36,8 +36,15 @@ def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
     if res not in [None, "hi", "hires", "lo", "lowres"]:
         raise ValueError(f"Unrecognized value {res} for res.")
 
-    hires = is_highres(adata) and res not in ["lowres", "lo"]
-    scale_key = "tissue_hires_scalef" if hires else "tissue_lowres_scalef"
+    scale_key = None
+    if is_lowres(adata) and res in [None, "lowres", "lo"]:
+        scale_key = "tissue_lowres_scalef"
+    if is_highres(adata) and res in [None, "hires", "hi"]:
+        scale_key = "tissue_hires_scalef"
+
+    if scale_key is None:
+        raise ValueError("Invalid resolution. Make sure the correct image is loaded.")
+
     return adata.uns["spatial"]["scale"][scale_key]
 
 
