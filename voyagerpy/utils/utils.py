@@ -16,6 +16,14 @@ def is_highres(adata: AnnData) -> bool:
     raise ValueError("Cannot find image data in .uns['spatial']")
 
 
+def is_lowres(adata: AnnData) -> bool:
+    if "lowres" in adata.uns["spatial"]["img"]:
+        return True
+    if "hires" in adata.uns["spatial"]["img"]:
+        return False
+    raise ValueError("Cannot find image data in .uns['spatial']")
+
+
 def make_unique(items: List) -> List:
     items = items[:]
     for i in range(len(items) - 1, -1, -1):
