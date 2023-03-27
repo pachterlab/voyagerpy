@@ -696,6 +696,7 @@ def plot_spatial_feature(
         curr_cmap = cmap
         values = obs[feature]
 
+        extra_kwargs = dict()
         if values.dtype != "category":
             curr_cmap = cmap
             vmax = None
@@ -703,6 +704,12 @@ def plot_spatial_feature(
             legend_kwds_.setdefault("label", label)
             legend_kwds_.setdefault("orientation", "vertical")
             legend_kwds_.setdefault("shrink", 0.6)
+
+            if divergent:
+                vmin = values.min()
+                vmax = values.max()
+                vcenter = 0
+                extra_kwargs["norm"] = DivergentNorm(vmin, vmax, vcenter)
 
         else:
             #  colorbar for discrete categories if pandas column is categorical
@@ -720,12 +727,6 @@ def plot_spatial_feature(
                 title_kwargs=cax_title_kwargs,
             )
 
-        norm = None
-        if divergent:
-            vmin = values.min()
-            vmax = values.max()
-            vcenter = 0
-            norm = DivergentNorm(vmin, vmax, vcenter)
         if color is not None:
             curr_cmap = None
 
@@ -738,9 +739,9 @@ def plot_spatial_feature(
             color=color,
             legend=_legend,
             cmap=curr_cmap,
-            norm=norm,
             vmax=vmax,
             legend_kwds=legend_kwds_,
+            **extra_kwargs,
             **geom_style,
             **kwds,
         )
