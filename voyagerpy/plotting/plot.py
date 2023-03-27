@@ -848,17 +848,15 @@ def spatial_reduced_dim(
     _ax: Optional[Axes] = None,
     legend: bool = True,
     subplot_kwds: Optional[Dict] = {},
-    legend_kwds: Optional[Dict] = {},
     **kwds,
 ):
     adata = adata.copy()
-    if isinstance(ncomponents, list):
-        dims = ncomponents
+    if isinstance(ncomponents, (list, tuple, range)):
+        dims = list(ncomponents)
     elif isinstance(ncomponents, int):
         dims = list(range(ncomponents))
     else:
-        raise TypeError("features must be a integer or a list of integers")
-    dim_nr = len(dims)
+        raise TypeError("features must be a integer or a sequence of integers")
 
     # check input
     assert_basic_spatial_features(adata, errors="raise")
@@ -867,7 +865,6 @@ def spatial_reduced_dim(
         raise ValueError(f"Cannot find {dimred!r} in adata.obsm")
 
     # create df for dimension reduction
-
     reductions = adata.obsm[dimred][:, dims]
     feat_names = [f"{dimred}{i}" for i in dims]
     adata.obs[feat_names] = reductions
@@ -875,21 +872,6 @@ def spatial_reduced_dim(
     axs = plot_spatial_feature(
         adata=adata,
         features=feat_names,
-        ncol=ncol,
-        barcode_geom=barcode_geom,
-        annot_geom=annot_geom,
-        tissue=tissue,
-        cmap=cmap,
-        div_cmap=div_cmap,
-        geom_style=geom_style,
-        annot_style=annot_style,
-        alpha=alpha,
-        divergent=divergent,
-        color=color,
-        _ax=_ax,
-        legend=legend,
-        subplot_kwds=subplot_kwds,
-        legend_kwds=legend_kwds,
         **kwds,
     )
 
