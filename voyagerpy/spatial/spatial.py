@@ -269,6 +269,9 @@ def set_geometry(
     if geom not in df and values is None:
         raise ValueError("values must not be None when geom does not exist in the DataFrame")
     if values is not None:
+        if sorted(values.index) == list(range(adata.n_obs)):
+            values.index = adata.obs_names[values.index]
+
         df[geom] = values
 
     df.set_geometry(geom, inplace=True)
