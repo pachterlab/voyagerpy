@@ -590,7 +590,7 @@ def compute_spatial_lag(adata: AnnData, feature: str, graph_name: Union[None, st
         adata = adata.copy()
 
     if graph_name is None:
-        dists = adata.obsp["distances"]
+        dists = adata.obsp["connectivities"]
     elif isinstance(graph_name, str):
         dists = adata.obsp[graph_name]
     elif isinstance(graph_name, np.ndarray):
@@ -607,7 +607,7 @@ def compute_spatial_lag(adata: AnnData, feature: str, graph_name: Union[None, st
     return adata
 
 
-def moran(adata: AnnData, feature: Union[str, Sequence[str]], graph_name: str = "distances", permutations: int = 0):
+def moran(adata: AnnData, feature: Union[str, Sequence[str]], graph_name: str = "connectivities", permutations: int = 0):
     import esda
 
     if graph_name not in adata.uns.get("spatial", {}):
@@ -635,7 +635,7 @@ def local_moran(
     inplace: bool = True,
     permutations: int = 0,
     key_added: str = "local_moran",
-    graph_name: str = "distances",
+    graph_name: str = "connectivities",
     keep_simulations: bool = False,
     **kwargs,
 ) -> AnnData:
