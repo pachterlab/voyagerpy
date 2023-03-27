@@ -552,6 +552,8 @@ def plot_spatial_feature(
     subplot_kwds: Optional[Dict] = {},
     legend_kwds: Optional[Dict] = {},
     dimension: str = "barcode",
+    local: Optional[str] = None,
+    obsm: Optional[str] = None,
     image: bool = False,
     **kwds,
 ) -> Union[np.ndarray, Any]:
@@ -564,9 +566,10 @@ def plot_spatial_feature(
         raise TypeError("features must be a string or a list of strings")
 
     assert_basic_spatial_features(adata, dimension, errors="raise")
+    if obsm is not None and obsm not in adata.obsm:
+        raise KeyError(f'Key "{obsm}" is not found in adata.obsm')
 
-    # copy observation dataframe so we can edit it without changing the inputs
-    adata = adata.copy()
+    # adata = adata.copy()
 
     secondary_gene_column = adata.uns["config"]["secondary_var_names"]
     added_features = []
@@ -576,8 +579,8 @@ def plot_spatial_feature(
     var_features = []
     labeled_features = []
 
-    for feature in feat_ls:
-        if feature in adata.obs:
+    df = adata.obs if obsm is None else adata.obsm[obsm]
+    df_repr = f"adata.obs" if obsm is None else f'adata.obsm["{obsm}"]'
             labeled_features.append((feature, feature))
             continue
         if feature in adata.var.index:
@@ -595,7 +598,7 @@ def plot_spatial_feature(
             features_to_pop.append(feature)
             continue
 
-        raise ValueError(f"Cannot find {feature!r} in adata.obs or gene names")
+        raise ValueError(f"Cannot find {feature!r} in {df_repr} or gene names")
 
     # Rename the features found via the secondary column
     feat_ls.extend(added_features)
@@ -610,21 +613,23 @@ def plot_spatial_feature(
 
     del feat_ls
     # Select the spots to work with
-    barcode_selection = slice(None) if not tissue else adata.obs["in_tissue"] == 1
-    gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
 
-    # Retain the type of obs
-    geo_obs = adata.obs.copy()
+    # TODO: This is a bit messy fix. Maybe get rid of the tissue param.
+    tissue = tissue and "in_tissue" in df
+
+    barcode_selection = slice(None) if not tissue else df["in_tissue"] == 1
+    gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
 
     if dimension == "barcode":
         geo = adata.obsm["geometry"].loc[barcode_selection].copy()
+        gene_selection = gene_selection if var_features else 0
     elif dimension == "gene":
         geo = adata.varm["geometry"].loc[gene_selection].copy()
     else:
-        geo = adata.uns["spatial"]["geometry"][dimension]
+        geo = adata.uns["spatial"]["geometry"][dimension].copy()
 
     adata = adata[barcode_selection, gene_selection].copy()
-    obs = adata.obs
+    obs = adata.obs if obsm is None else adata.obsm[obsm]
 
     if var_features:
         if layer is None:
