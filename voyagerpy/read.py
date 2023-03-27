@@ -205,12 +205,20 @@ def read_10x_visium(
     tissue_alt_path = tissue_pos_path.with_stem("tissue_positions_list")
 
     if tissue_pos_path.exists():
+        version = 2
         adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path).set_index(["barcode"])], axis=1)
     elif tissue_alt_path.exists():
+        version = 1
         colnames = ["barcode", "in_tissue", "array_row", "array_col", "pxl_row_in_fullres", "pxl_col_in_fullres"]
         adata.obs = pd.concat([adata.obs, pd.read_csv(tissue_pos_path, header=None, names=colnames).set_index(["barcode"])], axis=1)
     else:
         raise ValueError("Cannot read file tissue_positions.csv")
 
     adata = read_img_data(path, adata, res=res)
+    metadata = {
+        "data_source": "visium",
+        "img_res": [res for res in ("lowres", "hires") if (path / "spatial" / f"tissue_{res}_image.png").exists()],
+        "version": version,
+    }
+    adata.uns["metadata"] = metadata
     return adata
