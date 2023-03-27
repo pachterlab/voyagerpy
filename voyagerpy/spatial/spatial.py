@@ -564,10 +564,10 @@ def rollback_transforms(adata: AnnData, apply: bool = True):
 # %%
 
 
-def to_spatial_weights(adata: AnnData, dist_key: "str" = "distances"):
+def to_spatial_weights(adata: AnnData, graph_name: "str" = "distances"):
     import libpysal
 
-    distances = adata.obsp[dist_key].copy()
+    distances = adata.obsp[graph_name].copy()
     if isinstance(distances, sparse.csr_matrix):
         distances = distances.A
 
@@ -581,23 +581,23 @@ def to_spatial_weights(adata: AnnData, dist_key: "str" = "distances"):
     W.set_transform("r")
 
     adata.uns.setdefault("spatial", {})
-    adata.uns["spatial"][dist_key] = W
+    adata.uns["spatial"][graph_name] = W
     return adata
 
 
-def compute_spatial_lag(adata: AnnData, feature: str, distances: Union[None, str, np.ndarray], inplace: bool = False) -> AnnData:
+def compute_spatial_lag(adata: AnnData, feature: str, graph_name: Union[None, str, np.ndarray], inplace: bool = False) -> AnnData:
     if not inplace:
         adata = adata.copy()
 
-    if distances is None:
+    if graph_name is None:
         dists = adata.obsp["distances"]
-    elif isinstance(distances, str):
-        dists = adata.obsp[distances]
-    elif isinstance(distances, np.ndarray):
-        dists = distances
+    elif isinstance(graph_name, str):
+        dists = adata.obsp[graph_name]
+    elif isinstance(graph_name, np.ndarray):
+        dists = graph_name
     else:
         raise TypeError("Distances should be of type None, str, or np.ndarray.")
-    del distances
+    del graph_name
 
     features = [feature] if isinstance(feature, str) else feature[:]
     for feat in features:
@@ -607,20 +607,20 @@ def compute_spatial_lag(adata: AnnData, feature: str, distances: Union[None, str
     return adata
 
 
-def moran(adata: AnnData, feature: Union[str, Sequence[str]], dist_key: str = "distances", permutations: int = 0):
+def moran(adata: AnnData, feature: Union[str, Sequence[str]], graph_name: str = "distances", permutations: int = 0):
     import esda
 
-    if dist_key not in adata.uns.get("spatial", {}):
-        to_spatial_weights(adata, dist_key)
+    if graph_name not in adata.uns.get("spatial", {}):
+        to_spatial_weights(adata, graph_name)
 
     features = [feature] if isinstance(feature, str) else list(feature[:])
 
-    W = adata.uns["spatial"][dist_key]
+    W = adata.uns["spatial"][graph_name]
     morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
 
     adata.uns["spatial"].setdefault("moran", {})
-    adata.uns["spatial"]["moran"].setdefault(dist_key, pd.DataFrame(columns=["I", "EI"]))
-    df = adata.uns["spatial"]["moran"][dist_key]
+    adata.uns["spatial"]["moran"].setdefault(graph_name, pd.DataFrame(columns=["I", "EI"]))
+    df = adata.uns["spatial"]["moran"][graph_name]
     for feat in features:
         moran = esda.Moran(adata.obs[feat], W, permutations=permutations)
         df.at[feat, "I"] = moran.I
@@ -635,7 +635,7 @@ def local_moran(
     inplace: bool = True,
     permutations: int = 0,
     key_added: str = "local_moran",
-    dist_key: str = "distances",
+    graph_name: str = "distances",
     keep_simulations: bool = False,
     **kwargs,
 ) -> AnnData:
@@ -646,10 +646,10 @@ def local_moran(
     features = [feature] if isinstance(feature, str) else list(feature)
 
     adata.uns.setdefault("spatial", {})
-    if dist_key not in adata.uns["spatial"]:
-        to_spatial_weights(adata, dist_key)
+    if graph_name not in adata.uns["spatial"]:
+        to_spatial_weights(adata, graph_name)
 
-    W = adata.uns["spatial"][dist_key]
+    W = adata.uns["spatial"][graph_name]
 
     local_morans = [
         esda.Moran_Local(
@@ -680,7 +680,7 @@ def local_moran(
     # Parameters
     adata.uns["spatial"][key_added].setdefault("params", {})
     param_dict = adata.uns["spatial"][key_added]["params"]
-    param_dict["dist_key"] = dist_key
+    param_dict["graph_name"] = graph_name
     param_dict["permutations"] = permutations
     param_dict["keep_simulations"] = keep_simulations
     param_dict["seed"] = kwargs.get("seed", None)
