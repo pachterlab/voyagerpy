@@ -1238,7 +1238,7 @@ def contour_plot(
 def moran_plot(
     adata: AnnData,
     feature: str,
-    distances: Union[None, str, np.ndarray],
+    graph_name: Union[None, str, np.ndarray] = None,
     color_by: Optional[str] = None,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
@@ -1251,7 +1251,7 @@ def moran_plot(
 
     lagged_feature = f"lagged_{feature}"
     if lagged_feature not in adata.obs:
-        spatial.compute_spatial_lag(adata, feature, distances, inplace=True)
+        spatial.compute_spatial_lag(adata, feature, graph_name=graph_name, inplace=True)
 
     rc_context = {
         "axes.grid": True,
