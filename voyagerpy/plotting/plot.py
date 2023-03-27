@@ -555,6 +555,7 @@ def plot_spatial_feature(
     local: Optional[str] = None,
     obsm: Optional[str] = None,
     image: bool = False,
+    feature_labels: Union[None, str, Sequence[Optional[str]]] = None,
     **kwds,
 ) -> Union[np.ndarray, Any]:
 
@@ -581,10 +582,17 @@ def plot_spatial_feature(
 
     df = adata.obs if obsm is None else adata.obsm[obsm]
     df_repr = f"adata.obs" if obsm is None else f'adata.obsm["{obsm}"]'
-            labeled_features.append((feature, feature))
+
+    feature_labels = feature_labels or [None] * len(feat_ls)
+    feature_labels = [feature_labels] if not isinstance(feature_labels, (tuple, list)) else feature_labels[:]
+
+    for feature, label in zip(feat_ls, feature_labels):
+        label = label if label is not None else feature
+        if feature in df:
+            labeled_features.append((feature, label))
             continue
         if feature in adata.var.index:
-            labeled_features.append((feature, feature))
+            labeled_features.append((feature, label))
             var_features.append(feature)
             continue
 
