@@ -564,10 +564,10 @@ def rollback_transforms(adata: AnnData, apply: bool = True):
 # %%
 
 
-def to_spatial_weights(adata: AnnData, graph_name: "str" = "distances"):
+def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None):
     import libpysal
 
-    distances = adata.obsp[graph_name].copy()
+    distances = adata.obsp[graph_name or get_default_graph(adata)].copy()
     if isinstance(distances, sparse.csr_matrix):
         distances = distances.A
 
@@ -585,13 +585,19 @@ def to_spatial_weights(adata: AnnData, graph_name: "str" = "distances"):
     return adata
 
 
-def compute_spatial_lag(adata: AnnData, feature: str, graph_name: Union[None, str, np.ndarray], inplace: bool = False) -> AnnData:
+def compute_spatial_lag(
+    adata: AnnData,
+    feature: str,
+    graph_name: Union[None, str, np.ndarray] = None,
+    inplace: bool = False,
+) -> AnnData:
     if not inplace:
         adata = adata.copy()
 
     if graph_name is None:
-        dists = adata.obsp["connectivities"]
-    elif isinstance(graph_name, str):
+        graph_name = get_default_graph(adata)
+
+    if isinstance(graph_name, str):
         dists = adata.obsp[graph_name]
     elif isinstance(graph_name, np.ndarray):
         dists = graph_name
@@ -607,26 +613,98 @@ def compute_spatial_lag(adata: AnnData, feature: str, graph_name: Union[None, st
     return adata
 
 
-def moran(adata: AnnData, feature: Union[str, Sequence[str]], graph_name: str = "connectivities", permutations: int = 0):
+def moran(
+    adata: AnnData,
+    feature: Union[str, Sequence[str]],
+    graph_name: Optional[str] = None,
+    dim: Literal["obs", "var"] = "obs",
+    permutations: int = 0,
+):
     import esda
+
+    if graph_name is None:
+        graph_name = get_default_graph(adata)
 
     if graph_name not in adata.uns.get("spatial", {}):
         to_spatial_weights(adata, graph_name)
 
+    W = adata.uns["spatial"][graph_name]
+
     features = [feature] if isinstance(feature, str) else list(feature[:])
 
-    W = adata.uns["spatial"][graph_name]
-    morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
+    if dim == "obs":
+        morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
+    elif dim == "var":
 
-    adata.uns["spatial"].setdefault("moran", {})
-    adata.uns["spatial"]["moran"].setdefault(graph_name, pd.DataFrame(columns=["I", "EI"]))
-    df = adata.uns["spatial"]["moran"][graph_name]
-    for feat in features:
-        moran = esda.Moran(adata.obs[feat], W, permutations=permutations)
+        feat_idx = list(map(adata.var.index.get_loc, features))
+        morans = [esda.Moran(adata.X[:, i], W, permutations=permutations) for i in feat_idx]
+    else:
+        raise ValueError('dim must either be "obs" or "var"')
+
+    moran_dict = adata.uns["spatial"].setdefault("moran", {})
+    df = moran_dict.setdefault(graph_name, pd.DataFrame(columns=["I", "EI"], dtype=("double", "double")))
+
+    for feat, moran in zip(features, morans):
         df.at[feat, "I"] = moran.I
         df.at[feat, "EI"] = moran.EI
 
-    return morans[0] if isinstance(feature, str) else morans
+    if permutations > 0:
+        moran_sims = adata.uns["spatial"].setdefault("moran_mc", {})
+        sims_dict = adata.uns["spatial"]["moran_mc"].setdefault(graph_name, {})
+        for feat, moran in zip(features, morans):
+            df = sims_dict.setdefault(feat, pd.DataFrame(columns=["sim", "p_sim"]))
+            df["sim"] = moran.sim
+            df["p_sim"] = moran.p_sim
+
+    # TODO: What do we want to return?
+    # return morans[0] if isinstance(feature, str) else morans
+
+
+def set_default_graph(adata: AnnData, graph_name: str) -> None:
+    adata.uns.setdefault("spatial", {})
+    adata.uns["spatial"]["default_graph"] = graph_name
+
+
+def get_default_graph(adata: AnnData) -> str:
+    return adata.uns.get("spatial", {}).get("default_graph", "connectivities")
+
+
+def losh(
+    adata: AnnData,
+    feature: Union[str, Sequence[str]],
+    graph_name: Optional[str] = None,
+    inference: Union[None, Literal["permutation"], Literal["chi-square"]] = None,
+    inplace: bool = True,
+    key_added: str = "losh",
+) -> AnnData:
+    import esda
+
+    if not inplace:
+        adata = adata.copy()
+    if graph_name is None:
+        graph_name = get_default_graph(adata)
+
+    if graph_name not in adata.uns.get("spatial", {}):
+        to_spatial_weights(adata, graph_name)
+
+    W = adata.uns["spatial"][graph_name]
+    features = [feature] if isinstance(feature, str) else list(feature)
+    losh = esda.LOSH(W, inference=inference)
+
+    adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
+
+    for feat in features:
+        losh.fit(adata.obs[feat])
+        adata.obsm[key_added][feat] = losh.Hi
+
+    adata.uns["spatial"].setdefault(key_added, {})
+    losh_dict = adata.uns["spatial"][key_added]
+    losh_dict.setdefault("params", {})
+
+    losh_dict["params"].update(losh.get_params())
+    losh_dict["params"]["graph_name"] = graph_name
+
+    return adata
 
 
 def local_moran(
