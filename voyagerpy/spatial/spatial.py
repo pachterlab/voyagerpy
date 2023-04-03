@@ -58,8 +58,24 @@ Contour = Any
 # %%
 
 
-def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires") -> float:
 
+## write a docstring for this function
+def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires") -> float:
+    # docstring
+    """
+    This function takes a contour and returns a score for how well it fits the tissue
+
+    Parameters
+    ----------
+    cntr : Contour
+        The contour to score, represented as a list of points from a cv2 findContours function
+    adata: AnnData object describing the voyager dataset
+    size: str = "hires" or "lowres", the resolution of the image to use
+
+    Returns
+    -------
+    float the score of the contour
+    """
     scl = utl.get_scale(adata, res=size)
 
     # tissue_barcodes = adata.obs[adata.obs["in_tissue"] == 1]
@@ -620,7 +636,17 @@ def moran(
     dim: Literal["obs", "var"] = "obs",
     permutations: int = 0,
 ):
-    import esda
+    #import esda
+    ## write code to check if esda is installed, otherwise complain
+    try:
+        import esda
+    except ImportError:
+        raise ImportError(
+            "Moran's I requires the `esda` package. Please install it with `pip install esda`."
+        )
+
+    
+
 
     if graph_name is None:
         graph_name = get_default_graph(adata)

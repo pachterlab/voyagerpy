@@ -297,6 +297,7 @@ def plot_barcode_data(
     y_labels: Union[None, str, Sequence[str]] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
+    ax: Optional[Axes] = None,
     **kwargs,
 ):
     #  TODO: Allow ax argument
@@ -350,8 +351,12 @@ def plot_barcode_data(
 
     default_rc_context.update(rc_context or {})
 
-    with plt.rc_context(default_rc_context):
-        fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey)
+    if ax is not None:
+        axs_arr = np.array([ax])
+        fig = ax.get_figure()
+    else:
+        with plt.rc_context(default_rc_context):
+            fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey, layout="tight")
 
     feature_iterator = ((y_feat, x_feat) for y_feat in zip(y_labels, y_features) for x_feat in zip(x_labels, x_features))
 
@@ -376,7 +381,7 @@ def plot_barcode_data(
             **kwargs,
         )
 
-    fig.tight_layout()
+    #fig.tight_layout()
     return axs_arr
 
 
@@ -398,14 +403,10 @@ def plot_bin2d(
     get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
     obs = get_dataframe(data) if isinstance(data, AnnData) else data
 
-    #     I don't know how the range is computed in ggplot2
-    #     r = ((-6.377067e-05,  4.846571e+04), (-1.079733e-05, 8.205973e+03))
-    r = None
-
+    
     plot_kwargs = dict(
         bins=bins,
         cmap="Blues",
-        range=r,
     )
 
     figsize = kwargs.pop("figsize", (10, 7))
@@ -416,7 +417,6 @@ def plot_bin2d(
     if hex_plot:
         renaming = [
             ("gridsize", "bins", bins),
-            ("extent", "range", None),
             ("mincnt", "cmin", 1),
         ]
         for hex_name, hist_name, default in renaming:
@@ -842,6 +842,7 @@ def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "rai
                 raise ex
             return False, error_msg
     # TODO: add checks for genes and annotgeom
+    # TODO: deprecate
     return True, ""
 
     if not isinstance(adata.obs, gpd.GeoDataFrame):
