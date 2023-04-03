@@ -16,30 +16,33 @@ from voyagerpy.plotting.plot import (
     plot_bin2d,
     plot_dim_loadings,
     plot_expression,
-    plot_features_bin2d,
     plot_feature_data_with_reduction,
+    plot_features_bin2d,
     plot_features_histogram,
-    plot_pca,
-    plot_spatial_feature,
-    simple_violinplot,
-    spatial_reduced_dim,
-    scatter,
     plot_fitline,
     plot_local_result,
+    plot_moran_mc,
+    plot_pca,
+    plot_spatial_feature,
+    scatter,
+    simple_violinplot,
+    spatial_reduced_dim,
 )
+
+# https://github.com/dtm2451/dittoSeq
+from .ditto_colors import ditto_colors
+
+# https://github.com/thomasp85/scico
+from .roma_colors import roma_colors
 
 
 def set_default_cmap(cmap_name: str) -> None:
     rcParams["image.cmap"] = cmap_name
 
 
-# https://github.com/thomasp85/scico
-from .roma_colors import roma_colors
 
 register_segmented_cmap("roma", roma_colors, reverse=True)
 
-# https://github.com/dtm2451/dittoSeq
-from .ditto_colors import ditto_colors
 
 register_listed_cmap("dittoseq", ditto_colors, reverse=False)
 set_default_cmap("dittoseq")
@@ -66,4 +69,5 @@ __all__ = [
     "scatter",
     "plot_fitline",
     "plot_local_result",
+    "plot_moran_mc",
 ]

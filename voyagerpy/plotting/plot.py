@@ -49,9 +49,17 @@ plt.rcParams["axes.edgecolor"] = "#00000050"
 plt.rcParams["axes.facecolor"] = "white"
 plt.rcParams["axes.grid.which"] = "both"
 plt.rcParams["axes.labelsize"] = 8
+plt.rcParams["axes.titlesize"] = 10
+plt.rcParams["figure.labelsize"] = 10
+plt.rcParams["figure.titlesize"] = 12
 plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["grid.color"] = "k"
 plt.rcParams["image.origin"] = "lower"
+plt.rcParams["lines.markersize"] = 4
+""" #TODO: 
+ax title font_size 10
+fig.supylabel fontsize 10 (figure.labelsize)
+"""
 
 
 def imshow(
@@ -118,11 +126,38 @@ def configure_violins(violins, cmap=None, edgecolor="#00000050", alpha=0.7):
 
 
 def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, **kwargs):
+
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
+
     violin_opts.update(kwargs)
     violins = ax.violinplot(df[y], **violin_opts)
     configure_violins(violins, cmap)
+
+    if not isinstance(y, str) or True:
+        colnames = y
+    else:
+        colnames = [y]
+
+    cols = df[colnames]
+
+    x_vals = np.ones_like(cols)
+    if cols.ndim == 2:
+        x_vals += np.arange(cols.shape[1]).ravel()
+
+    y_vals = cols.values.ravel()
+    scatter(
+        x_vals,
+        y_vals,
+        color_by=x_vals,
+        cmap=cmap,
+        ax=ax,
+        is_categorical=True,
+        legend=False,
+        alpha=0.7
+        # log=True
+    )
+    ax.set_xticks([])
     ax.set_ylabel(str(y))
     return ax
 
@@ -136,6 +171,7 @@ def grouped_violinplot(
     legend: bool = True,
     vert: bool = True,
 ):
+
     if not vert:
         x, y = y, x
     groups = df.groupby(x)[y].groups
@@ -171,6 +207,7 @@ def plot_single_barcode_data(
     adata: AnnData,
     y: Union[int, str],
     x: Union[int, str, None] = None,
+    obsm: Optional[str] = None,
     cmap: Optional[str] = None,
     ax: Optional[Axes] = None,
     legend: bool = False,
@@ -178,8 +215,15 @@ def plot_single_barcode_data(
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ):
-    obs = adata.obs
+
+    if obsm is not None:
+        obs = adata.obsm[obsm].copy()
+        if color_by is not None and color_by not in obs:
+            obs[color_by] = adata.obs[color_by].copy()
+    else:
+        obs = adata.obs
     if ax is None:
         fig, ax = plt.subplots()
     assert ax is not None
@@ -191,19 +235,22 @@ def plot_single_barcode_data(
             raise NotImplementedError('"Rectangule" plots not implemented')
         else:
             # Create a horizontal plot, so we group by y instead of x
-            ax = grouped_violinplot(ax, adata.obs, x, y, cmap, legend=legend, vert=False)
+            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, vert=False)
     else:
         if x is None:
-            ax = simple_violinplot(ax, adata.obs, y, cmap)
+            # TODO: check if these kwargs make sense
+            ax = simple_violinplot(ax, obs, y, cmap, **kwargs)
         elif is_categorical_dtype(obs[x]):
-            ax = grouped_violinplot(ax, adata.obs, x, y, cmap, legend=legend)
+            # TODO: Check if these kwargs make sense
+            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, **kwargs)
         else:
-            colors = np.zeros_like(adata.obs[x], "int") if color_by is None else adata.obs[color_by].astype(int)
+            colors = np.zeros_like(obs[x], "int") if color_by is None else obs[color_by].astype(int)
             colormap = plt.get_cmap(cmap)
-            scat = ax.scatter(x, y, data=adata.obs, c=colors, cmap=colormap, vmin=0, vmax=colormap.N, alpha=0.5, s=8)
+            _scatter_kwargs = dict(alpha=0.5, s=8)
+            _scatter_kwargs.update(kwargs)
+
+            scat = ax.scatter(x, y, data=obs, c=colors, cmap=colormap, vmin=0, vmax=colormap.N, **_scatter_kwargs)
             if contour_kwargs is not None:
-                points = adata.obs[[x, y]].values.T
-                # contour_plot(ax, points, **contour_kwargs)
                 _contour_kwargs = dict(x=x, y=y, data=adata.obs)
                 _contour_kwargs.update(contour_kwargs)
                 contour_plot(ax, **_contour_kwargs)
@@ -239,6 +286,7 @@ def plot_barcode_data(
     adata: AnnData,
     y: Union[str, Sequence[str]],
     x: Optional[str] = None,
+    obsm: Optional[str] = None,
     ncol: Optional[int] = None,
     cmap: Union[None, str, colors.ListedColormap, colors.LinearSegmentedColormap] = None,
     color_by: Optional[str] = None,
@@ -249,6 +297,7 @@ def plot_barcode_data(
     y_labels: Union[None, str, Sequence[str]] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
+    **kwargs,
 ):
     #  TODO: Allow ax argument
 
@@ -257,15 +306,18 @@ def plot_barcode_data(
 
     if x_labels is None:
         x_labels = x_features[:]
+        if obsm is not None:
+            x_labels = [f"{lab}_{obsm}" for lab in x_labels]
 
     x_labels = x_labels if isinstance(x_labels, (list, tuple)) else [x_labels]
     if isinstance(x_labels, (list, tuple)) and len(x_labels) != len(x_features):
         raise ValueError("x_labels must have the same length as x")
 
-    # if isinstance(x_label, str)
-
     if y_labels is None:
         y_labels = y_features[:]
+        if obsm is not None:
+            y_labels = [f"{obsm}_{lab}" for lab in y_labels]
+
     y_labels = y_labels if isinstance(y_labels, (list, tuple)) else [y_labels]
     if isinstance(y_labels, (list, tuple)) and len(y_labels) != len(y_features):
         raise ValueError("y_labels must have the same length as y")
@@ -313,6 +365,7 @@ def plot_barcode_data(
             adata,
             y=y_feat,
             x=x_feat,
+            obsm=obsm,
             cmap=cmap,
             ax=axs_arr.flat[i_plot],
             legend=add_legend,
@@ -320,6 +373,7 @@ def plot_barcode_data(
             x_label=x_label,
             y_label=y_label,
             contour_kwargs=contour_kwargs,
+            **kwargs,
         )
 
     fig.tight_layout()
@@ -453,20 +507,6 @@ def plot_expression(
     if groupby is None:
         gene_ids = [gene_ids]
 
-    # if groupby is not None:
-    #     for ax, gene_id in zip(axs.flat, gene_ids):
-    #         grouped_violinplot(ax, obs, groupby, gene_id, legend=False)
-    #         title = gene_id
-    #         if show_symbol and secondary_column == "symbol":
-    #             title = adata.var.at[gene_id, secondary_column]
-
-    #         ax.set_title(title, fontsize=10)
-    #         ax.set_ylabel("")
-    #         ax.set_xlabel("")
-    # else:
-    #     for ax, genes in zip(axs.flat, gene_ids):
-    #         simple_violinplot(ax, obs, genes, legend=False)
-
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
             grouped_violinplot(ax, obs, groupby, gene_id, legend=False, cmap=cmap)
@@ -476,7 +516,7 @@ def plot_expression(
             elif show_symbol:
                 title = gene_id
 
-            ax.set_title(title, fontsize=10)
+            ax.set_title(title)
         else:
             simple_violinplot(ax, obs, gene_id, legend=False, cmap=cmap)
             labels = gene_id
@@ -489,9 +529,9 @@ def plot_expression(
         ax.set_ylabel("")
         ax.set_xlabel("")
 
-    fig.supylabel("Expression" + f" ({layer})" if layer is not None else "", fontsize=10)
+    fig.supylabel("Expression" + f" ({layer})" if layer is not None else "")
     if groupby is not None:
-        fig.supxlabel(groupby, fontsize=10)
+        fig.supxlabel(groupby)
     fig.tight_layout()
     return axs
 
@@ -555,7 +595,9 @@ def plot_spatial_feature(
     local: Optional[str] = None,
     obsm: Optional[str] = None,
     image: bool = False,
+    figtitle: Optional[str] = None,
     feature_labels: Union[None, str, Sequence[Optional[str]]] = None,
+    rc_context: Optional[Dict[str, Any]] = None,
     **kwds,
 ) -> Union[np.ndarray, Any]:
 
@@ -666,19 +708,21 @@ def plot_spatial_feature(
 
     subplot_kwds = subplot_kwds or {}
     # create the subplots with right cols and rows
+
     _rc_context = {
-        "axes.grid": False,
-        "figure.frameon": False,
-        "axes.spines.bottom": False,
-        "axes.spines.top": False,
-        "axes.spines.left": False,
-        "axes.spines.right": False,
-        "xtick.bottom": False,
-        "xtick.labelbottom": False,
-        "ytick.left": False,
-        "ytick.labelleft": False,
+        # "axes.grid": False,
+        # "figure.frameon": False,
+        # "axes.spines.bottom": False,
+        # "axes.spines.top": False,
+        # "axes.spines.left": False,
+        # "axes.spines.right": False,
+        # "xtick.bottom": False,
+        # "xtick.labelbottom": False,
+        # "ytick.left": False,
+        # "ytick.labelleft": False,
     }
 
+    _rc_context.update(rc_context or {})
     if _ax is None:
         with plt.rc_context(_rc_context):
             fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **subplot_kwds)
@@ -765,6 +809,9 @@ def plot_spatial_feature(
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
+    if figtitle is not None:
+        fig.suptitle(figtitle, x=0, ha="left", va="bottom")
+
     axs = fig.get_axes()
 
     for ax in axs:
@@ -817,16 +864,23 @@ def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "rai
     return True, ""
 
 
-def plot_local_result(adata: AnnData, locality: str, *args, figtitle: Optional[str] = None, **kwargs):
+def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs):
 
-    if locality not in adata.obsm:
-        raise KeyError(f"`{locality}` not found in adata.obsm.")
+    if obsm not in adata.obsm:
+        raise KeyError(f"`{obsm}` not found in adata.obsm.")
 
-    axs = plot_spatial_feature(adata, obsm=locality, *args, **kwargs)
-    fig = axs[0].get_figure()
-    title = locality.replace("_", " ").capitalize() if figtitle is None else figtitle
+    kwargs.setdefault("figtitle", obsm.replace("_", " ").capitalize())
 
-    fig.suptitle(title, x=0, ha="left", fontsize="xx-large", va="bottom")
+    rc_context = {
+        "axes.grid": True,
+        "figure.frameon": True,
+        "axes.spines.bottom": True,
+        "axes.spines.top": True,
+        "axes.spines.left": True,
+        "axes.spines.right": True,
+    }
+
+    axs = plot_spatial_feature(adata, features=features, obsm=obsm, rc_context=rc_context, **kwargs)
     return axs
 
 
@@ -1296,6 +1350,56 @@ def moran_plot(
     return ax
 
 
+def plot_moran_mc(
+    adata: AnnData,
+    feature: Union[str, Sequence[str]],
+    graph_name: Optional[str] = None,
+    cmap: Optional[str] = None,
+    ax: Optional[Axes] = None,
+    legend_title: str = "feature",
+    **kwargs,
+):
+
+    linewidth = kwargs.pop("linewidth", None)
+    _kwargs = dict(figsize=None)
+    _kwargs.update(kwargs)
+    if ax is None:
+        fig, (ax,) = configure_subplots(1, 1, **_kwargs)
+
+    ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
+
+    if graph_name is None:
+        graph_name = spatial.get_default_graph(adata)
+    moran_df = adata.uns["spatial"].get("moran", {}).get(graph_name, None)
+    moran_sim_dict = adata.uns["spatial"].get("moran_mc", {}).get(graph_name, None)
+
+    if moran_df is None or moran_sim_dict is None:
+        raise KeyError(
+            "The AnnData object does not have the results needed for this plot.\
+ Please run `voyagerpy.spatial.moran` with permutations > 0 for the selected features."
+        )
+
+    features = [feature] if isinstance(feature, str) else feature[:]
+
+    Is = moran_df.loc[feature, "I"]
+    minI, maxI = Is.min(), Is.max()
+
+    for feat, I in zip(features, Is):
+
+        sim = moran_sim_dict[feat]["sim"]
+        label = adata.var.loc[feat, "symbol"]
+
+        x1 = min(minI, sim.min())
+        x2 = max(maxI, sim.max())
+        xs = np.linspace(x1, x2, 200)
+        kernel = gaussian_kde(sim)
+        (p,) = ax.plot(xs, kernel(xs), label=label, linewidth=linewidth)
+        ax.axvline(I, color=p.get_c(), linewidth=linewidth)
+
+    ax.legend(loc="center left", bbox_to_anchor=(1.04, 0.5), title=legend_title, frameon=False)
+
+    return ax
+
 
 def plot_barcode_histogram(
     adata: AnnData,
@@ -1308,6 +1412,7 @@ def plot_barcode_histogram(
     log: bool = True,
     stacked: bool = False,
     histtype: str = "step",
+    obsm: Optional[str] = None,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
 
@@ -1316,24 +1421,29 @@ def plot_barcode_histogram(
     ncol = min(ncol, nplot)
     nrow = int(np.ceil(nplot / ncol))
 
+    if obsm is not None:
+        if obsm not in adata.obsm:
+            raise KeyError(f'"{obsm}" not found in adata.obsm')
+        df = adata.obsm[obsm].copy()
+        if fill_by not in df:
+            df[fill_by] = adata.obs[fill_by].copy()
+    else:
+        df = adata.obs.copy()
+
     if fill_by is not None:
         fig, axs, cax = subplots_single_colorbar(nrow, ncol, figsize=figsize)
         all_feats = features + [fill_by]
-        keys, groups = zip(*adata.obs[all_feats].groupby(fill_by).groups.items())
+        keys, groups = zip(*df[all_feats].groupby(fill_by).groups.items())
 
         colormap = plt.get_cmap(cmap)
         colors = [colormap(i) for i in range(len(keys))]
 
         for feat, ax in zip(features, axs.flat):
-            hist_range = np.array([adata.obs[feat].min(), adata.obs[feat].max()])
-            hist_mid = hist_range.mean()
-            hist_range = tuple((hist_range - hist_mid) * 1.05 + hist_mid)
-
-            # dat = [adata.obs.loc[group, feat].values for group in groups]
+            hist_range = np.array([df[feat].min(), df[feat].max()])
 
             hist_data = [
                 np.histogram(
-                    adata.obs.loc[group, feat].values,
+                    df.loc[group, feat].values,
                     bins=bins,
                     range=hist_range,
                 )
@@ -1347,7 +1457,6 @@ def plot_barcode_histogram(
                 n, bins_, rects = ax.hist(
                     bin_edges[:, :-1].T,
                     bins=bins,
-                    range=hist_range,
                     log=log,
                     label=keys,
                     stacked=stacked,
@@ -1360,15 +1469,23 @@ def plot_barcode_histogram(
                 ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
 
                 centers = np.diff(bin_edges) / 2 + bin_edges[:, :-1]
-                rects = ax.plot(centers.T, np.maximum(0.2, counts.T))
+                bin_width = np.diff(bin_edges).mean(axis=1, keepdims=True)
+
+                # CLEANUP: We're adding bins to both ends to make the lines go to zero
+                if True:
+                    zeros = np.zeros((centers.shape[0], 1))
+                    counts = np.hstack([zeros, counts, zeros])
+                    centers = np.hstack([centers[:, :1] - bin_width, centers, centers[:, -1:] + bin_width])
+                counts += log
+
+                # we plot counts + log to map zero to zero without losing plotted data
+                rects = ax.plot(centers.T, counts.T, **hist_kwargs)
 
                 if log:
                     ax.set_yscale("log")
 
-                ax.set_ylim(0.2, None)
-
             ax.grid(False, "minor")
-            ax.set_xlabel(feat, size=10)
+            ax.set_xlabel(feat)
 
         if histtype.startswith("step"):
             # Hack to get the actual handles
@@ -1396,6 +1513,8 @@ def plot_features_histogram(
     log: bool = True,
     stacked: bool = False,
     histtype: str = "step",
+    markers: Union[None, str, Sequence[str]] = None,
+    show_symbol: bool = True,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
 
@@ -1403,6 +1522,10 @@ def plot_features_histogram(
     nplot = len(features)
     ncol = min(ncol, nplot)
     nrow = int(np.ceil(nplot / ncol))
+
+    _hist_kwargs = dict(edgecolor="w")
+
+    _hist_kwargs.update(hist_kwargs)
 
     if fill_by is not None:
         fig, axs, cax = subplots_single_colorbar(nrow, ncol, figsize=figsize)
@@ -1413,13 +1536,12 @@ def plot_features_histogram(
         colors = [colormap(i) for i in range(len(keys))]
 
         for feat, ax in zip(features, axs.flat):
+            # these should probably be .var
             hist_range = np.array([adata.obs[feat].min(), adata.obs[feat].max()])
             hist_mid = hist_range.mean()
             hist_range = tuple((hist_range - hist_mid) * 1.05 + hist_mid)
 
-            # dat = [adata.obs.loc[group, feat].values for group in groups]
-
-            hist_data = [np.histogram(adata.obs.loc[group, feat].values, bins=bins, range=hist_range, **hist_kwargs) for group in groups]
+            hist_data = [np.histogram(adata.obs.loc[group, feat].values, bins=bins, range=hist_range, **_hist_kwargs) for group in groups]
 
             counts, bin_edges = zip(*hist_data)
             bin_edges = np.array(bin_edges)
@@ -1435,9 +1557,10 @@ def plot_features_histogram(
                     weights=counts.T,
                     color=colors[: len(keys)],
                     histtype=histtype,
-                    **hist_kwargs,
+                    **_hist_kwargs,
                 )
             else:
+                # TODO: make this match the barcode histogram
                 ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
 
                 centers = np.diff(bin_edges) / 2 + bin_edges[:, :-1]
@@ -1451,6 +1574,8 @@ def plot_features_histogram(
             ax.grid(False, "minor")
             ax.set_xlabel(feat, size=10)
 
+            add_markers(adata.var, feat, markers, ax=ax, cmap=cmap, label_col="symbol", legend=True)
+
         if histtype.startswith("step"):
             # Hack to get the actual handles
             handles = [patch[0] for patch in rects]
@@ -1458,42 +1583,91 @@ def plot_features_histogram(
             handles = rects
         cax.legend(handles=handles, labels=keys, loc="center left", title=fill_by, frameon=False)
     else:
-        fig, axs = configure_subplots(nplot, ncol)
+        fig, axs = configure_subplots(nplot, ncol, figsize=figsize)
+        _hist_kwargs.setdefault("color", "#666666ff")
 
-        color = plt.get_cmap(cmap)(7 if cmap is None else 0)
         for ax, feat in zip(axs.flat, features):
-            n, _, rects = ax.hist(adata.var[feat], bins=bins, log=log, histtype=histtype, color=color, **hist_kwargs)
-            print("sum of bins", n.sum())
+            if histtype != "line":
+                n, _, rects = ax.hist(adata.var[feat], bins=bins, log=log, histtype=histtype, **_hist_kwargs)
+            else:
+                _hist_kwargs.pop("ec", None)
+                _hist_kwargs.pop("edgecolor", None)
+                counts, bin_edges = np.histogram(adata.var[feat].dropna(inplace=False).values, bins=bins)
+                centers = np.diff(bin_edges) / 2 + bin_edges[:-1]
+                rects = ax.plot(centers, counts, **_hist_kwargs)
+
+            add_markers(
+                adata.var,
+                feat,
+                markers,
+                ax=ax,
+                cmap=cmap,
+                label_col="symbol" if show_symbol else None,
+                legend=True,
+            )
+            ax.set_xlabel(feat)
 
     fig.supylabel("count")
 
     return axs
 
 
+def add_markers(
+    df,
+    feat,
+    markers: Union[None, str, Sequence[str]],
+    ax: Axes,
+    cmap: Optional[str] = None,
+    label_col: Optional[str] = None,
+    legend: bool = True,
+):
+    if markers is not None:
+        marker_list = [markers] if isinstance(markers, str) else markers[:]
+        colors = plt.get_cmap(cmap)
+
+        for i_marker, marker in enumerate(marker_list):
+            value = df.loc[marker, feat]
+            label_suffix = marker if label_col is None else df.loc[marker, label_col]
+            label = f"{i_marker} - {label_suffix}"
+            ax.axvline(value, color=colors(i_marker), label=label)
+
+        ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title="Marker Gene")
+    return ax
+
+
 def plot_fitline(
-    x,
-    y,
+    x: Union[str, Series, np.ndarray],
+    y: Union[str, Series, np.ndarray],
     alternative: str = "two-sided",
     ax: Optional[Axes] = None,
     color: Optional[str] = None,
     data: Any = None,
+    xlim: Optional[Tuple[Optional[float], Optional[float]]] = None,
+    ylim: Optional[Tuple[Optional[float], Optional[float]]] = None,
 ):
 
-    xlim = ylim = None
     if ax is None:
         fig, ax = plt.subplots()
-    else:
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
 
     if data is not None:
-        x = data[x]
-        y = data[y]
+        xdat = data[x] if isinstance(x, str) else x[:]
+        ydat = data[y] if isinstance(y, str) else y[:]
+    else:
+        xdat = x[:]
+        ydat = y[:]
 
-    non_nans = ~(np.isnan(x) | np.isnan(y))
-    reg = linregress(x[non_nans], y[non_nans], alternative=alternative)
+    xdat = np.array(xdat)
+    ydat = np.array(ydat)
 
-    ax.axline((0, reg.intercept), slope=reg.slope, color=color)
+    non_nans = ~(np.isnan(xdat) | np.isnan(ydat))
+    reg = linregress(xdat[non_nans], ydat[non_nans], alternative=alternative)
+
+    xmax = xdat.max()  # max(0, xdat.max())
+    xmin = xdat.min()  # min(xdat.min(), 0)
+    ymin = xmin * reg.slope + reg.intercept
+    ymax = xmax * reg.slope + reg.intercept
+
+    ax.axline((xmin, ymin), (xmax, ymax), color=color)
 
     if xlim is not None:
         ax.set_xlim(*xlim)
@@ -1517,6 +1691,7 @@ def scatter(
     fitline_kwargs: Optional[Dict[str, Any]] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
     figsize: Optional[Tuple[float, float]] = None,
+    is_categorical: Optional[bool] = None,
     **scatter_kwargs,
 ):
     if ax is None:
@@ -1533,7 +1708,7 @@ def scatter(
     _scatter_kwargs = dict(cmap=cmap, s=8)
     cmap_kwargs = dict()
 
-    is_categorical = False
+    # is_categorical = False
     if data is None:
         if isinstance(color_by, str):
             raise ValueError("data must not be None if color_by is str")
@@ -1549,7 +1724,7 @@ def scatter(
     del color_by, x, y
 
     # if color_dat is not None and data is not None and data[color_dat].dtype == "category":
-    if color_dat is not None and color_dat.dtype == "category":
+    if is_categorical or color_dat is not None and color_dat.dtype == "category":
         is_categorical = True
         _scatter_kwargs.update(
             dict(
