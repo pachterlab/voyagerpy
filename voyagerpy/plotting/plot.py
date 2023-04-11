@@ -1092,36 +1092,45 @@ def subplots_single_colorbar(
 
 def plot_dim_loadings(
     adata: AnnData,
-    dims: Sequence[int],
+    dims: Union[int, Sequence[int]],
     ncol: int = 2,
-    figsize: Union[Tuple[float, float], float, int] = 6,
-    n_extremes: int = 5,
+    n_loadings: int = 10,
     show_symbol: bool = True,
+    **kwargs,
 ):
+    dims = list(range(dims)) if isinstance(dims, int) else list(dims)
     dat = adata.varm["PCs"][:, dims]
+    nplots = len(dims)
 
-    if isinstance(figsize, (int, float)):
-        ncol = min(ncol, len(dims))
-        nrow = int(np.ceil(len(dims) / ncol))
-        figsize = (nrow * figsize / ncol, figsize)
+    _subplot_kwargs = dict(
+        nplots=nplots,
+        ncol=ncol,
+        figsize=kwargs.pop("figsize", None),
+        sharex=kwargs.pop("sharex", True),
+        layout=kwargs.pop("layout", "tight"),
+    )
 
-    fig, axs = configure_subplots(len(dims), ncol, figsize=figsize, sharex=True)
+    fig, axs = configure_subplots(**_subplot_kwargs)
 
     show_symbol = show_symbol and adata.uns["config"]["var_names"] != "symbol"
 
+    n_min = n_loadings // 2
+    n_max = n_loadings - n_min
     for i, (ax, dim) in enumerate(zip(axs.flat, dims)):
         ax.set_title(f"PC{dim}")
 
+        # get indices of sorted dim loadings (ascending)
         idx = np.argsort(dat[:, i])
-        idx = np.hstack([idx[:n_extremes], idx[-n_extremes:]])
+        idx = np.hstack([idx[:n_min], idx[-n_max:]])
+
         genes = adata.var.index[idx]
         if show_symbol:
             genes = adata.var.loc[genes, "symbol"]
 
         loadings = dat[idx, i]
-        lines = [((0, row), (loading, row)) for row, loading in enumerate(loadings)]
+        hlines = [((0, row), (loading, row)) for row, loading in enumerate(loadings)]
 
-        line_segments = LineCollection(lines, colors="k")
+        line_segments = LineCollection(hlines, colors="k")
         ax.add_collection(line_segments)
 
         ax.scatter(loadings, genes, c="b")
@@ -1132,7 +1141,6 @@ def plot_dim_loadings(
 
     fig.supxlabel("Loading")
     fig.supylabel("Gene")
-    fig.tight_layout()
 
     return axs
 
