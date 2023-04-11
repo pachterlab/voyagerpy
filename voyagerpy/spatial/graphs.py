@@ -18,7 +18,7 @@ from shapely.geometry import Point, Polygon
 
 from voyagerpy import utils
 from voyagerpy.spatial import spatial
-
+from .spatial import get_default_graph
 
 def compute_weights(coords: gpd.GeoSeries, func="euclidean") -> Any:
     if func == "euclidean":
@@ -134,3 +134,32 @@ def find_visium_graph(
     positions = dict(zip(positions.index, positions.values))
     nx.set_node_attributes(G, positions, "pos")
     return G
+
+
+def compute_higher_order_nbors(adata, graph_name = None, force: bool=False,*, order: int):
+    if graph_name is None:
+        graph_name = get_default_graph(adata)
+        
+    W = adata.uns['spatial'][graph_name]
+    adata.uns['spatial'].setdefault('higher_order', {})
+    Ws = adata.uns['spatial']['higher_order'].setdefault(graph_name, [])
+    if force:
+        Ws.clear()
+
+    n_order = len(Ws)
+    if n_order == 0:
+        # Ws.append((W.sparse.copy()> 0).astype(int))
+        Ws.append(W.sparse.copy())
+
+    M = Ws[0].copy()
+    Mp = Ws[-1].copy()
+    for k in range(n_order+1, order):
+        # M is the original graph
+        # Mp is the order-k neighbourhood graph
+
+        # Mp
+        Mp = (M * Mp + M)
+        Mp.setdiag(0)
+        Ws.append(Mp.copy())
+
+    return Ws
