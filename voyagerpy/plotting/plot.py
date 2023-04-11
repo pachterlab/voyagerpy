@@ -795,7 +795,7 @@ def plot_spatial_feature(
     kwargs.setdefault("s", 4)
     geom_is_poly = geo.geometry.geom_type[0] == "Polygon"
     if geom_is_poly:
-        kwargs.setdefault("marker", kwargs.pop("s", None))
+        kwargs.setdefault("markersize", kwargs.pop("s", None))
 
     # iterate over features to plot
 
