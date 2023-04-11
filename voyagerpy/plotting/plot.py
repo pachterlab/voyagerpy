@@ -1185,14 +1185,15 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
     return ax
 
 
-@rcDecorator({"axes.edgecolor": "#00000050", "axes.grid.which": "both"})
-def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", figsize=None):
+def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", **kwargs):
 
     data = adata.obsm["X_pca"]
-
-    fig, axs, cax = subplots_single_colorbar(ndim, ndim, figsize=figsize)
+    rc_context = {"axes.edgecolor": "#00000050", "axes.grid.which": "both"}
+    with plt.rc_context(rc_context):
+        fig, axs, cax = subplots_single_colorbar(ndim, ndim, **kwargs)
 
     max_color = plt.get_cmap(cmap).N
+
     colors = adata.obs[colorby].astype(int)
     var_expl = np.round(adata.uns["pca"]["variance_ratio"] * 100).astype(int)
 
@@ -1237,7 +1238,6 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
     else:
         cax.remove()
 
-    fig.tight_layout(pad=0)
     return axs
 
 
