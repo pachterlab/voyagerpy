@@ -1395,8 +1395,8 @@ def plot_moran_mc(
 
 def plot_barcode_histogram(
     adata: AnnData,
-    features: Union[str, Sequence[str]],
-    fill_by: Optional[str] = None,
+    feature: Union[str, Sequence[str]],
+    color_by: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     ncol: int = 1,
     cmap: Optional[str] = None,
@@ -1405,10 +1405,12 @@ def plot_barcode_histogram(
     stacked: bool = False,
     histtype: str = "step",
     obsm: Optional[str] = None,
+    label: Optional[Sequence[str]] = None,
+    subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
 
-    features = [features] if isinstance(features, str) else features
+    features = [feature] if isinstance(feature, str) else feature
     nplot = len(features)
     ncol = min(ncol, nplot)
     nrow = int(np.ceil(nplot / ncol))
@@ -1417,20 +1419,28 @@ def plot_barcode_histogram(
         if obsm not in adata.obsm:
             raise KeyError(f'"{obsm}" not found in adata.obsm')
         df = adata.obsm[obsm].copy()
-        if fill_by not in df:
-            df[fill_by] = adata.obs[fill_by].copy()
+        if color_by not in df:
+            df[color_by] = adata.obs[color_by].copy()
     else:
         df = adata.obs.copy()
 
-    if fill_by is not None:
-        fig, axs, cax = subplots_single_colorbar(nrow, ncol, figsize=figsize)
-        all_feats = features + [fill_by]
-        keys, groups = zip(*df[all_feats].groupby(fill_by).groups.items())
+    _subplots_kwargs = dict(figsize=figsize, layout=None, hspace=0.5, nplots=nplot)
+    _subplots_kwargs.update(subplot_kwargs or {})
+
+    labels = [label] if isinstance(label, str) else label
+    del label
+    if labels is not None and len(labels) != len(features):
+        raise ValueError("labels must be the same length as features")
+
+    if color_by is not None:
+        fig, axs, cax = subplots_single_colorbar(nrow, ncol, **_subplots_kwargs)
+        all_feats = features + [color_by]
+        keys, groups = zip(*df[all_feats].groupby(color_by).groups.items())
 
         colormap = plt.get_cmap(cmap)
         colors = [colormap(i) for i in range(len(keys))]
 
-        for feat, ax in zip(features, axs.flat):
+        for i_ax, (feat, ax) in enumerate(zip(features, axs.flat)):
             hist_range = np.array([df[feat].min(), df[feat].max()])
 
             hist_data = [
@@ -1468,29 +1478,30 @@ def plot_barcode_histogram(
                     zeros = np.zeros((centers.shape[0], 1))
                     counts = np.hstack([zeros, counts, zeros])
                     centers = np.hstack([centers[:, :1] - bin_width, centers, centers[:, -1:] + bin_width])
-                counts += log
 
                 # we plot counts + log to map zero to zero without losing plotted data
+                counts += log
                 rects = ax.plot(centers.T, counts.T, **hist_kwargs)
 
                 if log:
                     ax.set_yscale("log")
 
             ax.grid(False, "minor")
-            ax.set_xlabel(feat)
+            ax.set_xlabel(feat if labels is None else labels[i_ax])
 
         if histtype.startswith("step"):
             # Hack to get the actual handles
             handles = [patch[0] for patch in rects]
         else:
             handles = rects
-        cax.legend(handles=handles, labels=keys, loc="center left", title=fill_by, frameon=False)
+        cax.legend(handles=handles, labels=keys, loc="center left", title=color_by, frameon=False)
     else:
         fig, axs = configure_subplots(nplot, ncol)
         # TODO
 
     fig.supylabel("count")
-
+    if obsm is not None:
+        fig.suptitle(f"Barcode histogram for {obsm}", ha="left", x=0.0)
     return axs
 
 
