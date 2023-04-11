@@ -313,8 +313,8 @@ def plot_barcode_data(
     sharex: Union[None, Literal["none", "all", "row", "col"], bool] = None,
     sharey: Union[None, str, bool] = None,
     figsize: Optional[Tuple[float, float]] = None,
-    x_labels: Union[None, str, Sequence[str]] = None,
-    y_labels: Union[None, str, Sequence[str]] = None,
+    x_label: Union[None, str, Sequence[str]] = None,
+    y_label: Union[None, str, Sequence[str]] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
     ax: Optional[Axes] = None,
@@ -322,28 +322,27 @@ def plot_barcode_data(
 ):
     #  TODO: Allow ax argument
 
-    x_features = x if isinstance(x, (list, tuple)) else [x]
-    y_features = y if isinstance(y, (list, tuple)) else [y]
+    x_features = list(x) if isinstance(x, (list, tuple)) else [x]
+    y_features = list(y) if isinstance(y, (list, tuple)) else [y]
 
-    if x_labels is None:
+    if x_label is None:
         x_labels = x_features[:]
         if obsm is not None:
             x_labels = [f"{lab}_{obsm}" for lab in x_labels]
+    else:
+        x_labels = list(x_label) if isinstance(x_label, (list, tuple)) else [x_label]
 
-    x_labels = x_labels if isinstance(x_labels, (list, tuple)) else [x_labels]
-    if isinstance(x_labels, (list, tuple)) and len(x_labels) != len(x_features):
-        raise ValueError("x_labels must have the same length as x")
-
-    if y_labels is None:
+    if y_label is None:
         y_labels = y_features[:]
         if obsm is not None:
-            y_labels = [f"{obsm}_{lab}" for lab in y_labels]
+            y_labels = [f"{lab}_{obsm}" for lab in y_labels]
+    else:
+        y_labels = list(y_label) if isinstance(y_label, (list, tuple)) else [y_label]
 
-    y_labels = y_labels if isinstance(y_labels, (list, tuple)) else [y_labels]
-    if isinstance(y_labels, (list, tuple)) and len(y_labels) != len(y_features):
-        raise ValueError("y_labels must have the same length as y")
+    assert isinstance(x_features, (list, tuple)), "x must be a list or tuple"
+    assert isinstance(y_features, (list, tuple)), "y must be a list or tuple"
 
-    del x, y
+    del x, y, x_label, y_label
 
     nplots = len(y_features) * len(x_features)
 
@@ -361,6 +360,13 @@ def plot_barcode_data(
         else:
             sharey = False
 
+    _subplot_kwargs = dict(
+        sharex=sharex,
+        sharey=sharey,
+        figsize=kwargs.pop("figsize", None),
+        layout=kwargs.pop("layout", "constrained"),
+    )
+
     default_rc_context = {
         "axes.spines.bottom": True,
         "axes.spines.top": False,
@@ -376,7 +382,7 @@ def plot_barcode_data(
         fig = ax.get_figure()
     else:
         with plt.rc_context(default_rc_context):
-            fig, axs_arr = configure_subplots(nplots, ncol, figsize=figsize, sharex=sharex, sharey=sharey, layout="tight")
+            fig, axs_arr = configure_subplots(nplots, ncol, **_subplot_kwargs)
 
     feature_iterator = ((y_feat, x_feat) for y_feat in zip(y_labels, y_features) for x_feat in zip(x_labels, x_features))
 
@@ -401,12 +407,11 @@ def plot_barcode_data(
             **kwargs,
         )
 
-    #fig.tight_layout()
     return axs_arr
 
 
 def plot_bin2d(
-    data: Union[AnnData, "pd.DataFrame"],
+    data: Union[AnnData, DataFrame],
     x: str,
     y: str,
     filt: Optional[str] = None,
