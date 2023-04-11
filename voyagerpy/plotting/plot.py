@@ -1356,7 +1356,7 @@ def plot_moran_mc(
     _kwargs = dict(figsize=None)
     _kwargs.update(kwargs)
     if ax is None:
-        fig, (ax,) = configure_subplots(1, 1, **_kwargs)
+        fig, (ax,) = configure_subplots(1, 1, squeeze=True, **_kwargs)
 
     ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
 
