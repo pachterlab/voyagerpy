@@ -269,20 +269,35 @@ def plot_single_barcode_data(
 
 
 def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
+
     ncol = min(ncol or 2, nplots)
     nrow = int(np.ceil(nplots / ncol))
 
-    default_figsize = (10, 7) if nrow >= 2 and ncol == 3 else (10, 10)
-    plot_kwargs = {"figsize": default_figsize}
+    hspace = kwargs.pop("hspace", 0.2)
+    wspace = kwargs.pop("wspace", None)
+
+    default_figsize = (6, 6)
+    plot_kwargs = {
+        "figsize": default_figsize,
+        "gridspec_kw": {"wspace": wspace, "hspace": hspace},
+        "squeeze": False,
+    }
     plot_kwargs.update(kwargs)
 
+    # tight layout incompatible with gridspec_kw arguments wspace and hspace
+    if plot_kwargs.get("layout", None) == "tight":
+        plot_kwargs.pop("gridspec_kw", None)
+
     fig, axs = plt.subplots(nrow, ncol, **plot_kwargs)
-    if nplots == 1:
+    if not isinstance(axs, np.ndarray):
         axs = np.array([axs])
 
     assert isinstance(axs, np.ndarray)
     for ax in axs.flat[nplots:]:
         ax.axis("off")
+
+    # print("setting layout as in theng")
+    # fig.get_layout_engine().set(hspace=0, h_pad=4 / 720, w_pad=4 / 720, wspace=0)
 
     return fig, axs
 
