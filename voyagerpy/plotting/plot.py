@@ -611,7 +611,7 @@ def nogrid(func):
 def plot_spatial_feature(
     adata: AnnData,
     features: Union[str, Sequence[str]],
-    ncol: int = 3,
+    ncol: int = 2,
     barcode_geom: Optional[str] = None,
     annot_geom: Optional[str] = None,
     tissue: bool = True,
@@ -629,8 +629,8 @@ def plot_spatial_feature(
     _ax: Union[None, Axes, Iterable[Axes]] = None,
     legend: bool = True,
     plot: bool = True,
-    subplot_kwds: Optional[Dict] = {},
-    legend_kwds: Optional[Dict] = {},
+    subplot_kwargs: Optional[Dict] = None,
+    legend_kwargs: Optional[Dict] = None,
     dimension: str = "barcode",
     local: Optional[str] = None,
     obsm: Optional[str] = None,
@@ -638,9 +638,9 @@ def plot_spatial_feature(
     figtitle: Optional[str] = None,
     feature_labels: Union[None, str, Sequence[Optional[str]]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
-    **kwds,
+    show_symbol: bool = True,
+    **kwargs,
 ) -> Union[np.ndarray, Any]:
-
     if isinstance(features, (list, tuple)):
         feat_ls = list(features)
     elif isinstance(features, str):
@@ -665,15 +665,18 @@ def plot_spatial_feature(
     df = adata.obs if obsm is None else adata.obsm[obsm]
     df_repr = f"adata.obs" if obsm is None else f'adata.obsm["{obsm}"]'
 
-    feature_labels = feature_labels or [None] * len(feat_ls)
+    feature_labels = feature_labels if feature_labels is not None else [None] * len(feat_ls)
     feature_labels = [feature_labels] if not isinstance(feature_labels, (tuple, list)) else feature_labels[:]
 
     for feature, label in zip(feat_ls, feature_labels):
         label = label if label is not None else feature
+
         if feature in df:
             labeled_features.append((feature, label))
             continue
         if feature in adata.var.index:
+            if show_symbol:
+                label = adata.var.at[feature, secondary_gene_column]
             labeled_features.append((feature, label))
             var_features.append(feature)
             continue
@@ -746,7 +749,17 @@ def plot_spatial_feature(
     if divergent:
         cmap = div_cmap
 
-    subplot_kwds = subplot_kwds or {}
+    _subplot_kwargs = dict(
+        layout="constrained",
+        figsize=kwargs.pop("figsize", None),
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+        hspace=0.2 if legend else 0.05,
+        wspace=0.2,
+    )
+    _subplot_kwargs.update(subplot_kwargs or {})
+
     # create the subplots with right cols and rows
 
     _rc_context = {
@@ -765,8 +778,7 @@ def plot_spatial_feature(
     _rc_context.update(rc_context or {})
     if _ax is None:
         with plt.rc_context(_rc_context):
-            fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **subplot_kwds)
-        fig.tight_layout()  # Or equivalently,  "plt.tight_layout()"
+            fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **_subplot_kwargs)
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
         if isinstance(_ax, Axes):
@@ -778,12 +790,15 @@ def plot_spatial_feature(
 
         fig = axs.flat[0].get_figure()
 
+    kwargs.setdefault("s", 4)
+    geom_is_poly = geo.geometry.geom_type[0] == "Polygon"
+    if geom_is_poly:
+        kwargs.setdefault("marker", kwargs.pop("s", None))
+
     # iterate over features to plot
 
-    cax_title_kwargs = dict(loc="left", fontsize=10)
-
-    for ax, (feature, label) in zip(axs.flat, labeled_features):
-        legend_kwds_ = deepcopy(legend_kwds)
+    for _ax, (feature, label) in zip(axs.flat, labeled_features):
+        legend_kwargs_ = deepcopy(legend_kwargs or {})
         _legend = legend
         curr_cmap = cmap
         values = obs[feature]
@@ -793,9 +808,8 @@ def plot_spatial_feature(
             curr_cmap = cmap
             vmax = None
 
-            legend_kwds_.setdefault("label", label)
-            legend_kwds_.setdefault("orientation", "vertical")
-            legend_kwds_.setdefault("shrink", 0.6)
+            legend_kwargs_.setdefault("title", label)
+            legend_kwargs_.setdefault("orientation", "vertical")
 
             if divergent:
                 vmin = values.min()
@@ -809,39 +823,60 @@ def plot_spatial_feature(
             vmax = cm.get_cmap(cat_cmap).N
             _legend = False
 
-            add_colorbar_discrete(
-                ax=ax,
-                fig=fig,
-                cmap=curr_cmap,
-                cbar_title=feature,
-                cat_names=list(values.cat.categories),
-                scale=False,
-                title_kwargs=cax_title_kwargs,
-            )
-
         if color is not None:
             curr_cmap = None
 
         if image:
-            ax = imshow(adata, None, ax)
+            _ax = imshow(adata, None, _ax)
 
-        geo.plot(
-            column=values,
-            ax=ax,
-            color=color,
-            legend=_legend,
-            cmap=curr_cmap,
-            vmax=vmax,
-            legend_kwds=legend_kwds_,
-            **extra_kwargs,
-            **geom_style,
-            **kwds,
-        )
+        if geom_is_poly:
+            legend_kwargs_.pop("title", None)
+            if _legend:
+                divider = make_axes_locatable(_ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                # legend_kwargs_.setdefault("label", label)
+                extra_kwargs["cax"] = cax
+                cax.set_title(label)
+                cax.set_ylabel(
+                    label,
+                    rotation=270,
+                    fontsize=12,
+                )
+
+            geo.plot(
+                column=values,
+                ax=_ax,
+                color=color,
+                legend=_legend,
+                cmap=curr_cmap,
+                vmax=vmax,
+                legend_kwds=legend_kwargs_,
+                **extra_kwargs,
+                **geom_style,
+                **kwargs,
+            )
+            # print("type:", type(cax))
+            # return cax.set_label #(label.upper(), rotation=270, fontsize=12)
+            # return cax
+            # return cax, gax
+
+        else:
+            _ax = scatter(
+                geo.geometry.x,
+                geo.geometry.y,
+                ax=_ax,
+                color_by=feature,
+                data=obs,
+                legend_kwargs=legend_kwargs_,
+                cmap=curr_cmap,
+                **extra_kwargs,
+                **kwargs,
+            )
 
         if annot_geom is not None:
             if annot_geom in adata.uns["spatial"]["geom"]:
                 # check annot_style is dict with correct values
-                annot_kwargs = dict(ax=ax, color="blue", alpha=alpha, **kwds)
+                annot_kwargs = dict(ax=_ax, color="blue", alpha=alpha, **kwargs)
                 annot_kwargs.update(annot_style or {})
 
                 plg = adata.uns["spatial"]["geom"][annot_geom]
@@ -851,13 +886,6 @@ def plot_spatial_feature(
 
     if figtitle is not None:
         fig.suptitle(figtitle, x=0, ha="left", va="bottom")
-
-    axs = fig.get_axes()
-
-    for ax in axs:
-        if ax.properties()["label"] == "<colorbar>" and ax.properties()["ylabel"] != "":
-            ax.set_title(ax.properties()["ylabel"], **cax_title_kwargs)
-            ax.set_ylabel("")
 
     return axs
 
@@ -942,8 +970,8 @@ def spatial_reduced_dim(
     color: Optional[str] = None,
     _ax: Optional[Axes] = None,
     legend: bool = True,
-    subplot_kwds: Optional[Dict] = {},
-    **kwds,
+    subplot_kwargs: Optional[Dict] = {},
+    **kwargs,
 ):
     adata = adata.copy()
     if isinstance(ncomponents, (list, tuple, range)):
@@ -967,10 +995,10 @@ def spatial_reduced_dim(
     axs = plot_spatial_feature(
         adata=adata,
         features=feat_names,
-        **kwds,
+        **kwargs,
     )
 
-    fig = axs[0].get_figure()
+    fig = axs.flat[0].get_figure()
     fig.suptitle(dimred, x=0, ha="left", fontsize="xx-large", va="bottom")
     return axs
 
