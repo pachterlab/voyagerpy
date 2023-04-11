@@ -1765,6 +1765,7 @@ def scatter(
     ax.set_title(labels.get("title", None))
 
     legend_kwargs = legend_kwargs or {}
+
     if legend and is_categorical:
         _legend_kwargs = dict(
             bbox_to_anchor=(1.04, 0.5),
@@ -1776,23 +1777,30 @@ def scatter(
         _legend_kwargs.update(legend_kwargs)
 
         ax.legend(*scat.legend_elements(), **_legend_kwargs)
+
     elif legend and color_dat is not None:
-        # TODO: compare:
-        """
-        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        # I'm not 100% certain which one to use
+        use_divider = True
+        if use_divider:
             divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            cbar = fig.colorbar(scat, cax=cax, shrink=0.4, label=feature_label)
-        """
+            cax = divider.append_axes("right", size="5%", pad="1%")
+        else:
+            cax = None
+
         cmap_kwargs = dict(
             label=legend_kwargs.pop("title", color_str),
-            ax=ax,
-            cax=None,
         )
+        if use_divider:
+            cmap_kwargs["cax"] = cax
+        else:
+            # cmap_kwargs["ax"] = ax
+            cmap_kwargs["use_gridspec"] = True
 
         cmap_kwargs.update(legend_kwargs or {})
         cbar_title = cmap_kwargs.pop("title", None)
+
         cbar = fig.colorbar(scat, **cmap_kwargs)
+
         if cbar_title is not None:
             cbar.ax.set_title(cbar_title, fontsize=8)
 
