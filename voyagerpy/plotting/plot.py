@@ -428,18 +428,25 @@ def plot_bin2d(
     get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
     obs = get_dataframe(data) if isinstance(data, AnnData) else data
 
-    
     plot_kwargs = dict(
         bins=bins,
         cmap="Blues",
     )
 
-    figsize = kwargs.pop("figsize", (10, 7))
+    figsize = kwargs.pop("figsize", None)
     plot_kwargs.update(kwargs)
 
-    grid_kwargs = dict(visible=True, which="both", axis="both", color="k", linewidth=0.5, alpha=0.2)
+    grid_kwargs = dict(
+        visible=True,
+        which="both",
+        axis="both",
+        color="k",
+        linewidth=0.5,
+        alpha=0.2,
+    )
 
     if hex_plot:
+        # hexbin has similar arguments as hist2d, but some names are different
         renaming = [
             ("gridsize", "bins", bins),
             ("mincnt", "cmin", 1),
@@ -452,7 +459,9 @@ def plot_bin2d(
         plot_kwargs.setdefault("linewidth", 0.2)
 
     if ax is None:
-        _, ax = plt.subplots(figsize=figsize)
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
 
     plot_fun = ax.hexbin if hex_plot else ax.hist2d
     x_label = x
@@ -463,10 +472,8 @@ def plot_bin2d(
 
     if subset is None:
         myfilt: Any = Ellipsis if filt is None else obs[filt].astype(bool)
-
         im = plot_fun(x[myfilt], y[myfilt], **plot_kwargs)  # type: ignore
-        cbar = plt.colorbar(im[-1] if isinstance(im, tuple) else im)
-        cbar.ax.set_title("count")
+        cbar = fig.colorbar(im[-1] if isinstance(im, tuple) else im, label="count")
 
     else:
         subset_name = subset
@@ -488,7 +495,6 @@ def plot_bin2d(
     ax.set_xlabel(x_label)
 
     ax.grid(**grid_kwargs)
-    ax.set_facecolor("w")
     return ax
 
 
