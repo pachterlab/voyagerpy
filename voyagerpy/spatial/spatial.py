@@ -624,7 +624,11 @@ def compute_spatial_lag(
     features = [feature] if isinstance(feature, str) else feature[:]
     for feat in features:
         lagged_feat = f"lagged_{feat}"
-        adata.obs[lagged_feat] = dists.dot(adata.obs[feat])
+        if feat in adata.var_names:
+            x = adata.X[:, adata.var_names.get_loc(feat)]
+        else:
+            x = adata.obs[feat]
+        adata.obs[lagged_feat] = dists.dot(x)
 
     return adata
 
