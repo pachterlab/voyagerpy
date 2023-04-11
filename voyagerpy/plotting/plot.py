@@ -1017,24 +1017,76 @@ def add_colorbar_discrete(
     return cbar
 
 
-def subplots_single_colorbar(nrow: int = 1, ncol: int = 1, **kwargs):
-    fig_kwargs = {"layout": "tight"}
-    fig_kwargs.update(kwargs)
-    figsize = fig_kwargs.pop("figsize", None)
+def subplots_single_colorbar(
+    nrow: int = 1,
+    ncol: int = 1,
+    cax_width: float = 0.2,
+    cax_space: float = 0.4,
+    **kwargs,
+):
+    figsize = kwargs.get("figsize", None)
+
     if isinstance(figsize, tuple):
-        figsize = (figsize[0] + 0.2, figsize[1])
+        figsize = (figsize[0] + cax_width + cax_space, figsize[1])
+        kwargs["figsize"] = figsize
 
-    fig = plt.figure(figsize=figsize, **fig_kwargs)
+    wspace = kwargs.pop("wspace", 0.05)
+    hspace = kwargs.pop("hspace", 0.05)
+    nplots = kwargs.pop("nplots", nrow * ncol)
 
-    width_ratios = [1] * ncol + [0.2]
-    spec = fig.add_gridspec(nrow, ncol + 1, width_ratios=width_ratios, height_ratios=[1] * nrow)
-    axs = np.array([[fig.add_subplot(spec[row, col]) for col in range(ncol)] for row in range(nrow)])
+    fig = plt.figure(**kwargs)
 
-    cax = fig.add_subplot(spec[:, -1])
+    # Configure the gridspec size
+    (total_width, _) = fig.get_size_inches()
+    plot_width = total_width - cax_width - cax_space
+
+    right = plot_width / total_width
+    left = (plot_width + cax_space) / total_width
+
+    has_layout = kwargs.get("layout", None) is not None
+    if has_layout:
+        main_spec = fig.add_gridspec(nrow, ncol + 1)
+        cax_spec = main_spec[:, -1]
+    else:
+        gridspec_kw = dict(
+            wspace=wspace,
+            hspace=hspace,
+            right=right,
+            # left=0.0,
+        )
+        main_spec = fig.add_gridspec(nrow, ncol, **gridspec_kw)
+
+    axs = np.array(
+        [
+            [
+                fig.add_subplot(
+                    main_spec[row, col],
+                )
+                for col in range(ncol)
+            ]
+            for row in range(nrow)
+        ]
+    )
+
+    # Make the last column of the grid the colorbar
+    if has_layout:
+        cax = fig.add_subplot(main_spec[:, -1])
+    else:
+        caxspec_kw = dict(
+            right=1.0,
+            left=left,
+        )
+        cax_spec = fig.add_gridspec(nrow, 1, **caxspec_kw)
+        cax = fig.add_subplot(cax_spec[:, -1])
+
     cax.set_frame_on(False)
     cax.grid(False)
     cax.set_xticks([])
     cax.set_yticks([])
+
+    for ax in axs.flat[nplots:]:
+        ax.axis("off")
+
     return fig, axs, cax
 
 
