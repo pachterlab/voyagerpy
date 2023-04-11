@@ -743,8 +743,9 @@ def local_moran(
     inplace: bool = True,
     permutations: int = 0,
     key_added: str = "local_moran",
-    graph_name: str = "connectivities",
+    graph_name: Optional[str] = None,
     keep_simulations: bool = False,
+    layer: Optional[str] = None,
     **kwargs,
 ) -> AnnData:
     import esda
@@ -754,14 +755,20 @@ def local_moran(
     features = [feature] if isinstance(feature, str) else list(feature)
 
     adata.uns.setdefault("spatial", {})
+
+    if graph_name is None:
+        graph_name = get_default_graph(adata)
+
     if graph_name not in adata.uns["spatial"]:
         to_spatial_weights(adata, graph_name)
 
+    X = adata.X if layer is None else adata.layers[layer].A
+    get_loc = adata.var.index.get_loc
     W = adata.uns["spatial"][graph_name]
 
     local_morans = [
         esda.Moran_Local(
-            adata.obs[feat],
+            X[:, get_loc(feat)] if feat in adata.var_names else adata.obs[feat],
             W,
             permutations=permutations,
             keep_simulations=keep_simulations,
@@ -793,6 +800,3 @@ def local_moran(
     param_dict["keep_simulations"] = keep_simulations
     param_dict["seed"] = kwargs.get("seed", None)
     return adata
-
-
-# %%
