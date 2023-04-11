@@ -9,7 +9,6 @@ Created on Fri Nov 25 14:08:42 2022
 
 import functools
 from copy import deepcopy
-from math import ceil
 from typing import (
     Any,
     Collection,
@@ -26,21 +25,21 @@ import geopandas as gpd
 import numpy as np
 import numpy.typing as npt
 from anndata import AnnData
-from matplotlib import cm, colors
+from matplotlib import cm, colors, gridspec
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
-import matplotlib.ticker
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas import DataFrame, Series, options
 from pandas.api.types import is_categorical_dtype
-from scipy.stats import gaussian_kde, linregress
 from scipy import sparse as sp
+from scipy.stats import gaussian_kde, linregress
 
 from voyagerpy import spatial, utils
-from .cmap_helper import DivergentNorm
 
+from .cmap_helper import DivergentNorm
 
 options.mode.chained_assignment = None  # default='warn'
 
