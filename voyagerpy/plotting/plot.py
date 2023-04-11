@@ -180,7 +180,13 @@ def grouped_violinplot(
         labels = [False, True]
 
     grouped_data = [df.loc[groups[key], y] for key in keys]
-    violin_opts = dict(showmeans=False, showextrema=False, showmedians=False, vert=vert)
+    violin_opts = dict(
+        showmeans=False,
+        showextrema=False,
+        showmedians=False,
+        vert=vert,
+        widths=0.8,
+    )
     violins = ax.violinplot(grouped_data, **violin_opts)
     ec, alpha = configure_violins(violins, cmap)
 
