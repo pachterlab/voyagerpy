@@ -4,6 +4,7 @@ name: Notebooks
 title: All notebooks
 permalink: /notebooks/
 order: 3
+published: False
 ---
 
 <div id class="container container-fluid">
