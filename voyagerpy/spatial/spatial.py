@@ -640,17 +640,12 @@ def moran(
     dim: Literal["obs", "var"] = "obs",
     permutations: int = 0,
 ):
-    #import esda
+    # import esda
     ## write code to check if esda is installed, otherwise complain
     try:
         import esda
     except ImportError:
-        raise ImportError(
-            "Moran's I requires the `esda` package. Please install it with `pip install esda`."
-        )
-
-    
-
+        raise ImportError("Moran's I requires the `esda` package. Please install it with `pip install esda`.")
 
     if graph_name is None:
         graph_name = get_default_graph(adata)
