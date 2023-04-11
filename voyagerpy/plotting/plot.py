@@ -1695,6 +1695,7 @@ def scatter(
     contour_kwargs: Optional[Dict[str, Any]] = None,
     figsize: Optional[Tuple[float, float]] = None,
     is_categorical: Optional[bool] = None,
+    aspect: Union[None, float, str] = None,
     **scatter_kwargs,
 ):
     if ax is None:
@@ -1794,4 +1795,7 @@ def scatter(
         cbar = fig.colorbar(scat, **cmap_kwargs)
         if cbar_title is not None:
             cbar.ax.set_title(cbar_title, fontsize=8)
+
+    if aspect is not None:
+        ax.set_aspect(aspect)
     return ax
