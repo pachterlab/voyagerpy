@@ -833,17 +833,12 @@ def plot_spatial_feature(
 
         if geom_is_poly:
             legend_kwargs_.pop("title", None)
+
             if _legend:
                 divider = make_axes_locatable(_ax)
                 cax = divider.append_axes("right", size="5%", pad=0.05)
-                # legend_kwargs_.setdefault("label", label)
                 extra_kwargs["cax"] = cax
                 cax.set_title(label)
-                cax.set_ylabel(
-                    label,
-                    rotation=270,
-                    fontsize=12,
-                )
 
             geo.plot(
                 column=values,
@@ -857,10 +852,6 @@ def plot_spatial_feature(
                 **geom_style,
                 **kwargs,
             )
-            # print("type:", type(cax))
-            # return cax.set_label #(label.upper(), rotation=270, fontsize=12)
-            # return cax
-            # return cax, gax
 
         else:
             _ax = scatter(
