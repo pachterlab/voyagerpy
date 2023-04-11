@@ -55,7 +55,10 @@ plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["grid.color"] = "k"
 plt.rcParams["image.origin"] = "lower"
 plt.rcParams["lines.markersize"] = 4
+# figure.constrained_layout.wspace 0.02
+# figure.subplot.wspace 0.2
 """ #TODO: 
+
 ax title font_size 10
 fig.supylabel fontsize 10 (figure.labelsize)
 """
@@ -153,8 +156,7 @@ def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, **
         ax=ax,
         is_categorical=True,
         legend=False,
-        alpha=0.7
-        # log=True
+        alpha=0.7,
     )
     ax.set_xticks([])
     ax.set_ylabel(str(y))
