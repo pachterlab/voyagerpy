@@ -504,9 +504,10 @@ def plot_expression(
     groupby: Optional[str] = None,
     ncol: Optional[int] = 2,
     show_symbol: bool = False,
-    layer: Optional[str] = "logcounts",
-    figsize: Optional[Tuple[float, float]] = None,
+    layer: Optional[str] = None,
     cmap: Optional[str] = None,
+    subplot_kwargs: Optional[Dict] = None,
+    **kwargs,
 ):
     genes = [genes] if isinstance(genes, str) else genes[:]
     gene_ids = []
@@ -532,8 +533,16 @@ def plot_expression(
             counts = counts.todense()
         obs[gene_id] = counts.copy()
 
+    _subplot_kwargs = dict(
+        figsize=kwargs.pop("figsize", None),
+        sharey=True,
+        sharex=True,
+        layout="tight",
+    )
+    _subplot_kwargs.update(subplot_kwargs or {})
+
     nplots = len(gene_ids) if groupby is not None else 1
-    fig, axs = configure_subplots(nplots, ncol, sharey=True, figsize=figsize)
+    fig, axs = configure_subplots(nplots, ncol, **_subplot_kwargs)
 
     if groupby is None:
         gene_ids = [gene_ids]
@@ -563,7 +572,7 @@ def plot_expression(
     fig.supylabel("Expression" + f" ({layer})" if layer is not None else "")
     if groupby is not None:
         fig.supxlabel(groupby)
-    fig.tight_layout()
+
     return axs
 
 
