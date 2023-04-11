@@ -31,7 +31,7 @@ def register_listed_cmap(cmap_name: str, cmap_colors: Tuple[str], reverse: bool 
 
 class DivergentNorm(Normalize):
     def __init__(self, vmin, vmax, vcenter=0, clip=False):
-        Normalize.__init__(self, vmin, vmax, clip)
+        super().__init__(vmin=vmin, vmax=vmax, clip=clip)
 
         # The largest interval defines the slope
         dx = max(abs(vmax - vcenter), abs(vcenter - vmin))
@@ -49,4 +49,4 @@ class DivergentNorm(Normalize):
         return np.ma.masked_array(np.interp(value, self.x, self.y))
 
     def inverse(self, value):
-        return np.ma.masked_array(np.interp(value, [0, 1], self.x))
+        return np.ma.masked_array(np.interp(value, [0, 1], self.x, left=self.vmin, right=self.vmax))
