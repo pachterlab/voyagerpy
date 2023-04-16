@@ -32,6 +32,7 @@ from scipy import sparse
 from shapely.geometry import Point, Polygon
 
 from voyagerpy import utils as utl
+from .graphs import compute_higher_order_neighbors
 
 
 # create spatial functions with shapely
@@ -56,7 +57,6 @@ def get_approx_tissue_boundary(adata: AnnData, size: str = "hires", paddingx: in
 
 Contour = Any
 # %%
-
 
 
 ## write a docstring for this function
@@ -801,3 +801,70 @@ def local_moran(
     param_dict["keep_simulations"] = keep_simulations
     param_dict["seed"] = kwargs.get("seed", None)
     return adata
+
+
+def compute_correlogram(
+    adata: AnnData,
+    feature: Union[str, Sequence[str]],
+    method: str = "moran",
+    graph_name: Optional[str] = None,
+    order: Optional[int] = None,
+    layer: Optional[str] = None,
+    force: bool = False,
+    key_added: str = "correlogram",
+):
+    # try importing libpysal and esda
+    try:
+        import libpysal
+        import esda
+    except ImportError:
+        raise ImportError(
+            "Please install libpysal and esda to use correlogram. "
+            "See https://pysal.org/libpysal/installation.html and "
+            "https://pysal.org/esda/installation.html for installation instructions."
+        )
+
+    if method not in ["moran", "losh", "corr"]:
+        raise NotImplementedError(f"Correlogram is not implemented for method {method}.")
+
+    if graph_name is None:
+        graph_name = get_default_graph(adata)
+
+    higher_order = adata.uns["spatial"].setdefault("higher_order", {})
+    Ws = higher_order.setdefault(graph_name, [])
+    if not order and len(Ws) == 0:
+        raise RuntimeError("Please provide a positive integer value for `order`, or run `compute_higher_order_neighbors` first.")
+
+    if len(Ws) == 0 and order:
+        Ws = compute_higher_order_neighbors(adata, graph_name=graph_name, order=order)
+
+    features = [feature] if isinstance(feature, str) else feature[:]
+    order = order or (len(Ws) + 1)
+
+    correlogram_dict = adata.uns["spatial"][method].setdefault(key_added, {})
+    correlogram_df = correlogram_dict.setdefault(graph_name, pd.DataFrame(columns=list(range(1, order + 1)), index=features))
+    W_og = adata.uns["spatial"][graph_name].sparse.copy()
+
+    X = adata.X if layer is None else adata.layers[layer]
+
+    for k_order, w in enumerate((Ws)[:order], 1):
+        W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(silence_warnings=True)
+        if k_order in correlogram_df.columns and (not any(correlogram_df[k_order].isna())) and not force:
+            continue
+        for feat in features:
+            if not (np.isnan(correlogram_df.at[feat, k_order]) or force):
+                print("not computing correlogram for feature", feat, "at order", k_order)
+                continue
+            if feat in adata.var_names:
+                i_feature = adata.var_names.get_loc(feat)
+                x = X[:, i_feature]
+            else:
+                x = adata.obs[feat]
+            if method == "moran":
+                val = esda.Moran(x, W, permutations=0).I
+            else:
+                y = w.dot(x)
+                val = np.corrcoef(x, y)[0, 1]
+            correlogram_df.at[feat, k_order] = val
+
+    return correlogram_df

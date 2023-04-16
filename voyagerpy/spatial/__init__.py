@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from voyagerpy.spatial import graphs
+from voyagerpy.spatial.graphs import compute_higher_order_neighbors, find_visium_graph
 from voyagerpy.spatial.spatial import (
     apply_transforms,
     cancel_transforms,
+    compute_correlogram,
     compute_spatial_lag,
     detect_tissue_threshold,
     get_approx_tissue_boundary,
@@ -28,9 +29,12 @@ from voyagerpy.spatial.spatial import (
 __all__ = [
     "apply_transforms",
     "cancel_transforms",
+    "compute_correlogram",
+    "compute_higher_order_neighbors",
     "compute_spatial_lag",
     "detect_tissue_threshold",
     "get_approx_tissue_boundary",
+    "get_default_graph",
     "get_geom",
     "get_spot_coords",
     "get_tissue_boundary",
@@ -41,9 +45,8 @@ __all__ = [
     "moran",
     "rollback_transforms",
     "rotate_img90",
+    "set_default_graph",
     "set_geometry",
     "to_points",
     "to_spatial_weights",
-    "get_default_graph",
-    "set_default_graph",
 ]
