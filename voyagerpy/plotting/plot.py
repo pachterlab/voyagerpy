@@ -1493,7 +1493,7 @@ def plot_barcode_histogram(
     else:
         df = adata.obs.copy()
 
-    _subplots_kwargs = dict(figsize=figsize, layout=None, hspace=0.5, nplots=nplot)
+    _subplots_kwargs = dict(figsize=figsize, layout="constrained", hspace=0.5, nplots=nplot)
     _subplots_kwargs.update(subplot_kwargs or {})
 
     labels = [label] if isinstance(label, str) else label
@@ -1557,6 +1557,7 @@ def plot_barcode_histogram(
 
             ax.grid(False, "minor")
             ax.set_xlabel(feat if labels is None else labels[i_ax])
+            ax.xaxis.set_label_position("top")
 
         if histtype.startswith("step"):
             # Hack to get the actual handles
@@ -1569,6 +1570,7 @@ def plot_barcode_histogram(
         # TODO
 
     fig.supylabel("count")
+    fig.supxlabel("values")
     if obsm is not None:
         fig.suptitle(f"Barcode histogram for {obsm}", ha="left", x=0.0)
     return axs
