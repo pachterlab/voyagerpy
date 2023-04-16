@@ -122,17 +122,20 @@ def get_mean_var(X, *, axis=0):
 
 
 def inverse_density_weights(x, adjust=1):
-    kde = sm.nonparametric.KDEUnivariate(m)
-    bw = 0.9 * min(np.std(m), iqr(m) / 1.34) * (len(m) ** (-1 / 5))
+    kde = sm.nonparametric.KDEUnivariate(x)
+    bw = 0.9 * min(np.std(x), iqr(x) / 1.34) * (len(x) ** (-1 / 5))
     # out = kde.fit(bw=bw,gridsize=512,clip=(min(m),max(m)),cut=0)
     out = kde.fit(bw=bw, gridsize=512, cut=0)
-    kde_supp = kde.support
+    kde_supp = out.support
     # kde_dens = kde.density
-    kde_out = kde.evaluate(kde_supp)
+    kde_out = out.evaluate(kde_supp)
 
-    w = 1 / np.interp(m, kde_supp, kde_out)
+    w = 1 / np.interp(x, kde_supp, kde_out)
     w = w / np.mean(w)
     return w
+
+
+# %%
 
 
 def fit_trend_var(gene_var, _gene_mean, min_min=0.1, parametric=True, lowess=False, density_weights=True):
@@ -178,8 +181,8 @@ w = inverse_density_weights(m)
 
 # %%
 
-left_n = 100
-left_prop = 0.1
-grid_length = 10
-b_grid_range = 5
-n_grid_max = 10
+# left_n = 100
+# left_prop = 0.1
+# grid_length = 10
+# b_grid_range = 5
+# n_grid_max = 10
