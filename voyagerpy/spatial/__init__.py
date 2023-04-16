@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from voyagerpy.spatial.graphs import compute_higher_order_neighbors, find_visium_graph
+from voyagerpy.spatial.graphs import find_visium_graph
 from voyagerpy.spatial.spatial import (
     apply_transforms,
     cancel_transforms,
     compute_correlogram,
+    compute_higher_order_neighbors,
     compute_spatial_lag,
     detect_tissue_threshold,
     get_approx_tissue_boundary,

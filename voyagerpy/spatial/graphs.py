@@ -18,7 +18,8 @@ from shapely.geometry import Point, Polygon
 
 from voyagerpy import utils
 from voyagerpy.spatial import spatial
-from .spatial import get_default_graph
+
+# from .spatial import get_default_graph
 
 
 def compute_weights(coords: gpd.GeoSeries, func="euclidean") -> Any:
@@ -135,51 +136,3 @@ def find_visium_graph(
     positions = dict(zip(positions.index, positions.values))
     nx.set_node_attributes(G, positions, "pos")
     return G
-
-
-def compute_higher_order_neighbors(adata, graph_name=None, force: bool = False, *, order: int):
-    if graph_name is None:
-        graph_name = get_default_graph(adata)
-
-    higher_order = adata.uns["spatial"].setdefault("higher_order", {})
-    Ws = higher_order.setdefault(graph_name, [])
-    if force:
-        Ws.clear()
-
-    W = adata.uns["spatial"][graph_name].sparse.copy()
-    W.eliminate_zeros()
-    W.prune()
-    W.data = np.ones_like(W.data)
-    n_order = len(Ws)
-    if n_order == 0:
-        Ws.append(W)
-        n_order = 1
-
-    if n_order >= order:
-        return Ws
-
-    # M is the original graph
-    M = W.copy().tolil()
-
-    # Mp is the order-k neighbourhood graph
-    Mp = Ws[-1].copy().tolil()
-
-    # The total graph is the union of all the graphs
-    total_graph = M.copy().tolil()
-    total_graph.setdiag(1)
-
-    # Reconstruction of the <k order neighbourhood graph
-    for w in Ws:
-        total_graph = total_graph.maximum(w.tolil())
-
-    for k in range(n_order, order):
-        # M is the original graph
-        # Mp is the order-k neighbourhood graph
-        Mp = ((Mp * M).minimum(1) - total_graph).maximum(0).tolil()
-        total_graph = total_graph.maximum(Mp)
-        w = Mp.tocsr()
-        w.eliminate_zeros()
-        w.prune()
-        Ws.append(w)
-
-    return Ws
