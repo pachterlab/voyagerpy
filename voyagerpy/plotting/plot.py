@@ -696,7 +696,6 @@ def plot_spatial_feature(
     subplot_kwargs: Optional[Dict] = None,
     legend_kwargs: Optional[Dict] = None,
     dimension: str = "barcode",
-    local: Optional[str] = None,
     obsm: Optional[str] = None,
     image: bool = False,
     figtitle: Optional[str] = None,
