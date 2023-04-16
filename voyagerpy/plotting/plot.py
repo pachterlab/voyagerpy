@@ -1851,20 +1851,15 @@ def scatter(
 
     elif legend and color_dat is not None:
         # I'm not 100% certain which one to use
-        use_divider = True
+        use_divider = not True
+
         if use_divider:
             divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad="1%")
-        else:
-            cax = None
-
-        cmap_kwargs = dict(
-            label=legend_kwargs.pop("title", color_str),
-        )
-        if use_divider:
+            cax = divider.append_axes("right", size="5%", pad="2%")
             cmap_kwargs["cax"] = cax
         else:
-            # cmap_kwargs["ax"] = ax
+            cax = None
+            cmap_kwargs["ax"] = ax
             cmap_kwargs["use_gridspec"] = True
 
         cmap_kwargs.update(legend_kwargs or {})
