@@ -1323,7 +1323,7 @@ def contour_plot(
 
 def moran_plot(
     adata: AnnData,
-    feature: str,
+    feature: Union[str, Sequence],
     graph_name: Union[None, str, np.ndarray] = None,
     color_by: Optional[str] = None,
     xlim: Optional[Tuple[float, float]] = None,
@@ -1331,55 +1331,84 @@ def moran_plot(
     ax: Optional[Axes] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
     # cmap: Optional[str] = None
+    show_symbol: bool = True,
+    ncol: int = 2,
     **scatter_kwargs,
 ) -> Axes:
     adata = adata.copy()
 
-    lagged_feature = f"lagged_{feature}"
-    if lagged_feature not in adata.obs:
-        spatial.compute_spatial_lag(adata, feature, graph_name=graph_name, inplace=True)
+    features = [feature] if isinstance(feature, str) else feature
+    del feature
+    _subplot_kwargs = dict(layout="constrained", wspace=0.2, hspace=0.2, figsize=(3 * ncol, 3 * ncol))
+    nplot = len(features)
+    ncol = min(ncol, nplot)
+    nrow = int(np.ceil(nplot / ncol))
 
-    rc_context = {
-        "axes.grid": True,
-        "axes.spines.bottom": True,
-        "axes.spines.top": True,
-        "axes.spines.left": True,
-        "axes.spines.right": True,
-    }
+    if ax is None:
+        fig, axs, cax = subplots_single_colorbar(nrow, ncol, **_subplot_kwargs)
+    else:
+        if isinstance(ax, Axes):
+            axs = np.array([[ax]])
+        if axs.size < nplot:
+            raise ValueError("Fewer axes than plots.")
 
-    y_label = f"Spatially lagged {feature}"
+    for feature, ax in zip(features, axs.flat):
+        lagged_feature = f"lagged_{feature}"
+        if lagged_feature not in adata.obs:
+            spatial.compute_spatial_lag(adata, feature, graph_name=graph_name, inplace=True)
 
-    _contour_kwargs = dict(
-        shape=(150, 150),
-        levels=7,
-        colors="cyan",
-        linewidths=1,
-    )
-    _contour_kwargs.update(contour_kwargs or {})
-    points = adata.obs[[feature, lagged_feature]].values.T
+        rc_context = {
+            "axes.grid": True,
+            "axes.spines.bottom": True,
+            "axes.spines.top": True,
+            "axes.spines.left": True,
+            "axes.spines.right": True,
+        }
 
-    ax = scatter(
-        x=feature,
-        y=lagged_feature,
-        color_by=color_by,
-        labels=dict(y=y_label),
-        rc_context=rc_context,
-        fitline_kwargs=dict(color="b"),
-        contour_kwargs={"colors": "cyan"},
-        data=adata.obs,
-        **scatter_kwargs,
-    )
+        y_label = f"Spatially lagged {feature}"
 
-    if xlim is not None:
-        ax.set_xlim(*xlim)
-    if ylim is not None:
-        ax.set_ylim(*ylim)
+        _contour_kwargs = dict(
+            shape=(150, 150),
+            levels=7,
+            colors="cyan",
+            linewidths=1,
+        )
+        _contour_kwargs.update(contour_kwargs or {})
 
-    ax.axvline(adata.obs[feature].mean(), linestyle="--", c="k", alpha=0.5)
-    ax.axhline(adata.obs[lagged_feature].mean(), linestyle="--", c="k", alpha=0.5)
+        labels = dict(x=feature, y=y_label)
 
-    ax.set_aspect("equal")
-    return ax
+        if feature in adata.var_names:
+            i_feature = adata.var_names.get_loc(feature)
+            adata.obs[feature] = adata.X[:, i_feature]
+            if show_symbol:
+                symbol = adata.var.at[feature, adata.uns["config"]["secondary_var_names"]]
+                labels["x"] = symbol
+                labels["y"] = f"Spatially lagged {symbol}"
+
+        ax = scatter(
+            x=feature,
+            y=lagged_feature,
+            color_by=color_by,
+            labels=labels,
+            rc_context=rc_context,
+            fitline_kwargs=dict(color="b"),
+            contour_kwargs={"colors": "cyan"},
+            data=adata.obs,
+            ax=ax,
+            legend=False,
+            **scatter_kwargs,
+        )
+
+        if xlim is not None:
+            ax.set_xlim(*xlim)
+        if ylim is not None:
+            ax.set_ylim(*ylim)
+
+        ax.axvline(adata.obs[feature].mean(), linestyle="--", c="k", alpha=0.5)
+        ax.axhline(adata.obs[lagged_feature].mean(), linestyle="--", c="k", alpha=0.5)
+
+        ax.set_aspect("equal")
+    return axs
 
 
 def plot_moran_mc(
