@@ -503,6 +503,68 @@ def plot_bin2d(
 def plot_expression(
     adata: AnnData,
     genes: Union[str, Sequence[str]],
+    y: Optional[str] = None,
+    obsm: Optional[str] = None,
+    ax: Union[None, Axes, np.ndarray[Axes]] = None,
+    **kwargs,
+):
+    if y is None:
+        return plot_expression_violin(adata, genes, **kwargs)
+
+    else:
+        return plot_expression_scatter(adata, genes, y, obsm=obsm, ax=ax, **kwargs)
+
+
+def plot_expression_scatter(
+    adata: AnnData,
+    gene: str,
+    y: str,
+    obsm: Optional[str] = None,
+    ax: Union[None, Axes] = None,
+    color_by: Optional[str] = None,
+    layer: Optional[str] = None,
+    **kwargs,
+):
+
+    obs = adata.obs if obsm is None else adata.obsm[obsm]
+    X = adata.X if layer is None else adata.layers[layer]
+
+    if isinstance(X, sp.csr_matrix):
+        X = X.toarray()
+    elif isinstance(X, np.matrix):
+        X = np.array(X)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    color_data = obs if color_by in obs else adata.obs
+
+    gene_idx = adata.var_names.get_loc(gene)
+    x_ = X[:, gene_idx]
+    y_ = obs[y]
+    ax = scatter(
+        x_,
+        y_,
+        label=gene,
+        color_by=color_by,
+        data=color_data,
+        ax=ax,
+        **kwargs,
+    )
+
+    y_symbol = adata.var.at[y, "symbol"]
+    ax.set_title(gene)
+    ax.set_xlabel("Expression" + f" ({layer})" if layer is not None else "")
+    ax.set_ylabel(y_symbol + f" {obsm}" if obsm is not None else "")
+
+    return ax
+
+
+def plot_expression_violin(
+    adata: AnnData,
+    genes: Union[str, Sequence[str]],
     groupby: Optional[str] = None,
     ncol: Optional[int] = 2,
     show_symbol: bool = False,
