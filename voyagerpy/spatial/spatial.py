@@ -701,6 +701,7 @@ def losh(
     inference: Union[None, Literal["permutation"], Literal["chi-square"]] = None,
     inplace: bool = True,
     key_added: str = "losh",
+    layer: Optional[str] = None,
 ) -> AnnData:
     import esda
 
@@ -718,8 +719,13 @@ def losh(
 
     adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
 
+    X = adata.X if layer is None else adata.layers[layer]
+
     for feat in features:
-        losh.fit(adata.obs[feat])
+        if feat in adata.var_names:
+            losh.fit(X[:, adata.var_names.get_loc(feat)])
+        else:
+            losh.fit(adata.obs[feat])
         adata.obsm[key_added][feat] = losh.Hi
 
     adata.uns["spatial"].setdefault(key_added, {})
