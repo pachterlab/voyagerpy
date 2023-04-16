@@ -1576,6 +1576,48 @@ def plot_barcode_histogram(
     return axs
 
 
+def plot_correlogram(
+    adata,
+    graph_name=None,
+    metric="moran",
+    order=None,
+    show_symbol: bool = True,
+    ax=None,
+    features=None,
+    cmap=None,
+):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
+    if graph_name is None:
+        graph_name = spatial.get_default_graph(adata)
+
+    corr_dict = adata.uns.setdefault("spatial", {}).setdefault(metric, {}).setdefault("correlogram", {})
+    if graph_name not in corr_dict:
+        raise KeyError(f"Graph {graph_name} not found in adata.uns['spatial']['{metric}']['correlogram']")
+
+    df = corr_dict[graph_name]
+    # df = adata.uns["spatial"][metric]["correlogram"][graph_name]
+    if order is None:
+        order = slice(None)
+    if isinstance(order, tuple):
+        order = slice(*order)
+    if features is None:
+        features = df.index
+    cols = df.columns[order]
+
+    for feature in features:
+        ss = df.loc[feature, cols]
+        label = adata.var.at[feature, "symbol"] if show_symbol else feature
+        ax.plot(ss.T, "-o", label=label)
+    ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title="feature")
+    ax.axhline(0, linestyle="--")
+    ax.set_ylim(-0.03, 1.03)
+    ax.set_ylabel(metric.title())
+    ax.set_xlabel("Lag")
+    return ax
+
+
 def plot_features_histogram(
     adata: AnnData,
     features: Union[str, Sequence[str]],
