@@ -734,13 +734,13 @@ def plot_spatial_feature(
 
     for feature, label in zip(feat_ls, feature_labels):
         label = label if label is not None else feature
-
+        is_gene = feature in adata.var_names
+        if is_gene and show_symbol:
+            label = adata.var.at[feature, secondary_gene_column]
         if feature in df:
             labeled_features.append((feature, label))
             continue
-        if feature in adata.var.index:
-            if show_symbol:
-                label = adata.var.at[feature, secondary_gene_column]
+        if is_gene:
             labeled_features.append((feature, label))
             var_features.append(feature)
             continue
