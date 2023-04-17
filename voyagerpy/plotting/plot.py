@@ -508,11 +508,18 @@ def plot_expression(
     ax: Union[None, Axes, np.ndarray[Axes]] = None,
     **kwargs,
 ):
-    if y is None:
-        return plot_expression_violin(adata, genes, **kwargs)
 
-    else:
-        return plot_expression_scatter(adata, genes, y, obsm=obsm, ax=ax, **kwargs)
+    _rc_params = {
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.grid": False,
+    }
+    with plt.rc_context(_rc_params):
+        if y is None:
+            return plot_expression_violin(adata, genes, **kwargs)
+
+        else:
+            return plot_expression_scatter(adata, genes, y, obsm=obsm, ax=ax, **kwargs)
 
 
 def plot_expression_scatter(
@@ -601,7 +608,7 @@ def plot_expression_violin(
         figsize=kwargs.pop("figsize", None),
         sharey=True,
         sharex=True,
-        layout="tight",
+        layout="constrained",
     )
     _subplot_kwargs.update(subplot_kwargs or {})
 
@@ -819,24 +826,32 @@ def plot_spatial_feature(
         sharey=True,
         squeeze=False,
         hspace=0.2 if legend else 0.05,
-        wspace=0.2,
+        wspace=0.1,
     )
     _subplot_kwargs.update(subplot_kwargs or {})
 
     # create the subplots with right cols and rows
 
     _rc_context = {
-        # "axes.grid": False,
-        # "figure.frameon": False,
-        # "axes.spines.bottom": False,
-        # "axes.spines.top": False,
-        # "axes.spines.left": False,
-        # "axes.spines.right": False,
-        # "xtick.bottom": False,
-        # "xtick.labelbottom": False,
-        # "ytick.left": False,
-        # "ytick.labelleft": False,
+        "axes.grid": False,
+        "figure.frameon": False,
+        "axes.spines.bottom": False,
+        "axes.spines.top": False,
+        "axes.spines.left": False,
+        "axes.spines.right": False,
+        "xtick.bottom": False,
+        "xtick.labelbottom": False,
+        "ytick.left": False,
+        "ytick.labelleft": False,
     }
+
+    geom_is_poly = geo.geometry.geom_type[0] == "Polygon"
+
+    # This is to match the vignettes.
+    # visium_10x and nonspatial don't have the same look for this function.
+    if not geom_is_poly:
+        for key in _rc_context:
+            _rc_context[key] = True
 
     _rc_context.update(rc_context or {})
     if _ax is None:
@@ -854,7 +869,6 @@ def plot_spatial_feature(
         fig = axs.flat[0].get_figure()
 
     kwargs.setdefault("s", 4)
-    geom_is_poly = geo.geometry.geom_type[0] == "Polygon"
     if geom_is_poly:
         kwargs.setdefault("markersize", kwargs.pop("s", None))
 
@@ -901,7 +915,7 @@ def plot_spatial_feature(
                 extra_kwargs["cax"] = cax
                 cax.set_title(label)
 
-            geo.plot(
+            scat = geo.plot(
                 column=values,
                 ax=_ax,
                 color=color,
@@ -913,6 +927,13 @@ def plot_spatial_feature(
                 **geom_style,
                 **kwargs,
             )
+
+            if legend and not _legend:
+                cmap_colors = plt.get_cmap(curr_cmap).colors
+                legend_dict = {lab: color for lab, color in zip(sorted(np.unique(values)), cmap_colors)}
+                for key, color in legend_dict.items():
+                    _ax.scatter([], [], label=key, color=color)
+                _ax.legend(loc="center left", bbox_to_anchor=(1.04, 0.5), title=label, frameon=False)
 
         else:
             _ax = scatter(
@@ -1175,7 +1196,7 @@ def plot_dim_loadings(
         ncol=ncol,
         figsize=kwargs.pop("figsize", None),
         sharex=kwargs.pop("sharex", True),
-        layout=kwargs.pop("layout", "tight"),
+        layout=kwargs.pop("layout", "constrained"),
     )
 
     fig, axs = configure_subplots(**_subplot_kwargs)
@@ -1339,10 +1360,18 @@ def moran_plot(
 
     features = [feature] if isinstance(feature, str) else feature
     del feature
-    _subplot_kwargs = dict(layout="constrained", wspace=0.2, hspace=0.2, figsize=(3 * ncol, 3 * ncol))
+
     nplot = len(features)
     ncol = min(ncol, nplot)
     nrow = int(np.ceil(nplot / ncol))
+
+    _subplot_kwargs = dict(
+        layout=None if nplot == 1 else "constrained",
+        wspace=0.2,
+        hspace=0.2,
+        cax_space=0.2,
+        figsize=scatter_kwargs.pop("figsize", None),
+    )
 
     if ax is None:
         fig, axs, cax = subplots_single_colorbar(nrow, ncol, **_subplot_kwargs)
@@ -1352,7 +1381,7 @@ def moran_plot(
         if axs.size < nplot:
             raise ValueError("Fewer axes than plots.")
 
-    for feature, ax in zip(features, axs.flat):
+    for i_plot, (feature, ax) in enumerate(zip(features, axs.flat)):
         lagged_feature = f"lagged_{feature}"
         if lagged_feature not in adata.obs:
             spatial.compute_spatial_lag(adata, feature, graph_name=graph_name, inplace=True)
@@ -1395,7 +1424,8 @@ def moran_plot(
             contour_kwargs={"colors": "cyan"},
             data=adata.obs,
             ax=ax,
-            legend=False,
+            legend=i_plot == nplot - 1,
+            legend_kwargs=dict(cax=(cax if i_plot == nplot - 1 else None)),
             **scatter_kwargs,
         )
 
@@ -1408,6 +1438,7 @@ def moran_plot(
         ax.axhline(adata.obs[lagged_feature].mean(), linestyle="--", c="k", alpha=0.5)
 
         ax.set_aspect("equal")
+
     return axs
 
 
@@ -1879,17 +1910,24 @@ def scatter(
 
     legend_kwargs = legend_kwargs or {}
 
+    label_on_top = False
     if legend and is_categorical:
+
         _legend_kwargs = dict(
             bbox_to_anchor=(1.04, 0.5),
             loc="center left",
             frameon=False,
             title=color_str,
         )
+
         legend_kwargs.pop("label", None)
         _legend_kwargs.update(legend_kwargs)
-
-        ax.legend(*scat.legend_elements(), **_legend_kwargs)
+        cax = _legend_kwargs.pop("cax", None)
+        if cax is None:
+            cax = ax
+        else:
+            _legend_kwargs.pop("bbox_to_anchor", None)
+        cax.legend(*scat.legend_elements(), **_legend_kwargs)
 
     elif legend and color_dat is not None:
         # I'm not 100% certain which one to use
@@ -1909,8 +1947,10 @@ def scatter(
 
         cbar = fig.colorbar(scat, **cmap_kwargs)
 
-        if cbar_title is not None:
+        if cbar_title is not None and label_on_top:
             cbar.ax.set_title(cbar_title, fontsize=8)
+        elif cbar_title is not None:
+            cbar.set_label(cbar_title)
 
     if aspect is not None:
         ax.set_aspect(aspect)
