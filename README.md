@@ -101,3 +101,11 @@ Make sure to have `published: true` for the page to be created and included in t
 ## Running things locally
 
 Follow the instructions for [Jekyll on GitHub pages]() to install Ruby and Jekyll. Anyway, I used RVM since MacOS and ruby are not the best of friends, and installed Ruby 3.1.3.
+
+To convert the notebook to HTML and include it in the project, head over to the `pmelsted/voyagerpy-notebooks` repo, where you can run the `convert_notebook.sh` script:
+
+```
+./convert_notebook.sh mynotebook.sh /path/to/voyagerpy-pages/branch
+```
+
+This will convert the notebook, strip the notebook to its core, and change the src attribute of the img tags so we won't have broken images.
