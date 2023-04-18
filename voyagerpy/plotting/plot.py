@@ -215,8 +215,8 @@ def grouped_violinplot(
     if not vert:
         x, y = y, x
 
-    ax.set_xlabel(x)
-    ax.set_ylabel(y)
+    ax.set_xlabel(x_label or x)
+    ax.set_ylabel(y_label or y)
     if not legend:
         return ax
 
@@ -238,7 +238,6 @@ def plot_single_barcode_data(
     color_by: Optional[str] = None,
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
-    contour_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs,
 ):
     if obsm is not None:
@@ -258,30 +257,22 @@ def plot_single_barcode_data(
             raise NotImplementedError('"Rectangule" plots not implemented')
         else:
             # Create a horizontal plot, so we group by y instead of x
-            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, vert=False)
+            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, x_label=x_label, y_label=y_label, vert=False)
     else:
         if x is None:
-            # TODO: check if these kwargs make sense
-            ax = simple_violinplot(ax, obs, y, cmap, **kwargs)
+            ax = simple_violinplot(ax, obs, y, cmap, x_label=x_label, y_label=y_label, **kwargs)
+
         elif is_categorical_dtype(obs[x]):
-            # TODO: Check if these kwargs make sense
-            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, **kwargs)
+            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, x_label=x_label, y_label=y_label, **kwargs)
+
         else:
-            colors = np.zeros_like(obs[x], "int") if color_by is None else obs[color_by].astype(int)
-            colormap = plt.get_cmap(cmap)
-            _scatter_kwargs = dict(alpha=0.5, s=8)
+            _scatter_kwargs = dict(
+                alpha=0.5,
+                labels=dict(x=x_label or x, y=y_label or y),
+            )
+
             _scatter_kwargs.update(kwargs)
-
-            scat = ax.scatter(x, y, data=obs, c=colors, cmap=colormap, vmin=0, vmax=colormap.N, **_scatter_kwargs)
-            if contour_kwargs is not None:
-                _contour_kwargs = dict(x=x, y=y, data=adata.obs)
-                _contour_kwargs.update(contour_kwargs)
-                contour_plot(ax, **_contour_kwargs)
-
-            ax.set_xlabel(x_label or x)
-            ax.set_ylabel(y_label or y)
-            if legend and color_by is not None:
-                ax.legend(*scat.legend_elements(), bbox_to_anchor=(1.04, 0.5), loc="center left", title=color_by, frameon=False)
+            ax = scatter(x, y, color_by=color_by, cmap=cmap, ax=ax, data=obs, **_scatter_kwargs)
 
     return ax
 
@@ -290,6 +281,7 @@ def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[
     ncol = min(ncol or 2, nplots)
     nrow = int(np.ceil(nplots / ncol))
 
+    # TODO: We may need to increase the space if we draw legends, yticks, etc
     hspace = kwargs.pop("hspace", 0.2)
     wspace = kwargs.pop("wspace", None)
 
