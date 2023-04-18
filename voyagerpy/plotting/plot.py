@@ -47,10 +47,13 @@ plt.style.use("ggplot")
 plt.rcParams["axes.edgecolor"] = "#00000050"
 plt.rcParams["axes.facecolor"] = "white"
 plt.rcParams["axes.grid.which"] = "both"
-plt.rcParams["axes.labelsize"] = 8
-plt.rcParams["axes.titlesize"] = 10
-plt.rcParams["figure.labelsize"] = 10
-plt.rcParams["figure.titlesize"] = 12
+plt.rcParams["axes.grid.axis"] = "both"
+plt.rcParams["axes.labelsize"] = 9
+plt.rcParams["axes.titlesize"] = 11
+plt.rcParams["figure.labelsize"] = 11
+plt.rcParams["figure.titlesize"] = 13
+plt.rcParams["ytick.labelsize"] = 9
+plt.rcParams["xtick.labelsize"] = 9
 plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["grid.color"] = "k"
 plt.rcParams["image.origin"] = "lower"
