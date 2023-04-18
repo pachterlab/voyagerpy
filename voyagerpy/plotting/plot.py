@@ -1186,10 +1186,11 @@ def plot_dim_loadings(
     ncol: int = 2,
     n_loadings: int = 10,
     show_symbol: bool = True,
+    varm: str = "PCs",
     **kwargs,
 ):
     dims = list(range(dims)) if isinstance(dims, int) else list(dims)
-    dat = adata.varm["PCs"][:, dims]
+    dat = adata.varm[varm][:, dims]
     nplots = len(dims)
 
     _subplot_kwargs = dict(
@@ -1198,6 +1199,7 @@ def plot_dim_loadings(
         figsize=kwargs.pop("figsize", None),
         sharex=kwargs.pop("sharex", True),
         layout=kwargs.pop("layout", "constrained"),
+        hspace=0.15,
     )
 
     fig, axs = configure_subplots(**_subplot_kwargs)
@@ -1207,7 +1209,7 @@ def plot_dim_loadings(
     n_min = n_loadings // 2
     n_max = n_loadings - n_min
     for i, (ax, dim) in enumerate(zip(axs.flat, dims)):
-        ax.set_title(f"PC{dim}")
+        ax.set_title(f"{varm} {dim}")
 
         # get indices of sorted dim loadings (ascending)
         idx = np.argsort(dat[:, i])
