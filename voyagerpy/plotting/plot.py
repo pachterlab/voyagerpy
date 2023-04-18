@@ -688,6 +688,7 @@ def plot_spatial_feature(
     barcode_geom: Optional[str] = None,
     annot_geom: Optional[str] = None,
     tissue: bool = True,
+    subset_barcodes: Union[None, slice, Sequence[str]] = None,
     layer: Optional[str] = None,
     colorbar: bool = False,
     cmap: Optional[str] = "Blues",
@@ -783,6 +784,7 @@ def plot_spatial_feature(
     tissue = tissue and "in_tissue" in df
 
     barcode_selection = slice(None) if not tissue else df["in_tissue"] == 1
+    barcode_selection = subset_barcodes if subset_barcodes is not None else slice(None)
     gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
 
     if dimension == "barcode":
