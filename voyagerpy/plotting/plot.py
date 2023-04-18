@@ -321,35 +321,29 @@ def plot_barcode_data(
     color_by: Optional[str] = None,
     sharex: Union[None, Literal["none", "all", "row", "col"], bool] = None,
     sharey: Union[None, str, bool] = None,
-    figsize: Optional[Tuple[float, float]] = None,
     x_label: Union[None, str, Sequence[str]] = None,
     y_label: Union[None, str, Sequence[str]] = None,
-    contour_kwargs: Optional[Dict[str, Any]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
     ax: Optional[Axes] = None,
+    subplot_kwargs: Optional[Dict] = None,
     **kwargs,
 ):
-    #  TODO: Allow ax argument
-
-    x_features = list(x) if isinstance(x, (list, tuple)) else [x]
-    y_features = list(y) if isinstance(y, (list, tuple)) else [y]
+    x_features = listify(x)
+    y_features = listify(y)
 
     if x_label is None:
         x_labels = x_features[:]
         if obsm is not None:
             x_labels = [f"{lab}_{obsm}" for lab in x_labels]
     else:
-        x_labels = list(x_label) if isinstance(x_label, (list, tuple)) else [x_label]
+        x_labels = listify(x_label)
 
     if y_label is None:
         y_labels = y_features[:]
         if obsm is not None:
             y_labels = [f"{lab}_{obsm}" for lab in y_labels]
     else:
-        y_labels = list(y_label) if isinstance(y_label, (list, tuple)) else [y_label]
-
-    assert isinstance(x_features, (list, tuple)), "x must be a list or tuple"
-    assert isinstance(y_features, (list, tuple)), "y must be a list or tuple"
+        y_labels = listify(y_label)
 
     del x, y, x_label, y_label
 
@@ -369,31 +363,36 @@ def plot_barcode_data(
         else:
             sharey = False
 
-    _subplot_kwargs = dict(
-        sharex=sharex,
-        sharey=sharey,
-        figsize=kwargs.pop("figsize", None),
-        layout=kwargs.pop("layout", "constrained"),
-    )
-
-    default_rc_context = {
-        "axes.spines.bottom": True,
-        "axes.spines.top": False,
-        "axes.spines.left": True,
-        "axes.spines.right": False,
-        "axes.grid": False,
-    }
-
-    default_rc_context.update(rc_context or {})
-
     if ax is not None:
         axs_arr = np.array([ax])
         fig = ax.get_figure()
     else:
+        _subplot_kwargs = dict(
+            sharex=sharex,
+            sharey=sharey,
+            figsize=kwargs.pop("figsize", None),
+            layout=kwargs.pop("layout", "constrained"),
+        )
+        default_rc_context = {
+            "axes.spines.bottom": True,
+            "axes.spines.top": False,
+            "axes.spines.left": True,
+            "axes.spines.right": False,
+            "axes.grid": False,
+        }
+        _subplot_kwargs.update(subplot_kwargs or {})
+        default_rc_context.update(rc_context or {})
         with plt.rc_context(default_rc_context):
             fig, axs_arr = configure_subplots(nplots, ncol, **_subplot_kwargs)
 
-    feature_iterator = ((y_feat, x_feat) for y_feat in zip(y_labels, y_features) for x_feat in zip(x_labels, x_features))
+    feature_iterator = (
+        (
+            (y_lab, y_feat),
+            (x_lab, x_feat),
+        )
+        for (y_lab, y_feat) in zip(y_labels, y_features)
+        for (x_lab, x_feat) in zip(x_labels, x_features)
+    )
 
     for i_plot, (y_feat, x_feat) in enumerate(feature_iterator):
         i_col = i_plot % ncol
@@ -412,7 +411,6 @@ def plot_barcode_data(
             color_by=color_by,
             x_label=x_label,
             y_label=y_label,
-            contour_kwargs=contour_kwargs,
             **kwargs,
         )
 
