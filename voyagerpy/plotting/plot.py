@@ -307,9 +307,6 @@ def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[
     for ax in axs.flat[nplots:]:
         ax.axis("off")
 
-    # print("setting layout as in theng")
-    # fig.get_layout_engine().set(hspace=0, h_pad=4 / 720, w_pad=4 / 720, wspace=0)
-
     return fig, axs
 
 
