@@ -187,6 +187,8 @@ def grouped_violinplot(
     cmap: Optional[str] = None,
     legend: bool = True,
     vert: bool = True,
+    x_label: Optional[str] = None,
+    y_label: Optional[str] = None,
 ):
     if not vert:
         x, y = y, x
