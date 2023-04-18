@@ -562,7 +562,6 @@ def plot_expression_scatter(
         **kwargs,
     )
 
-    
     ax.set_title(gene)
     ax.set_xlabel("Expression" + f" ({layer})" if layer is not None else "")
     if y_symbol is not None:
@@ -687,14 +686,9 @@ def plot_spatial_feature(
     ncol: int = 2,
     barcode_geom: Optional[str] = None,
     annot_geom: Optional[str] = None,
-    tissue: bool = True,
     subset_barcodes: Union[None, slice, Sequence[str]] = None,
     layer: Optional[str] = None,
-    colorbar: bool = False,
-    cmap: Optional[str] = "Blues",
-    cat_cmap: Optional[str] = "dittoseq",
-    div_cmap: str = "roma",
-    categ_type: Union[str, Collection[str]] = {},
+    obsm: Optional[str] = None,
     geom_style: Optional[Dict] = {},
     annot_style: Optional[Dict] = {},
     alpha: float = 0.2,
@@ -702,11 +696,12 @@ def plot_spatial_feature(
     color: Optional[str] = None,
     _ax: Union[None, Axes, Iterable[Axes]] = None,
     legend: bool = True,
-    plot: bool = True,
+    cmap: Optional[str] = "Blues",
+    cat_cmap: Optional[str] = None,
+    div_cmap: str = "roma",
     subplot_kwargs: Optional[Dict] = None,
     legend_kwargs: Optional[Dict] = None,
     dimension: str = "barcode",
-    obsm: Optional[str] = None,
     image: bool = False,
     figtitle: Optional[str] = None,
     feature_labels: Union[None, str, Sequence[Optional[str]]] = None,
@@ -714,12 +709,8 @@ def plot_spatial_feature(
     show_symbol: bool = True,
     **kwargs,
 ) -> Union[np.ndarray, Any]:
-    if isinstance(features, (list, tuple)):
-        feat_ls = list(features)
-    elif isinstance(features, str):
-        feat_ls = [features]
-    else:
-        raise TypeError("features must be a string or a list of strings")
+    
+    feat_ls = listify(features)
 
     assert_basic_spatial_features(adata, dimension, errors="raise")
     if obsm is not None and obsm not in adata.obsm:
@@ -780,10 +771,6 @@ def plot_spatial_feature(
     del feat_ls
     # Select the spots to work with
 
-    # TODO: This is a bit messy fix. Maybe get rid of the tissue param.
-    tissue = tissue and "in_tissue" in df
-
-    barcode_selection = slice(None) if not tissue else df["in_tissue"] == 1
     barcode_selection = subset_barcodes if subset_barcodes is not None else slice(None)
     gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
 
