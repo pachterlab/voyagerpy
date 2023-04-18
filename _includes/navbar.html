@@ -1,4 +1,5 @@
-<div role="navigation" class="navbar navbar-expand-lg navbar-dark background-hi">
+<nav role="navigation" class="navbar navbar-expand-lg navbar-dark background-hi">
+	<div class="col-md-0 col-lg-1 col-sm-0"></div>
 	<div class="container-fluid">
 		<a class="navbar-brand" href="#">{{ site.name }}</a>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -20,7 +21,8 @@
 						{{ nav.name -}}
 					</a>
 					<ul class="dropdown-menu">
-						{% for tech in site.technologies %}
+						{% assign sorted_technologies = site.technologies | sort: "order" %}
+						{% for tech in sorted_technologies %}
 						<li><a class="dropdown-item" href="{{ site.baseurl | append: tech.url}}">{{ tech.name -}}</a>
 						</li>
 						{% endfor %}
@@ -46,4 +48,4 @@
 			</ul>
 		</div>
 	</div>
-</div>
+	</div>
