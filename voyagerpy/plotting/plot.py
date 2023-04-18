@@ -55,6 +55,7 @@ plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["grid.color"] = "k"
 plt.rcParams["image.origin"] = "lower"
 plt.rcParams["lines.markersize"] = 4
+plt.rcParams["figure.dpi"] = 80  # 100 is the default
 # figure.constrained_layout.wspace 0.02
 # figure.subplot.wspace 0.2
 """ #TODO: 
@@ -165,12 +166,13 @@ def grouped_violinplot(
     legend: bool = True,
     vert: bool = True,
 ):
-
     if not vert:
         x, y = y, x
+
     groups = df.groupby(x)[y].groups
     keys = sorted(groups.keys())
     labels = keys
+
     if df[x].dtype == "category" and keys == [0, 1]:
         labels = [False, True]
 
@@ -183,7 +185,7 @@ def grouped_violinplot(
         widths=0.8,
     )
     violins = ax.violinplot(grouped_data, **violin_opts)
-    ec, alpha = configure_violins(violins, cmap)
+    _, alpha = configure_violins(violins, cmap)
 
     set_ticks = ax.set_xticks if vert else ax.set_yticks
     set_ticks(np.arange(len(keys)) + 1, labels=labels)
@@ -217,7 +219,6 @@ def plot_single_barcode_data(
     contour_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs,
 ):
-
     if obsm is not None:
         obs = adata.obsm[obsm].copy()
         if color_by is not None and color_by not in obs:
@@ -264,7 +265,6 @@ def plot_single_barcode_data(
 
 
 def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
-
     ncol = min(ncol or 2, nplots)
     nrow = int(np.ceil(nplots / ncol))
 
@@ -419,7 +419,6 @@ def plot_bin2d(
     ax: Optional[Axes] = None,
     **kwargs,
 ) -> Axes:
-
     get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
     obs = get_dataframe(data) if isinstance(data, AnnData) else data
 
@@ -501,7 +500,6 @@ def plot_expression(
     ax: Union[None, Axes, np.ndarray[Axes]] = None,
     **kwargs,
 ):
-
     _rc_params = {
         "axes.spines.top": False,
         "axes.spines.right": False,
@@ -525,7 +523,6 @@ def plot_expression_scatter(
     layer: Optional[str] = None,
     **kwargs,
 ):
-
     obs = adata.obs if obsm is None else adata.obsm[obsm]
     X = adata.X if layer is None else adata.layers[layer]
 
@@ -661,7 +658,6 @@ def rcDecorator(context):
 
 
 def nogrid(func):
-
     context = {"axes.grid": False}
 
     @functools.wraps(func)
@@ -959,7 +955,6 @@ def plot_spatial_feature(
 
 
 def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "raise") -> Tuple[bool, str]:
-
     ret = True
     errors_to_raise = []
     get_geom_prompt = "Consider run voyagerpy.spatial.get_geom(adata) first."
@@ -1002,7 +997,6 @@ def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "rai
 
 
 def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs):
-
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
 
@@ -1240,7 +1234,6 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
 
 
 def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", **kwargs):
-
     data = adata.obsm["X_pca"]
     rc_context = {"axes.edgecolor": "#00000050", "axes.grid.which": "both"}
     with plt.rc_context(rc_context):
@@ -1306,7 +1299,6 @@ def contour_plot(
     linewidths: Optional[float] = 1,
     origin: Optional[str] = None,
 ) -> Axes:
-
     if data is not None:
         xdat = data[x] if isinstance(x, str) else x[:]
         ydat = data[y] if isinstance(y, str) else y[:]
@@ -1444,7 +1436,6 @@ def plot_moran_mc(
     legend_title: str = "feature",
     **kwargs,
 ):
-
     linewidth = kwargs.pop("linewidth", None)
     _kwargs = dict(figsize=None)
     _kwargs.update(kwargs)
@@ -1470,7 +1461,6 @@ def plot_moran_mc(
     minI, maxI = Is.min(), Is.max()
 
     for feat, I in zip(features, Is):
-
         sim = moran_sim_dict[feat]["sim"]
         label = adata.var.loc[feat, "symbol"]
 
@@ -1502,7 +1492,6 @@ def plot_barcode_histogram(
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
-
     features = [feature] if isinstance(feature, str) else feature
     nplot = len(features)
     ncol = min(ncol, nplot)
@@ -1657,7 +1646,6 @@ def plot_features_histogram(
     show_symbol: bool = True,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
-
     features = [features] if isinstance(features, str) else features
     nplot = len(features)
     ncol = min(ncol, nplot)
@@ -1785,7 +1773,6 @@ def plot_fitline(
     xlim: Optional[Tuple[Optional[float], Optional[float]]] = None,
     ylim: Optional[Tuple[Optional[float], Optional[float]]] = None,
 ):
-
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -1905,7 +1892,6 @@ def scatter(
 
     label_on_top = False
     if legend and is_categorical:
-
         _legend_kwargs = dict(
             bbox_to_anchor=(1.04, 0.5),
             loc="center left",
