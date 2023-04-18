@@ -3,6 +3,7 @@ title: Visium Processing Workflows with VoyagerPy
 layout: technology
 name: Visium
 published: true
+order: 1
 ---
 
 <p class="text-justify">
