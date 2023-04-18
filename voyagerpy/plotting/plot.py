@@ -529,7 +529,7 @@ def plot_expression_scatter(
     obs = adata.obs if obsm is None else adata.obsm[obsm]
     X = adata.X if layer is None else adata.layers[layer]
 
-    if isinstance(X, sp.csr_matrix):
+    if sp.issparse(X):
         X = X.toarray()
     elif isinstance(X, np.matrix):
         X = np.array(X)
@@ -541,12 +541,21 @@ def plot_expression_scatter(
 
     color_data = obs if color_by in obs else adata.obs
 
-    gene_idx = adata.var_names.get_loc(gene)
-    x_ = X[:, gene_idx]
-    y_ = obs[y]
+    if isinstance(gene, str):
+        gene_idx = adata.var_names.get_loc(gene)
+        x_data = X[:, gene_idx]
+    else:
+        x_data = gene
+    if isinstance(y, str):
+        y_data = obs[y]
+        y_symbol = adata.var.at[y, "symbol"]
+    else:
+        y_data = y
+        y_symbol = None
+
     ax = scatter(
-        x_,
-        y_,
+        x_data,
+        y_data,
         label=gene,
         color_by=color_by,
         data=color_data,
@@ -554,17 +563,18 @@ def plot_expression_scatter(
         **kwargs,
     )
 
-    y_symbol = adata.var.at[y, "symbol"]
+    
     ax.set_title(gene)
     ax.set_xlabel("Expression" + f" ({layer})" if layer is not None else "")
-    ax.set_ylabel(y_symbol + f" {obsm}" if obsm is not None else "")
+    if y_symbol is not None:
+        ax.set_ylabel(y_symbol + f" {obsm}" if obsm is not None else "")
 
     return ax
 
 
 def plot_expression_violin(
     adata: AnnData,
-    genes: Union[str, Sequence[str]],
+    gene: Union[str, Sequence[str]],
     groupby: Optional[str] = None,
     ncol: Optional[int] = 2,
     show_symbol: bool = False,
@@ -573,18 +583,19 @@ def plot_expression_violin(
     subplot_kwargs: Optional[Dict] = None,
     **kwargs,
 ):
-    genes = [genes] if isinstance(genes, str) else genes[:]
+    # genes = [genes] if isinstance(genes, str) else genes[:]
+    genes = listify(gene)
     gene_ids = []
 
     secondary_column = adata.uns["config"]["secondary_var_names"]
 
-    for gene in genes:
-        if gene in adata.var[secondary_column].values:
-            new_genes = adata.var.index[adata.var[secondary_column] == gene]
+    for genes in genes:
+        if genes in adata.var[secondary_column].values:
+            new_genes = adata.var.index[adata.var[secondary_column] == genes]
             gene_ids.extend(new_genes.tolist())
         else:
-            assert gene in adata.var_names
-            gene_ids.append(gene)
+            assert genes in adata.var_names
+            gene_ids.append(genes)
 
     obs = adata.obs[[groupby]] if groupby is not None else adata.obs.copy()
     for gene_id in gene_ids:
