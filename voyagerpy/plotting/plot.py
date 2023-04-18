@@ -14,6 +14,7 @@ from typing import (
     Collection,
     Dict,
     Iterable,
+    List,
     Literal,
     Optional,
     Sequence,
@@ -66,6 +67,24 @@ plt.rcParams["figure.dpi"] = 80  # 100 is the default
 ax title font_size 10
 fig.supylabel fontsize 10 (figure.labelsize)
 """
+
+
+def listify(x: Union[None, int, str, Iterable[str], Iterable[int]], size: Optional[int] = None) -> Union[List[str], List[int], List[None]]:
+    """Converts a string or an iterable of strings to a list of strings.
+
+    Parameters
+    ----------
+    x : Union[str, Iterable[str]]
+        The string or iterable to convert.
+
+    Returns
+    -------
+    List[str]
+        The list of strings.
+    """
+    nontype = type(None)
+    size = size if size is not None else 1
+    return [x] * size if isinstance(x, (int, str, nontype)) else list(x)
 
 
 def imshow(
