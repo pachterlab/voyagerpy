@@ -497,7 +497,7 @@ def plot_bin2d(
 
 def plot_expression(
     adata: AnnData,
-    genes: Union[str, Sequence[str]],
+    gene: Union[str, Sequence[str]],
     y: Optional[str] = None,
     obsm: Optional[str] = None,
     ax: Union[None, Axes, np.ndarray[Axes]] = None,
@@ -510,10 +510,10 @@ def plot_expression(
     }
     with plt.rc_context(_rc_params):
         if y is None:
-            return plot_expression_violin(adata, genes, **kwargs)
+            return plot_expression_violin(adata, gene, **kwargs)
 
         else:
-            return plot_expression_scatter(adata, genes, y, obsm=obsm, ax=ax, **kwargs)
+            return plot_expression_scatter(adata, gene, y, obsm=obsm, ax=ax, **kwargs)
 
 
 def plot_expression_scatter(
