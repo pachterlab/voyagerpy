@@ -444,15 +444,6 @@ def plot_bin2d(
     figsize = kwargs.pop("figsize", None)
     plot_kwargs.update(kwargs)
 
-    grid_kwargs = dict(
-        visible=True,
-        which="both",
-        axis="both",
-        color="k",
-        linewidth=0.5,
-        alpha=0.2,
-    )
-
     if hex_plot:
         # hexbin has similar arguments as hist2d, but some names are different
         renaming = [
@@ -502,7 +493,7 @@ def plot_bin2d(
     ax.set_ylabel(y_label)
     ax.set_xlabel(x_label)
 
-    ax.grid(**grid_kwargs)
+    ax.grid()
     return ax
 
 
