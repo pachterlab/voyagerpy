@@ -118,17 +118,16 @@ def imshow(
     return axs
 
 
-def configure_violins(violins, cmap=None, edgecolor="#00000050", alpha=0.7):
-    cmap = plt.get_cmap(cmap) if isinstance(cmap, (str, type(None))) else cmap
-    for i, violin in enumerate(violins["bodies"]):
-        violin.set_facecolor(cmap(i))
+def configure_violins(violins, cmap: Optional[str] = None, edgecolor: str = "#00000050", alpha: float = 0.7) -> Tuple[str, float]:
+    colormap = plt.get_cmap(cmap) if isinstance(cmap, (str, type(None))) else cmap
+    for i_color, violin in enumerate(violins["bodies"]):
+        violin.set_facecolor(colormap(i_color))
         violin.set_edgecolor(edgecolor)
         violin.set_alpha(alpha)
     return edgecolor, alpha
 
 
-def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, **kwargs):
-
+def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, scatter_points: bool = True, **kwargs):
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
 
@@ -136,28 +135,22 @@ def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, **
     violins = ax.violinplot(df[y], **violin_opts)
     configure_violins(violins, cmap)
 
-    if not isinstance(y, str) or True:
-        colnames = y
-    else:
-        colnames = [y]
-
-    cols = df[colnames]
-
-    x_vals = np.ones_like(cols)
-    if cols.ndim == 2:
-        x_vals += np.arange(cols.shape[1]).ravel()
-
-    y_vals = cols.values.ravel()
-    scatter(
-        x_vals,
-        y_vals,
-        color_by=x_vals,
-        cmap=cmap,
-        ax=ax,
-        is_categorical=True,
-        legend=False,
-        alpha=0.7,
-    )
+    if scatter_points:
+        cols = df[y]
+        x_vals = np.ones_like(cols)
+        if cols.ndim == 2:
+            x_vals += np.arange(cols.shape[1]).ravel()
+        y_vals = cols.values.ravel()
+        scatter(
+            x_vals,
+            y_vals,
+            color_by=x_vals,
+            cmap=cmap,
+            ax=ax,
+            is_categorical=True,
+            legend=False,
+            alpha=0.7,
+        )
     ax.set_xticks([])
     ax.set_ylabel(str(y))
     return ax
