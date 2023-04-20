@@ -12,7 +12,8 @@ def register_segmented_cmap(cmap_name: str, cmap_colors: Tuple[str], reverse=Fal
     if reverse:
         cmap_colors = cmap_colors[::-1]
 
-    cmap = LinearSegmentedColormap.from_list(cmap_name, cmap_colors, N=len(cmap_colors))
+    # cmap = LinearSegmentedColormap.from_list(cmap_name, cmap_colors, N=len(cmap_colors))
+    cmap = LinearSegmentedColormap.from_list(cmap_name, cmap_colors)
     colormaps.register(cmap)
     colormaps.register(cmap.reversed())
 
