@@ -3,7 +3,7 @@
 
 from voyagerpy.utils.utils import (
     add_per_cell_qcmetrics,
-    calculate_metrics,
+    add_per_gene_qcmetrics,
     get_scale,
     is_highres,
     log_norm_counts,
@@ -14,7 +14,7 @@ from voyagerpy.utils.utils import (
 
 __all__ = [
     "add_per_cell_qcmetrics",
-    "calculate_metrics",
+    "add_per_gene_qcmetrics",
     "get_scale",
     "is_highres",
     "log_norm_counts",

@@ -48,54 +48,54 @@ def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
     return adata.uns["spatial"]["scale"][scale_key]
 
 
-def calculate_metrics(adata: AnnData) -> AnnData:
-    adata.var_names_make_unique()
-    # forcells
-    # n_genes_by_counts
-    adata.obs["n_genes_by_counts"] = np.diff(adata.X.tocsr().indptr)  # type:ignore
-    # total_counts
-    adata.obs["total_counts"] = np.array(adata.X.sum(axis=1)).reshape((adata.X.shape[0]))  # type:ignore
-    # prop_mito
+def add_per_gene_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
+    if "sum" not in adata.var.keys() or force:
+        adata.var["sum"] = adata.X.sum(axis=0).T  # type: ignore
 
-    adata.var["mt"] = adata.var_names.str.startswith("mt-")
-    adata.obs["pct_counts_mt"] = np.sum(adata[:, adata.var["mt"]].X, axis=1).A1 / np.sum(adata.X, axis=1).A1  # type:ignore
+    if "detected" not in adata.var.keys() or force:
+        adata.var["detected"] = np.diff(adata.X.tocsc().indptr)  # type: ignore
 
-    # for_genes
-    # detected in nr of barcodes
-    adata.var["n_cells_by_counts"] = np.diff(adata.X.tocsc().indptr)  # type: ignore
-    # barcodes per feature
-    adata.var["total_counts"] = np.array(adata.X.sum(axis=0)).reshape((adata.X.shape[1]))  # type: ignore
-    return adata
+    for key, subset in subsets.items():
+        sum_key = f"subsets_{key}_sum"
+        detected_key = f"subsets_{key}_detected"
+        percent_key = f"subsets_{key}_percent"
+
+        ss = adata[subset, :].X
+
+        if sum_key not in adata.var.keys() or force:
+            adata.var[sum_key] = ss.sum(axis=0).T  # type: ignore
+
+        if detected_key not in adata.var.keys() or force:
+            adata.var[detected_key] = np.diff(ss.tocsc().indptr)  # type: ignore
+
+        if percent_key not in adata.var.keys() or force:
+            adata.var[percent_key] = adata.var[sum_key] / adata.var["sum"] * 100
 
 
 def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
     if "sum" not in adata.obs.keys() or force:
-        adata.obs["sum"] = adata.X.sum(axis=1)
+        adata.obs["sum"] = adata.X.sum(axis=1)  # type: ignore
 
     if "detected" not in adata.obs.keys() or force:
-        adata.obs["detected"] = (adata.X > 0).sum(axis=1)
+        adata.obs["detected"] = np.diff(adata.X.tocsr().indptr)  # type: ignore
 
-    for key, arr in subsets.items():
-
-        if arr.dtype in ("bool", "O"):
-            arr = arr.astype(adata.X.dtype)
-
+    for key, subset in subsets.items():
         sum_key = f"subsets_{key}_sum"
-        det_key = f"subsets_{key}_detected"
-        prc_key = f"subsets_{key}_percent"
+        detected_key = f"subsets_{key}_detected"
+        percent_key = f"subsets_{key}_percent"
 
+        subset_X = adata[:, subset].X
         if sum_key not in adata.obs.keys() or force:
-            adata.obs[sum_key] = adata.X.dot(arr)
+            adata.obs[sum_key] = subset_X.sum(axis=1)  # type: ignore
 
-        if det_key not in adata.obs.keys() or force:
-            adata.obs[det_key] = (adata.X > 0).dot(arr)
+        if detected_key not in adata.obs.keys() or force:
+            adata.obs[detected_key] = np.diff(subset_X.tocsr().indptr)  # type: ignore
 
-        if prc_key not in adata.obs.keys() or force:
-            adata.obs[prc_key] = adata.obs[sum_key] / adata.obs["sum"]
+        if percent_key not in adata.obs.keys() or force:
+            adata.obs[percent_key] = adata.obs[sum_key] / adata.obs["sum"] * 100
 
 
 def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool = True, base: Optional[int] = 2, pseudocount: int = 1):
-
     # Equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
     # sc.pp.normalize_total(adata, target_sum=target_sum)
