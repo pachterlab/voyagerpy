@@ -108,7 +108,6 @@ def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires")
 
 
 def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200, high: int = 255) -> Tuple[int, Optional[Contour]]:
-
     bgr_img = cvtColor(adata.uns["spatial"]["img"][size], COLOR_RGB2BGR)
     bgr_img = (bgr_img * 255).astype("uint8")  # type: ignore
     imgray = cvtColor(bgr_img, COLOR_BGR2GRAY)
@@ -313,7 +312,6 @@ def to_points(
 
 
 def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = False, res: Optional[str] = None) -> AnnData:
-
     if not inplace:
         adata = adata.copy()
 
@@ -365,7 +363,6 @@ def get_spot_coords(
     as_df: bool = False,
     res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
-
     h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
     if tissue:
@@ -605,6 +602,7 @@ def compute_spatial_lag(
     feature: str,
     graph_name: Union[None, str, np.ndarray] = None,
     inplace: bool = False,
+    layer: Optional[str] = None,
 ) -> AnnData:
     if not inplace:
         adata = adata.copy()
@@ -621,10 +619,11 @@ def compute_spatial_lag(
     del graph_name
 
     features = [feature] if isinstance(feature, str) else feature[:]
+    X = adata.X if layer is None else adata.layers[layer].A
     for feat in features:
         lagged_feat = f"lagged_{feat}"
         if feat in adata.var_names:
-            x = adata.X[:, adata.var_names.get_loc(feat)]
+            x = X[:, adata.var_names.get_loc(feat)]
         else:
             x = adata.obs[feat]
         adata.obs[lagged_feat] = dists.dot(x)
@@ -659,7 +658,6 @@ def moran(
     if dim == "obs":
         morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
     elif dim == "var":
-
         feat_idx = list(map(adata.var.index.get_loc, features))
         morans = [esda.Moran(adata.X[:, i], W, permutations=permutations) for i in feat_idx]
     else:
