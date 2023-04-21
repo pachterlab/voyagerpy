@@ -637,16 +637,17 @@ def plot_expression_violin(
             assert genes in adata.var_names
             gene_ids.append(genes)
 
-    obs = adata.obs[[groupby]] if groupby is not None else adata.obs.copy()
+    X = (adata.X if layer is None else adata.layers[layer]).copy()
+
+    obs = (adata.obs[[groupby]] if groupby is not None else adata.obs).copy()
     for gene_id in gene_ids:
-        subset_gene = adata.var_names == gene_id
-        if layer is not None:
-            counts = adata.layers[layer][:, subset_gene]
-        else:
-            counts = adata.X[:, subset_gene]
-        if isinstance(counts, sp.csr_matrix):
-            counts = counts.todense()
-        obs[gene_id] = counts.copy()
+        gene_idx = adata.var_names.get_loc(gene_id)
+        counts = X[:, gene_idx]
+
+        if sp.issparse(counts):
+            counts = counts.A
+
+        obs[gene_id] = counts
 
     _subplot_kwargs = dict(
         figsize=kwargs.pop("figsize", None),
