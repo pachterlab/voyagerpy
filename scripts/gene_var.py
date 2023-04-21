@@ -8,6 +8,7 @@ Created on Sun Apr 16 12:41:26 2023
 import numpy as np
 from scipy import sparse
 from scipy.stats import iqr
+from scipy.stats import norm
 import numba
 import pandas as pd
 from scipy.stats import gaussian_kde
@@ -17,6 +18,7 @@ from scipy.optimize import least_squares
 import scanpy as sc
 from sklearn.linear_model import LinearRegression
 from statsmodels.nonparametric._smoothers_lowess import lowess
+from statsmodels.stats.multitest import fdrcorrection
 
 
 # %%
@@ -198,13 +200,21 @@ def parametric_fit(_mean, _vars, _weight, start):
     # print("Optimized parameters: a={}, b={}, c={}".format(a, n, b))
     return a, b, n
 
+def f_predict(x,a,b,n):
+    a0 = exp(a)
+    b0 = exp(b)
+    n0 = exp(n)+1
+    return (a0 *x)/(x**n0 + b0)
+
 
 def correct_logged_expectation(x, y, w, FUN):
     leftovers = y / FUN(x)
     med = weighted_median(leftovers, w)
     OUT = lambda x: FUN(x) * med
 
-    std_dev = weighted_median(abs(leftovers / (med - 1)), w) * 1.4826
+    std_dev = weighted_median(abs((leftovers / med) - 1), w) * 1.4826
+
+    return OUT, std_dev
 
 
 def weighted_median(x, w):
@@ -215,20 +225,43 @@ def weighted_median(x, w):
 
     x = x[o]
     w = w[o]
-    # return np.cumsum(w)
     p = np.cumsum(w) / sum(w)
-
     n = np.where(p < 0.5)[0].shape[0]
-
-    # return n
-    # return np.where(p>0.5)[0]
     if p[n] < 0.5:
         return x[n]
     else:
         return (x[n] + x[n + 1]) / 2
 
     # return n
+def decompose_log_exprs(_means,_vars,fit_means,fit_vars,ncells):
+    
+    
+    
+    fit,std_dev = fit_trend_var(fit_means,fit_vars)
+    
+    output = pd.DataFrame({"mean": _means,"total":_vars,"tech" : fit(_means)})
+    output["bio"] = output["total"] - output["tech"]
+    output["p_value"] = 1 - norm.cdf(output["bio"]/output["tech"],scale = std_dev)
+    output["FDR"] = fdrcorrection(output[p_value])
+    
+    return collected
+    #1 - norm().cdf(0.1)
 
+    
+
+
+def model_gene_var(adata,block=None,design=None,subset_row=None,subset_fit=None):
+    x_means,x_vars = get_mean_var(adata.X, axis=0)
+    decompose_log_exprs(x_mean,x_var)
+    if(subset_fit is None):
+        fit_stats_means = x_means
+        fit_stats_vars = x_vars
+    else:
+        pass
+    
+    collected = decompose_log_exprs(x_means, x_vars, fit_stats_means, fit_stats_vars,n_cells = adata.X.shape[0])
+    output = 
+    
 
 def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, _lowess=False, density_weights=True):
     is_okay = np.intersect1d(np.where(gene_var > 1.0e-8), np.where(gene_mean >= min_mean))
@@ -247,11 +280,12 @@ def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, _lowess=Fa
     PARAMFUN = lambda x: np.minimum(x / left_edge, 1)
 
     if parametric:
-        a_start, b_start, n_start = get_parametric_start(m, v)
 
+        a_start, b_start, n_start = get_parametric_start(m, v)
         a, b, n = parametric_fit(m, v, w, [a_start, b_start, n_start])
-        to_fit = to_fit - np.log(f(m, a, b, n))
-        PARAMFUN = lambda x: f(x, a, b, n)
+        #to_fit = to_fit - np.log(f(m, a, b, n))
+        PARAMFUN = lambda x: f_predict(x, a, b, n)
+        #return PARAMFUN
 
     if _lowess:
         idx = np.round(np.linspace(0, len(m) - 1, 200)).astype(int)
@@ -259,8 +293,7 @@ def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, _lowess=Fa
     else:
         UNSCALEDFUN = PARAMFUN
 
-    correct_logged_expectation(m, v, w, UNSCALEDFUN)
-    return ll
+    return correct_logged_expectation(m, v, w, UNSCALEDFUN)
 
 
 # def get_start_params():
@@ -312,12 +345,20 @@ w = inverse_density_weights(m)
 
 
 # %%
+def f_corr(x, a, b, n):
+    return (a * x) / (x ** (1 + n) + b)
 
-
-def f_corr2(x, a, n, b):
+def f_corr2(x, a, b, n):
     return (exp(a) * x) / (x ** (1 + exp(n)) + exp(b))
 
 
+    
+#%%    
+    
+    
+f_corr2(m0, 3.5457, 0.24, 3.0019)
+f_corr(m0, 2.424, 2.639, 0.604)
+f_predict(m0, 2.424, 2.639, 0.604)
 # %%
 ans = f_corr2(m, 2.4099, 0.5991, 2.62208)
 v0 = gene_var[is_okay]
@@ -327,9 +368,23 @@ w0 = inverse_density_weights(m0)
 idx = np.round(np.linspace(0, len(m0) - 1, 200)).astype(int)
 # %%
 parametric_fit(m, v, w, [1.28, 1.15, 0.14])
-a1, a2, a3 = get_parametric_start(m, v)
-fitted = fit_trend_var(v, m)
-out, resid_weights = fit_trend_var(v, m)
+a1, a2, a3 = get_parametric_start(m0, v0)
+fit_trend_var(v, m)
+fit_trend_var(m,v)
+out = fit_trend_var(m,v)
+out, resid_weights = fit_trend_var(m, v)
 # %%
-
+out(m0)
 weighted_median(m0, w0)
+m0
+np.log(3.5457)
+#%%
+m
+v
+correct_logged_expectation(x, y, w, out)
+#%%
+
+
+
+
+
