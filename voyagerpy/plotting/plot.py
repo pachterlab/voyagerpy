@@ -1287,25 +1287,48 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
     return ax
 
 
-def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = "cluster", **kwargs):
-    data = adata.obsm["X_pca"]
+def plot_pca(
+    adata: AnnData,
+    ndim: int = 5,
+    cmap: str = None,
+    color_by: str = "cluster",
+    obsm="X_pca",
+    legend_kwargs: Optional[Dict[str, Any]] = None,
+    subplot_kwargs: Optional[Dict[str, Any]] = None,
+    **kwargs,
+):
+    data = adata.obsm[obsm]
     rc_context = {"axes.edgecolor": "#00000050", "axes.grid.which": "both"}
+    _subplot_kwargs = dict(
+        figsize=kwargs.pop("figsize", None),
+    )
+    _subplot_kwargs.update(subplot_kwargs or {})
+
     with plt.rc_context(rc_context):
-        fig, axs, cax = subplots_single_colorbar(ndim, ndim, **kwargs)
+        fig, axs, cax = subplots_single_colorbar(ndim * ndim, ndim, **_subplot_kwargs)
 
-    max_color = plt.get_cmap(cmap).N
-
-    colors = adata.obs[colorby].astype(int)
     var_expl = np.round(adata.uns["pca"]["variance_ratio"] * 100).astype(int)
 
+    _legend_kwargs = dict(
+        bbox_to_anchor=(1.04, 0.5),
+        frameon=False,
+        loc="center left",
+        num=None,
+        title=color_by,
+    )
+    _legend_kwargs.update(legend_kwargs or {})
     scatter_kwargs = dict(
-        c=colors,
+        color_by=color_by,
+        data=adata.obs,
         s=8,
         alpha=0.5,
         cmap=cmap,
         vmin=0,
-        vmax=max_color,
+        vmax=plt.get_cmap(cmap).N,
+        legend=False,
     )
+
+    scatter_kwargs.update(kwargs)
 
     for row in range(ndim):
         if ndim > 1:
@@ -1317,7 +1340,7 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
             ax = axs[row, col]
 
             if row != col:
-                ax.scatter(*data[:, (col, row)].T, **scatter_kwargs)
+                ax = scatter(*data[:, (col, row)].T, ax=ax, **scatter_kwargs)
             if row < ndim - 1:
                 ax.set_xticklabels([])
             if col > 0:
@@ -1334,8 +1357,9 @@ def plot_pca(adata: AnnData, ndim: int = 5, cmap: str = "tab10", colorby: str = 
         axs[row, row].plot(xs, density(xs), c="k", linewidth=1)
 
     if ndim > 1:
-        legend_elements = axs.flat[1].collections[0].legend_elements()
-        cax.legend(*legend_elements, loc="center", title=colorby, frameon=False)
+        legend_elements = axs.flat[1].collections[0].legend_elements(num=_legend_kwargs.pop("num", None))
+        # cax.legend(*legend_elements, loc="center", title=colorby, frameon=False, num=None)
+        cax.legend(*legend_elements, **_legend_kwargs)
     else:
         cax.remove()
 
