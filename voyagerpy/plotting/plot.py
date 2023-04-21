@@ -1220,16 +1220,16 @@ def subplots_single_colorbar(
 
 def plot_dim_loadings(
     adata: AnnData,
-    dims: Union[int, Sequence[int]],
+    components: Union[int, Sequence[int]],
     ncol: int = 2,
     n_loadings: int = 10,
     show_symbol: bool = True,
     varm: str = "PCs",
     **kwargs,
 ):
-    dims = list(range(dims)) if isinstance(dims, int) else list(dims)
-    dat = adata.varm[varm][:, dims]
-    nplots = len(dims)
+    components = list(range(components)) if isinstance(components, int) else list(components)
+    dat = adata.varm[varm][:, components]
+    nplots = len(components)
 
     _subplot_kwargs = dict(
         nplots=nplots,
@@ -1246,7 +1246,7 @@ def plot_dim_loadings(
 
     n_min = n_loadings // 2
     n_max = n_loadings - n_min
-    for i, (ax, dim) in enumerate(zip(axs.flat, dims)):
+    for i, (ax, dim) in enumerate(zip(axs.flat, components)):
         ax.set_title(f"{varm} {dim}")
 
         # get indices of sorted dim loadings (ascending)
@@ -1267,7 +1267,7 @@ def plot_dim_loadings(
         ax.axvline(0, linestyle="--", c="k")
 
         # Show ticks at the bottom of each column
-        ax.tick_params("x", labelbottom=i + ncol >= len(dims))
+        ax.tick_params("x", labelbottom=i + ncol >= len(components))
 
     fig.supxlabel("Loading")
     fig.supylabel("Gene")
