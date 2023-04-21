@@ -157,3 +157,19 @@ def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:
     sum_.data = 1 / sum_.data
     sum_ = sp.diags(sum_.toarray().ravel())
     return sum_.dot(X) if byrow else X.dot(sum_)
+
+
+def kurtosis(x, method: str = 'moments'):
+    if method != 'moments':
+        raise NotImplementedError('Only method="moments" is currently implemented')
+
+    n = x.size
+    x_bar = x.mean()
+    # From asbio::kurt in R:
+    # methods of moments kurtosis is 
+    #   m_4 / m_2^2  with m_j = sum((x-x_mean)**j)/n
+    
+    m_2 = np.square(x - x_bar).mean()
+    m_4 = np.power(x - x_bar, 4).mean()
+
+    return m_4 / m_2**2
