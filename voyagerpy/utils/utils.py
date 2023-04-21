@@ -95,7 +95,13 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
             adata.obs[percent_key] = adata.obs[sum_key] / adata.obs["sum"] * 100
 
 
-def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool = True, base: Optional[int] = 2, pseudocount: int = 1):
+def log_norm_counts(
+        adata: AnnData, 
+        layer: Optional[str] = None, 
+        inplace: bool = True, 
+        base: Optional[int] = 2, 
+        pseudocount: int = 1
+    ):
     # Equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
     # sc.pp.normalize_total(adata, target_sum=target_sum)
@@ -120,7 +126,12 @@ def log_norm_counts(adata: AnnData, layer: Optional[str] = None, inplace: bool =
         X.data = log(X.data + pseudocount)
     else:
         X = log(X + pseudocount)
-    adata.X = X
+    
+    if layer is None:
+        adata.X = X
+    else:
+        adata.layers[layer] = X
+
     return adata
 
 
