@@ -1570,21 +1570,20 @@ def plot_barcode_histogram(
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
-    features = [feature] if isinstance(feature, str) else feature
+    features: List[str] = listify(feature)  # type: ignore
     nplot = len(features)
     ncol = min(ncol, nplot)
-    nrow = int(np.ceil(nplot / ncol))
 
     if obsm is not None:
         if obsm not in adata.obsm:
             raise KeyError(f'"{obsm}" not found in adata.obsm')
-        df = adata.obsm[obsm].copy()
-        if color_by not in df:
+        df: DataFrame = adata.obsm[obsm].copy()  # type: ignore
+        if color_by is not None and color_by not in df:
             df[color_by] = adata.obs[color_by].copy()
     else:
         df = adata.obs.copy()
 
-    _subplots_kwargs = dict(figsize=figsize, layout="constrained", hspace=0.5, nplots=nplot)
+    _subplots_kwargs = dict(figsize=figsize, layout="constrained", hspace=None)
     _subplots_kwargs.update(subplot_kwargs or {})
 
     labels = [label] if isinstance(label, str) else label
@@ -1593,7 +1592,7 @@ def plot_barcode_histogram(
         raise ValueError("labels must be the same length as features")
 
     if color_by is not None:
-        fig, axs, cax = subplots_single_colorbar(nrow, ncol, **_subplots_kwargs)
+        fig, axs, cax = subplots_single_colorbar(nplot, ncol, **_subplots_kwargs)
         all_feats = features + [color_by]
         keys, groups = zip(*df[all_feats].groupby(color_by).groups.items())
 
