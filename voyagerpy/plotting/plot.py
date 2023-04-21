@@ -739,7 +739,7 @@ def plot_spatial_feature(
     color: Optional[str] = None,
     _ax: Union[None, Axes, Iterable[Axes]] = None,
     legend: bool = True,
-    cmap: Optional[str] = "Blues",
+    cmap: Optional[str] = "Blues7",
     cat_cmap: Optional[str] = None,
     div_cmap: str = "roma",
     subplot_kwargs: Optional[Dict] = None,
@@ -752,7 +752,6 @@ def plot_spatial_feature(
     show_symbol: bool = True,
     **kwargs,
 ) -> Union[np.ndarray, Any]:
-    
     feat_ls = listify(features)
 
     assert_basic_spatial_features(adata, dimension, errors="raise")
@@ -949,12 +948,12 @@ def plot_spatial_feature(
                 extra_kwargs["cax"] = cax
                 cax.set_title(label)
 
-            scat = geo.plot(
+            _ax = geo.plot(
                 column=values,
                 ax=_ax,
                 color=color,
                 legend=_legend,
-                cmap=curr_cmap,
+                cmap=plt.get_cmap(curr_cmap),
                 vmax=vmax,
                 legend_kwds=legend_kwargs_,
                 **extra_kwargs,
@@ -962,6 +961,7 @@ def plot_spatial_feature(
                 **kwargs,
             )
 
+            # This would only happen for categorical data
             if legend and not _legend:
                 cmap_colors = plt.get_cmap(curr_cmap).colors
                 legend_dict = {lab: color for lab, color in zip(sorted(np.unique(values)), cmap_colors)}
