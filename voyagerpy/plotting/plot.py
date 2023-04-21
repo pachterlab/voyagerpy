@@ -1414,9 +1414,11 @@ def moran_plot(
     ylim: Optional[Tuple[float, float]] = None,
     ax: Optional[Axes] = None,
     contour_kwargs: Optional[Dict[str, Any]] = None,
-    # cmap: Optional[str] = None
     show_symbol: bool = True,
     ncol: int = 2,
+    legend: bool = True,
+    subplot_kwargs: Optional[Dict[str, Any]] = None,
+    layer: Optional[str] = None,
     **scatter_kwargs,
 ) -> Axes:
     adata = adata.copy()
@@ -1433,16 +1435,21 @@ def moran_plot(
         wspace=0.2,
         hspace=0.2,
         cax_space=0.2,
+        cax_width=0.01,
         figsize=scatter_kwargs.pop("figsize", None),
+        legend=legend,
     )
+    _subplot_kwargs.update(subplot_kwargs or {})
 
     if ax is None:
-        fig, axs, cax = subplots_single_colorbar(nrow, ncol, **_subplot_kwargs)
+        fig, axs, cax = subplots_single_colorbar(nplot, ncol, **_subplot_kwargs)
     else:
         if isinstance(ax, Axes):
             axs = np.array([[ax]])
         if axs.size < nplot:
             raise ValueError("Fewer axes than plots.")
+
+    X = adata.X if layer is None else adata.layers[layer].A
 
     for i_plot, (feature, ax) in enumerate(zip(features, axs.flat)):
         lagged_feature = f"lagged_{feature}"
@@ -1471,7 +1478,7 @@ def moran_plot(
 
         if feature in adata.var_names:
             i_feature = adata.var_names.get_loc(feature)
-            adata.obs[feature] = adata.X[:, i_feature]
+            adata.obs[feature] = X[:, i_feature]
             if show_symbol:
                 symbol = adata.var.at[feature, adata.uns["config"]["secondary_var_names"]]
                 labels["x"] = symbol
@@ -1487,7 +1494,7 @@ def moran_plot(
             contour_kwargs={"colors": "cyan"},
             data=adata.obs,
             ax=ax,
-            legend=i_plot == nplot - 1,
+            legend=legend and (i_plot == nplot - 1),
             legend_kwargs=dict(cax=(cax if i_plot == nplot - 1 else None)),
             **scatter_kwargs,
         )
