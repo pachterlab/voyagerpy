@@ -434,20 +434,28 @@ def plot_bin2d(
     name_true: Optional[str] = None,
     name_false: Optional[str] = None,
     hex_plot: bool = False,
+    cmap: Optional[str] = "Blues7",
+    cmap_true: Optional[str] = "Reds",
     binwidth: Optional[float] = None,
     ax: Optional[Axes] = None,
-    **kwargs,
+    **plot_kwargs,
 ) -> Axes:
     get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
     obs = get_dataframe(data) if isinstance(data, AnnData) else data
 
-    plot_kwargs = dict(
+    _plot_kwargs = dict(
         bins=bins,
-        cmap="Blues",
+        cmap=cmap,
+        cmin=1,
     )
 
-    figsize = kwargs.pop("figsize", None)
-    plot_kwargs.update(kwargs)
+    _legend_kwargs = dict(
+        y=_plot_kwargs.pop("y_label", y),
+        x=_plot_kwargs.pop("x_label", x),
+    )
+
+    figsize = plot_kwargs.pop("figsize", None)
+    plot_kwargs.update(_plot_kwargs)
 
     if hex_plot:
         # hexbin has similar arguments as hist2d, but some names are different
@@ -468,35 +476,61 @@ def plot_bin2d(
         fig = ax.get_figure()
 
     plot_fun = ax.hexbin if hex_plot else ax.hist2d
-    x_label = x
-    y_label = y
+    x_dat = obs[x]
+    y_dat = obs[y]
+    del x, y
 
-    x = obs[x]
-    y = obs[y]
+    if filt is None:
+        selection = ...
+    elif isinstance(filt, str):
+        selection = obs[filt].astype(bool)
+    else:
+        selection = filt
+
+    x_dat = x_dat[selection]
+    y_dat = y_dat[selection]
 
     if subset is None:
-        myfilt: Any = Ellipsis if filt is None else obs[filt].astype(bool)
-        im = plot_fun(x[myfilt], y[myfilt], **plot_kwargs)  # type: ignore
+        if filt is None:
+            selection = ...
+        elif isinstance(filt, str):
+            selection = obs[filt].astype(bool)
+        else:
+            selection = filt
+
+        im = plot_fun(x_dat, y_dat, **plot_kwargs)  # type: ignore
         cbar = fig.colorbar(im[-1] if isinstance(im, tuple) else im, label="count")
-
     else:
-        subset_name = subset
-        name_true = name_true or subset_name
-        name_false = name_false or f"!{subset_name}"
+        subset_name = ""
+        if isinstance(subset, str):
+            subset_name = subset
+            subset_true = obs[subset].astype(bool)
+            subset_false = (1 - subset_true).astype(bool)
+        else:
+            subset_true = subset.astype(bool)
+            subset_false = (1 - subset).astype(bool)
 
-        subset_true = obs[subset].astype(bool)
-        subset_false = (1 - subset_true).astype(bool)
+        name_true = name_true or subset_name or "True"
+        name_false = name_false or (f"!{subset_name}" if subset_name else "False")
 
-        im1 = plot_fun(x[subset_false], y[subset_false], **plot_kwargs)
+        x_min, x_max = x_dat.min(), x_dat.max()
+        y_min, y_max = y_dat.min(), y_dat.max()
 
-        plot_kwargs["cmap"] = "Reds"
-        im2 = plot_fun(x[subset_true], y[subset_true], **plot_kwargs)
+        if hex_plot:
+            plot_kwargs["extent"] = (x_min, x_max, y_min, y_max)
+        else:
+            plot_kwargs["range"] = [[x_min, x_max], [y_min, y_max]]
 
-        plt.colorbar(im1[-1] if isinstance(im1, tuple) else im1, label=name_true)
-        plt.colorbar(im2[-1] if isinstance(im2, tuple) else im2, label=name_false)
+        im_false = plot_fun(x_dat[subset_false], y_dat[subset_false], **plot_kwargs)
 
-    ax.set_ylabel(y_label)
-    ax.set_xlabel(x_label)
+        plot_kwargs["cmap"] = cmap_true
+        im_true = plot_fun(x_dat[subset_true], y_dat[subset_true], **plot_kwargs)
+
+        plt.colorbar(im_false[-1] if isinstance(im_false, tuple) else im_false, label=name_false)
+        plt.colorbar(im_true[-1] if isinstance(im_true, tuple) else im_true, label=name_true)
+
+    ax.set_ylabel(_legend_kwargs["y"])
+    ax.set_xlabel(_legend_kwargs["x"])
 
     ax.grid()
     return ax
