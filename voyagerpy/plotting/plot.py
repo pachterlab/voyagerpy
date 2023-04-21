@@ -154,6 +154,11 @@ def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, sc
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
 
+    labels = {
+        "x": kwargs.pop("x_label", None),
+        "y": kwargs.pop("y_label", y),
+    }
+
     violin_opts.update(kwargs)
     violins = ax.violinplot(df[y], **violin_opts)
     configure_violins(violins, cmap)
@@ -173,9 +178,13 @@ def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, sc
             is_categorical=True,
             legend=False,
             alpha=0.7,
+            labels=labels,
         )
+    else:
+        ax.set_ylabel(labels["y"])
+        ax.set_xlabel(labels["x"])
     ax.set_xticks([])
-    ax.set_ylabel(str(y))
+
     return ax
 
 
@@ -272,7 +281,6 @@ def plot_single_barcode_data(
                 alpha=0.5,
                 labels=dict(x=x_label or x, y=y_label or y),
             )
-
             _scatter_kwargs.update(kwargs)
             ax = scatter(x, y, color_by=color_by, cmap=cmap, ax=ax, data=obs, **_scatter_kwargs)
 
