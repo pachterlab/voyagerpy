@@ -1139,12 +1139,18 @@ def add_colorbar_discrete(
 
 
 def subplots_single_colorbar(
-    nrow: int = 1,
+    nplot: int = 1,
     ncol: int = 1,
     cax_width: float = 0.2,
     cax_space: float = 0.4,
     **kwargs,
 ):
+    ncol = min(ncol or 2, nplot)
+    nrow = int(np.ceil(nplot / ncol))
+
+    if not kwargs.pop("legend", True):
+        return *configure_subplots(nplot, ncol, **kwargs), None
+
     figsize = kwargs.get("figsize", None)
 
     if isinstance(figsize, tuple):
@@ -1153,7 +1159,6 @@ def subplots_single_colorbar(
 
     wspace = kwargs.pop("wspace", 0.05)
     hspace = kwargs.pop("hspace", 0.05)
-    nplots = kwargs.pop("nplots", nrow * ncol)
 
     fig = plt.figure(**kwargs)
 
@@ -1166,7 +1171,9 @@ def subplots_single_colorbar(
 
     has_layout = kwargs.get("layout", None) is not None
     if has_layout:
-        main_spec = fig.add_gridspec(nrow, ncol + 1)
+        ax_width = plot_width / ncol
+        width_ratios = [ax_width] * ncol + [cax_width]
+        main_spec = fig.add_gridspec(nrow, ncol + 1, wspace=wspace, hspace=hspace, width_ratios=width_ratios)
         cax_spec = main_spec[:, -1]
     else:
         gridspec_kw = dict(
@@ -1205,7 +1212,7 @@ def subplots_single_colorbar(
     cax.set_xticks([])
     cax.set_yticks([])
 
-    for ax in axs.flat[nplots:]:
+    for ax in axs.flat[nplot:]:
         ax.axis("off")
 
     return fig, axs, cax
