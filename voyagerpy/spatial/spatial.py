@@ -264,31 +264,31 @@ def set_geometry(
         adata = adata.copy()
 
     if dim == "barcode":
-        adata.obsm.setdefault("geometry", gpd.GeoDataFrame(index=adata.obs_names))
-        if not isinstance(adata.obsm["geometry"], gpd.GeoDataFrame):
-            adata.obsm["geometry"] = gpd.GeoDataFrame(adata.obsm["geometry"])
-        df: gpd.GeoDataFrame = adata.obsm["geometry"]
+        geo = adata.obsm.setdefault("geometry", gpd.GeoDataFrame(index=adata.obs_names))
+        if not isinstance(geo, gpd.GeoDataFrame):
+            adata.obsm["geometry"] = gpd.GeoDataFrame(geo)
+        geo_df: gpd.GeoDataFrame = adata.obsm["geometry"]  # type: ignore
     elif dim == "gene":
-        adata.varm.setdefault("geometry", gpd.GeoDataFrame(index=adata.var_names))
-        if not isinstance(adata.varm["geometry"], gpd.GeoDataFrame):
-            adata.varm["geometry"] = gpd.GeoDataFrame(adata.varm["geometry"])
-        df: gpd.GeoDataFrame = adata.varm["geometry"]
+        geo = adata.varm.setdefault("geometry", gpd.GeoDataFrame(index=adata.var_names))
+        if not isinstance(geo, gpd.GeoDataFrame):
+            adata.varm["geometry"] = gpd.GeoDataFrame(geo)
+        geo_df: gpd.GeoDataFrame = adata.varm["geometry"]  # type: ignore
     else:
-        adata.uns["spatial"].setdefault("geometry", {})
-        adata.uns["spatial"]["geometry"].setdefault(dim, gpd.GeoDataFrame(columns=[geom], index=index))
-        if not isinstance(adata.uns["geometry"][dim], gpd.GeoDataFrame):
-            adata.uns["geometry"][dim] = gpd.GeoDataFrame(adata.uns["geometry"][dim])
-        df: gpd.GeoDataFrame = adata.uns["spatial"]["geometry"][dim]
+        geo_dict = adata.uns["spatial"].setdefault("geometry", {})
+        geo = geo_dict.setdefault(dim, gpd.GeoDataFrame(columns=[geom], index=index))
+        if not isinstance(geo, gpd.GeoDataFrame):
+            geo_dict[dim] = gpd.GeoDataFrame(geo)
+        geo_df: gpd.GeoDataFrame = geo_dict[dim]
 
-    if geom not in df and values is None:
+    if geom not in geo_df and values is None:
         raise ValueError("values must not be None when geom does not exist in the DataFrame")
     if values is not None:
         if sorted(values.index) == list(range(adata.n_obs)):
             values.index = adata.obs_names[values.index]
 
-        df[geom] = values
+        geo_df[geom] = values
 
-    df.set_geometry(geom, inplace=True)
+    geo_df.set_geometry(geom, inplace=True)
 
     return adata
 
@@ -897,20 +897,23 @@ def compute_correlogram(
         W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(silence_warnings=True)
         if k_order in correlogram_df.columns and (not any(correlogram_df[k_order].isna())) and not force:
             continue
+
         for feat in features:
             if not (np.isnan(correlogram_df.at[feat, k_order]) or force):
-                print("not computing correlogram for feature", feat, "at order", k_order)
                 continue
+
             if feat in adata.var_names:
                 i_feature = adata.var_names.get_loc(feat)
                 x = X[:, i_feature]
             else:
                 x = adata.obs[feat]
+
             if method == "moran":
                 val = esda.Moran(x, W, permutations=0).I
             else:
                 y = w.dot(x)
                 val = np.corrcoef(x, y)[0, 1]
+
             correlogram_df.at[feat, k_order] = val
 
     return correlogram_df
