@@ -50,7 +50,6 @@ def _read_10x_h5(path: PathLike, symbol_as_index: bool = False, dtype: str = "fl
 
     try:
         with h5py.File(path, "r") as f:
-
             for i in f.keys():
                 data = f[i]["data"][()]
                 barcodes = f[i]["barcodes"][()].astype("str")
@@ -114,8 +113,7 @@ def read_10x_counts(
 
     raw_qualifier = "raw" if raw else "filtered"
     h5_file_path = path / f"{prefix_str}{raw_qualifier}_feature_bc_matrix.h5"
-    # TODO: should the mtx_dir not have an optional prefix?
-    mtx_dir_path = path / f"{raw_qualifier}_feature_bc_matrix"
+    mtx_dir_path = path / f"{prefix_str}{raw_qualifier}_feature_bc_matrix"
 
     adata: Optional[AnnData] = None
 
