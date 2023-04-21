@@ -315,8 +315,7 @@ def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = Fa
     if not inplace:
         adata = adata.copy()
 
-    adata.uns["spatial"].setdefault("geom", {})
-    geom = adata.uns["spatial"]["geom"]
+    geom = adata.uns["spatial"].setdefault("geom", {})
 
     # Create a geometry column from x & ly
     scale = utl.get_scale(adata, res=res)
@@ -325,23 +324,25 @@ def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = Fa
     type_converter = {"float32": np.float32, "float64": np.float64, "float": np.float32}
     dtype_cast = type_converter.get(str(adata.X.dtype), np.float64)
 
-    def to_point(x) -> Point:
-        return Point(
-            dtype_cast(x.pxl_col_in_fullres * scale),
-            dtype_cast(x.pxl_row_in_fullres * scale),
-        ).buffer((spot_diam / 2) * 0.2)
+    if False:
 
-    geometry_name: str = "spot_poly"
-    if geometry_name not in adata.obs:
-        # add spot points to geom
-        adata.obs[geometry_name] = adata.obs.apply(to_point, axis=1)
+        def to_point(x) -> Point:
+            return Point(
+                dtype_cast(x.pxl_col_in_fullres * scale),
+                dtype_cast(x.pxl_row_in_fullres * scale),
+            ).buffer((spot_diam / 2) * 0.2)
 
-    if not isinstance(adata.obs, gpd.GeoDataFrame):
-        # Create a GeoDataFrame from adata.obs
-        adata.obs = gpd.GeoDataFrame(
-            adata.obs,
-            geometry=geometry_name,
-        )
+        geometry_name: str = "spot_poly"
+        if geometry_name not in adata.obs:
+            # add spot points to geom
+            adata.obs[geometry_name] = adata.obs.apply(to_point, axis=1)
+
+        if not isinstance(adata.obs, gpd.GeoDataFrame):
+            # Create a GeoDataFrame from adata.obs
+            adata.obs = gpd.GeoDataFrame(
+                adata.obs,
+                geometry=geometry_name,
+            )
 
     tissue_poly = geom.get("tissue_poly", None)
     boundary = geom.get("tissue_boundary", None)
