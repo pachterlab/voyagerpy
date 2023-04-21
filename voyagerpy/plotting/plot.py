@@ -42,7 +42,7 @@ from voyagerpy import spatial, utils
 
 from .cmap_helper import DivergentNorm
 
-options.mode.chained_assignment = None  # default='warn'
+# options.mode.chained_assignment = None  # default='warn'
 
 plt.style.use("ggplot")
 plt.rcParams["axes.edgecolor"] = "#00000050"
