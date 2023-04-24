@@ -30,6 +30,7 @@ from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
+from matplotlib.path import Path as mplPath
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas import DataFrame, Series, options
 from pandas.api.types import is_categorical_dtype
@@ -121,16 +122,30 @@ def imshow(
     return axs
 
 
-def configure_violins(violins, cmap: Optional[str] = None, edgecolor: str = "#00000050", alpha: float = 0.7) -> Tuple[str, float]:
+def configure_violins(
+    violins,
+    cmap: Optional[str] = None,
+    edgecolor: str = "#00000050",
+    alpha: float = 0.7,
+    facecolor: Optional[str] = None,
+) -> Tuple[str, float]:
     colormap = plt.get_cmap(cmap) if isinstance(cmap, (str, type(None))) else cmap
     for i_color, violin in enumerate(violins["bodies"]):
-        violin.set_facecolor(colormap(i_color))
+        violin.set_facecolor(facecolor or colormap(i_color))
         violin.set_edgecolor(edgecolor)
         violin.set_alpha(alpha)
     return edgecolor, alpha
 
 
-def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, scatter_points: bool = True, **kwargs):
+def simple_violinplot(
+    ax: Axes,
+    df: DataFrame,
+    y: Union[str, int],
+    cmap: Optional[str] = None,
+    scatter_points: bool = True,
+    jitter: bool = False,
+    **kwargs,
+):
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
 
@@ -146,13 +161,30 @@ def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, sc
     if scatter_points:
         cols = df[y]
         x_vals = np.ones_like(cols)
+        x_colors = np.ones_like(cols)
         if cols.ndim == 2:
-            x_vals += np.arange(cols.shape[1]).ravel()
-        y_vals = cols.values.ravel()
+            x_offsets = np.arange(cols.shape[1]).ravel()
+            x_vals += x_offsets
+            x_colors += x_offsets
+            for violin, x_offset, y_col in zip(violins["bodies"], x_offsets, cols.values.T):
+                x_vals[:, x_offset] = jitter_points(
+                    violin.get_paths()[0],
+                    y_col,
+                    x=x_offset,
+                    jitter=jitter,
+                )
+        else:
+            x_vals = jitter_points(
+                violins["bodies"][0].get_paths()[0],
+                y_vals=cols.values,
+                jitter=jitter,
+            )
+        y_vals = cols.values
+
         scatter(
             x_vals,
             y_vals,
-            color_by=x_vals,
+            color_by=x_colors,
             cmap=cmap,
             ax=ax,
             is_categorical=True,
@@ -168,6 +200,21 @@ def simple_violinplot(ax: Axes, df: DataFrame, y: Union[str, int], cmap=None, sc
     return ax
 
 
+def jitter_points(violin: mplPath, y_vals: np.ndarray, x: int = 0, jitter: bool = False):
+    x_vert, y_vert = np.array(violin.cleaned().vertices).T
+    at_max_y = np.argmax(y_vert) + 1
+    x_vals = x + np.ones_like(y_vals, dtype=float)
+    interpolated = np.interp(y_vals, y_vert[:at_max_y], x_vert[:at_max_y])
+
+    if jitter:
+        rand = np.random.uniform(size=x_vals.size) * 2 - 1
+        # rand = np.linspace(0, 1, x_vals.size) * 2 - 1
+        diff = x_vals - interpolated
+        x_vals += diff * rand
+
+    return x_vals
+
+
 def grouped_violinplot(
     ax: Axes,
     df: DataFrame,
@@ -178,6 +225,9 @@ def grouped_violinplot(
     vert: bool = True,
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
+    scatter_points: bool = True,
+    jitter: bool = False,
+    **kwargs,
 ):
     if not vert:
         x, y = y, x
@@ -198,7 +248,8 @@ def grouped_violinplot(
         widths=0.8,
     )
     violins = ax.violinplot(grouped_data, **violin_opts)
-    _, alpha = configure_violins(violins, cmap)
+    facecolor = "white" if scatter_points and jitter else None
+    configure_violins(violins, cmap, facecolor=facecolor)
 
     set_ticks = ax.set_xticks if vert else ax.set_yticks
     set_ticks(np.arange(len(keys)) + 1, labels=labels)
@@ -208,13 +259,33 @@ def grouped_violinplot(
 
     ax.set_xlabel(x_label or x)
     ax.set_ylabel(y_label or y)
+
+    colormap = plt.get_cmap(cmap)
+    if scatter_points:
+        for i, (label, violin) in enumerate(zip(labels, violins["bodies"])):
+            x_dat, y_dat = [], []
+            if scatter_points:
+                y_dat = grouped_data[i]
+                x_dat = jitter_points(
+                    violin.get_paths()[0],
+                    y_dat,
+                    x=i,
+                    jitter=jitter,
+                )
+
+            scatter(
+                x_dat,
+                y_dat,
+                ax=ax,
+                label=label,
+                color=colormap(i),
+                **kwargs,
+            )
+
     if not legend:
         return ax
 
-    colormap = plt.get_cmap(cmap)
-    for i, label in enumerate(labels):
-        ax.scatter([], [], label=label, color=colormap(i), alpha=alpha)
-    ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title=x, frameon=False)
+    # ax.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", title=x, frameon=False)
     return ax
 
 
@@ -645,7 +716,7 @@ def plot_expression_violin(
 
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
-            grouped_violinplot(ax, obs, groupby, gene_id, legend=False, cmap=cmap)
+            grouped_violinplot(ax, obs, groupby, gene_id, legend=False, cmap=cmap, **kwargs)
             title = gene_id
             if show_symbol and secondary_column == "symbol":
                 title = adata.var.at[gene_id, secondary_column]
@@ -654,7 +725,7 @@ def plot_expression_violin(
 
             ax.set_title(title)
         else:
-            simple_violinplot(ax, obs, gene_id, legend=False, cmap=cmap)
+            simple_violinplot(ax, obs, gene_id, legend=False, cmap=cmap, **kwargs)
             labels = gene_id
             if show_symbol and secondary_column == "symbol":
                 labels = adata.var.loc[gene_id, "symbol"]
@@ -1270,7 +1341,7 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
 def plot_pca(
     adata: AnnData,
     ndim: int = 5,
-    cmap: str = None,
+    cmap: Optional[str] = None,
     color_by: str = "cluster",
     obsm="X_pca",
     legend_kwargs: Optional[Dict[str, Any]] = None,
