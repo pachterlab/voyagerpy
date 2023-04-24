@@ -34,16 +34,25 @@ from .ditto_colors import ditto_colors
 # https://github.com/thomasp85/scico
 from .roma_colors import roma_colors
 
+# https://github.com/cran/RColorBrewer
+from .blues_colors import blues3, blues4, blues5, blues6, blues7, blues8, blues9
+
 
 def set_default_cmap(cmap_name: str) -> None:
     rcParams["image.cmap"] = cmap_name
 
 
+register_segmented_cmap("roma", roma_colors, reverse=True)  # type: ignore
+register_segmented_cmap("Blues3", blues3, reverse=False)  # type: ignore
+register_segmented_cmap("Blues4", blues4, reverse=False)  # type: ignore
+register_segmented_cmap("Blues5", blues5, reverse=False)  # type: ignore
+register_segmented_cmap("Blues6", blues6, reverse=False)  # type: ignore
+register_segmented_cmap("Blues7", blues7, reverse=False)  # type: ignore
+register_segmented_cmap("Blues8", blues8, reverse=False)  # type: ignore
+register_segmented_cmap("Blues9", blues9, reverse=False)  # type: ignore
 
-register_segmented_cmap("roma", roma_colors, reverse=True)
 
-
-register_listed_cmap("dittoseq", ditto_colors, reverse=False)
+register_listed_cmap("dittoseq", ditto_colors, reverse=False) # type: ignore
 set_default_cmap("dittoseq")
 
 __all__ = [

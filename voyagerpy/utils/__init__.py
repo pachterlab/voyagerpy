@@ -3,9 +3,11 @@
 
 from voyagerpy.utils.utils import (
     add_per_cell_qcmetrics,
-    calculate_metrics,
+    add_per_gene_qcmetrics,
     get_scale,
     is_highres,
+    kurtosis,
+    listify,
     log_norm_counts,
     make_unique,
     normalize_csr,
@@ -14,9 +16,11 @@ from voyagerpy.utils.utils import (
 
 __all__ = [
     "add_per_cell_qcmetrics",
-    "calculate_metrics",
+    "add_per_gene_qcmetrics",
     "get_scale",
     "is_highres",
+    "kurtosis",
+    "listify",
     "log_norm_counts",
     "make_unique",
     "normalize_csr",

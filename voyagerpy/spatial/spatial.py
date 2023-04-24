@@ -108,7 +108,6 @@ def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires")
 
 
 def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200, high: int = 255) -> Tuple[int, Optional[Contour]]:
-
     bgr_img = cvtColor(adata.uns["spatial"]["img"][size], COLOR_RGB2BGR)
     bgr_img = (bgr_img * 255).astype("uint8")  # type: ignore
     imgray = cvtColor(bgr_img, COLOR_BGR2GRAY)
@@ -265,31 +264,31 @@ def set_geometry(
         adata = adata.copy()
 
     if dim == "barcode":
-        adata.obsm.setdefault("geometry", gpd.GeoDataFrame(index=adata.obs_names))
-        if not isinstance(adata.obsm["geometry"], gpd.GeoDataFrame):
-            adata.obsm["geometry"] = gpd.GeoDataFrame(adata.obsm["geometry"])
-        df: gpd.GeoDataFrame = adata.obsm["geometry"]
+        geo = adata.obsm.setdefault("geometry", gpd.GeoDataFrame(index=adata.obs_names))
+        if not isinstance(geo, gpd.GeoDataFrame):
+            adata.obsm["geometry"] = gpd.GeoDataFrame(geo)
+        geo_df: gpd.GeoDataFrame = adata.obsm["geometry"]  # type: ignore
     elif dim == "gene":
-        adata.varm.setdefault("geometry", gpd.GeoDataFrame(index=adata.var_names))
-        if not isinstance(adata.varm["geometry"], gpd.GeoDataFrame):
-            adata.varm["geometry"] = gpd.GeoDataFrame(adata.varm["geometry"])
-        df: gpd.GeoDataFrame = adata.varm["geometry"]
+        geo = adata.varm.setdefault("geometry", gpd.GeoDataFrame(index=adata.var_names))
+        if not isinstance(geo, gpd.GeoDataFrame):
+            adata.varm["geometry"] = gpd.GeoDataFrame(geo)
+        geo_df: gpd.GeoDataFrame = adata.varm["geometry"]  # type: ignore
     else:
-        adata.uns["spatial"].setdefault("geometry", {})
-        adata.uns["spatial"]["geometry"].setdefault(dim, gpd.GeoDataFrame(columns=[geom], index=index))
-        if not isinstance(adata.uns["geometry"][dim], gpd.GeoDataFrame):
-            adata.uns["geometry"][dim] = gpd.GeoDataFrame(adata.uns["geometry"][dim])
-        df: gpd.GeoDataFrame = adata.uns["spatial"]["geometry"][dim]
+        geo_dict = adata.uns["spatial"].setdefault("geometry", {})
+        geo = geo_dict.setdefault(dim, gpd.GeoDataFrame(columns=[geom], index=index))
+        if not isinstance(geo, gpd.GeoDataFrame):
+            geo_dict[dim] = gpd.GeoDataFrame(geo)
+        geo_df: gpd.GeoDataFrame = geo_dict[dim]
 
-    if geom not in df and values is None:
+    if geom not in geo_df and values is None:
         raise ValueError("values must not be None when geom does not exist in the DataFrame")
     if values is not None:
         if sorted(values.index) == list(range(adata.n_obs)):
             values.index = adata.obs_names[values.index]
 
-        df[geom] = values
+        geo_df[geom] = values
 
-    df.set_geometry(geom, inplace=True)
+    geo_df.set_geometry(geom, inplace=True)
 
     return adata
 
@@ -313,12 +312,10 @@ def to_points(
 
 
 def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = False, res: Optional[str] = None) -> AnnData:
-
     if not inplace:
         adata = adata.copy()
 
-    adata.uns["spatial"].setdefault("geom", {})
-    geom = adata.uns["spatial"]["geom"]
+    geom = adata.uns["spatial"].setdefault("geom", {})
 
     # Create a geometry column from x & ly
     scale = utl.get_scale(adata, res=res)
@@ -327,23 +324,25 @@ def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = Fa
     type_converter = {"float32": np.float32, "float64": np.float64, "float": np.float32}
     dtype_cast = type_converter.get(str(adata.X.dtype), np.float64)
 
-    def to_point(x) -> Point:
-        return Point(
-            dtype_cast(x.pxl_col_in_fullres * scale),
-            dtype_cast(x.pxl_row_in_fullres * scale),
-        ).buffer((spot_diam / 2) * 0.2)
+    if False:
 
-    geometry_name: str = "spot_poly"
-    if geometry_name not in adata.obs:
-        # add spot points to geom
-        adata.obs[geometry_name] = adata.obs.apply(to_point, axis=1)
+        def to_point(x) -> Point:
+            return Point(
+                dtype_cast(x.pxl_col_in_fullres * scale),
+                dtype_cast(x.pxl_row_in_fullres * scale),
+            ).buffer((spot_diam / 2) * 0.2)
 
-    if not isinstance(adata.obs, gpd.GeoDataFrame):
-        # Create a GeoDataFrame from adata.obs
-        adata.obs = gpd.GeoDataFrame(
-            adata.obs,
-            geometry=geometry_name,
-        )
+        geometry_name: str = "spot_poly"
+        if geometry_name not in adata.obs:
+            # add spot points to geom
+            adata.obs[geometry_name] = adata.obs.apply(to_point, axis=1)
+
+        if not isinstance(adata.obs, gpd.GeoDataFrame):
+            # Create a GeoDataFrame from adata.obs
+            adata.obs = gpd.GeoDataFrame(
+                adata.obs,
+                geometry=geometry_name,
+            )
 
     tissue_poly = geom.get("tissue_poly", None)
     boundary = geom.get("tissue_boundary", None)
@@ -365,7 +364,6 @@ def get_spot_coords(
     as_df: bool = False,
     res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
-
     h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
     if tissue:
@@ -605,6 +603,7 @@ def compute_spatial_lag(
     feature: str,
     graph_name: Union[None, str, np.ndarray] = None,
     inplace: bool = False,
+    layer: Optional[str] = None,
 ) -> AnnData:
     if not inplace:
         adata = adata.copy()
@@ -621,10 +620,11 @@ def compute_spatial_lag(
     del graph_name
 
     features = [feature] if isinstance(feature, str) else feature[:]
+    X = adata.X if layer is None else adata.layers[layer].A
     for feat in features:
         lagged_feat = f"lagged_{feat}"
         if feat in adata.var_names:
-            x = adata.X[:, adata.var_names.get_loc(feat)]
+            x = X[:, adata.var_names.get_loc(feat)]
         else:
             x = adata.obs[feat]
         adata.obs[lagged_feat] = dists.dot(x)
@@ -659,7 +659,6 @@ def moran(
     if dim == "obs":
         morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
     elif dim == "var":
-
         feat_idx = list(map(adata.var.index.get_loc, features))
         morans = [esda.Moran(adata.X[:, i], W, permutations=permutations) for i in feat_idx]
     else:
@@ -898,20 +897,23 @@ def compute_correlogram(
         W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(silence_warnings=True)
         if k_order in correlogram_df.columns and (not any(correlogram_df[k_order].isna())) and not force:
             continue
+
         for feat in features:
             if not (np.isnan(correlogram_df.at[feat, k_order]) or force):
-                print("not computing correlogram for feature", feat, "at order", k_order)
                 continue
+
             if feat in adata.var_names:
                 i_feature = adata.var_names.get_loc(feat)
                 x = X[:, i_feature]
             else:
                 x = adata.obs[feat]
+
             if method == "moran":
                 val = esda.Moran(x, W, permutations=0).I
             else:
                 y = w.dot(x)
                 val = np.corrcoef(x, y)[0, 1]
+
             correlogram_df.at[feat, k_order] = val
 
     return correlogram_df

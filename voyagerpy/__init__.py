@@ -16,25 +16,41 @@ from typing import Union, Tuple, TypeVar
 from scipy import sparse
 import numpy as np
 
-# SingleIndexable = TypeVar("SingleIndexable", int, slice, np.int64, np.int32, np.ndarray)
-# _single_indexable_ = Union[int, slice, np.int64, np.int32, np.ndarray]
-# Indexable = TypeVar("Indexable", _single_indexable_, Tuple[_single_indexable_, _single_indexable_], sparse.spmatrix)
+from anndata import AnnData
+import anndata
 
-# class VoyagerData(AnnData):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
 
-#         self.obsm["geometry"] = GeoDataFrame(index=self.obs_names)
-#         self.uns["spatial"] = {}
+class Voyager(AnnData):
+    def __init__(self, *args, **kwargs):
+        X = args[0] if len(args) else kwargs.get("X", None)
 
-#     def copy(self, *args, **kwargs):
-#         vdat = super().copy(*args, **kwargs)
-#         vdat.obsm["geometry"] = self.obsm["geometry"].copy()
-#         return vdat
+        dtype_present = len(args) > 8 or "dtype" in kwargs
+        dtype = None
 
-#     def __getitem__(self, index: Indexable) -> "VoyagerData":
-#         adata = super().__getitem__(index)
+        if not dtype_present:
+            if isinstance(X, (AnnData, Voyager)):
+                dtype = X.X.dtype
+            elif X is None:
+                dtype = None
+            else:
+                dtype = X.dtype
 
+        _kwargs = dict(dtype=dtype)
+        _kwargs.update(kwargs)
+
+        super().__init__(*args, **_kwargs)
+        barcode_geo = self.obsm.setdefault("geometry", gpd.GeoDataFrame(index=self.obs_names))
+
+        if not isinstance(barcode_geo, anndata._core.views.DataFrameView) and not isinstance(barcode_geo, gpd.GeoDataFrame):
+            self.obsm["geometry"] = gpd.GeoDataFrame(barcode_geo)
+
+    def copy(self, *args) -> "Voyager":
+        adata = super().copy(*args)
+        return Voyager(adata)
+
+    def __getitem__(self, index):
+        oidx, vidx = self._normalize_indices(index)
+        return Voyager(self, oidx=oidx, vidx=vidx, asview=True)
 
 
 __all__ = [
