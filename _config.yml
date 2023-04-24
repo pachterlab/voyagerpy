@@ -61,6 +61,7 @@ include:
   - _layouts
   - _technologies
   - _navitems
+  - img
 # - Gemfile
 # - Gemfile.lock
 # - .sass-cache/
