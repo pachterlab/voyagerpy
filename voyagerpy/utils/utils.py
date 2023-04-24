@@ -103,13 +103,13 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
 
 
 def log_norm_counts(
-        adata: AnnData, 
-        layer: Optional[str] = None, 
-        inplace: bool = True, 
-        base: Optional[int] = 2, 
-        pseudocount: int = 1
-    ):
-    # Equivalent to:
+    adata: AnnData,
+    layer: Optional[str] = None,
+    inplace: bool = True,
+    base: Optional[int] = 2,
+    pseudocount: int = 1,
+):
+    # Roughly equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
     # sc.pp.normalize_total(adata, target_sum=target_sum)
     # sc.pp.log1p(adata, base=2)
@@ -133,7 +133,7 @@ def log_norm_counts(
         X.data = log(X.data + pseudocount)
     else:
         X = log(X + pseudocount)
-    
+
     if layer is None:
         adata.X = X
     else:
@@ -142,7 +142,13 @@ def log_norm_counts(
     return adata
 
 
-def scale(X, center=True, unit_variance: bool = True, center_before_scale: bool = True, ddof: int = 1):
+def scale(
+    X,
+    center=True,
+    unit_variance: bool = True,
+    center_before_scale: bool = True,
+    ddof: int = 1,
+):
     is_sparse = isinstance(X, sp.csr_matrix)
     if is_sparse:
         X = X.todense()
@@ -193,7 +199,10 @@ def kurtosis(x, method: str = "moments"):
     return m_4 / m_2**2
 
 
-def listify(x: Union[None, int, str, Iterable[str], Iterable[int]], size: Optional[int] = None) -> List[Any]:
+def listify(
+    x: Union[None, int, str, Iterable[str], Iterable[int]],
+    size: Optional[int] = None,
+) -> List[Any]:
     """Converts a string or an iterable of strings to a list of strings.
 
     Parameters
