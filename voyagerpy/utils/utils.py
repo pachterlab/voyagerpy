@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List, Optional
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+)
 
 import numpy as np
 import scipy.sparse as sp
@@ -170,17 +177,35 @@ def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:
     return sum_.dot(X) if byrow else X.dot(sum_)
 
 
-def kurtosis(x, method: str = 'moments'):
-    if method != 'moments':
+def kurtosis(x, method: str = "moments"):
+    if method != "moments":
         raise NotImplementedError('Only method="moments" is currently implemented')
 
     n = x.size
     x_bar = x.mean()
     # From asbio::kurt in R:
-    # methods of moments kurtosis is 
+    # methods of moments kurtosis is
     #   m_4 / m_2^2  with m_j = sum((x-x_mean)**j)/n
-    
+
     m_2 = np.square(x - x_bar).mean()
     m_4 = np.power(x - x_bar, 4).mean()
 
     return m_4 / m_2**2
+
+
+def listify(x: Union[None, int, str, Iterable[str], Iterable[int]], size: Optional[int] = None) -> List[Any]:
+    """Converts a string or an iterable of strings to a list of strings.
+
+    Parameters
+    ----------
+    x : Union[str, Iterable[str]]
+        The string or iterable to convert.
+
+    Returns
+    -------
+    List[str]
+        The list of strings.
+    """
+    nontype = type(None)
+    size = size if size is not None else 1
+    return [x] * size if isinstance(x, (int, float, str, nontype)) else list(x)

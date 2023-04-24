@@ -6,12 +6,10 @@ Created on Fri Nov 25 14:08:42 2022
 @author: sinant
 """
 
-
 import functools
 from copy import deepcopy
 from typing import (
     Any,
-    Collection,
     Dict,
     Iterable,
     List,
@@ -67,24 +65,6 @@ plt.rcParams["figure.dpi"] = 80  # 100 is the default
 ax title font_size 10
 fig.supylabel fontsize 10 (figure.labelsize)
 """
-
-
-def listify(x: Union[None, int, str, Iterable[str], Iterable[int]], size: Optional[int] = None) -> Union[List[str], List[int], List[None]]:
-    """Converts a string or an iterable of strings to a list of strings.
-
-    Parameters
-    ----------
-    x : Union[str, Iterable[str]]
-        The string or iterable to convert.
-
-    Returns
-    -------
-    List[str]
-        The list of strings.
-    """
-    nontype = type(None)
-    size = size if size is not None else 1
-    return [x] * size if isinstance(x, (int, str, nontype)) else list(x)
 
 
 def imshow(
@@ -335,22 +315,22 @@ def plot_barcode_data(
     subplot_kwargs: Optional[Dict] = None,
     **kwargs,
 ):
-    x_features = listify(x)
-    y_features = listify(y)
+    x_features = utils.listify(x)
+    y_features = utils.listify(y)
 
     if x_label is None:
         x_labels = x_features[:]
         if obsm is not None:
             x_labels = [f"{lab}_{obsm}" for lab in x_labels]
     else:
-        x_labels = listify(x_label)
+        x_labels = utils.listify(x_label)
 
     if y_label is None:
         y_labels = y_features[:]
         if obsm is not None:
             y_labels = [f"{lab}_{obsm}" for lab in y_labels]
     else:
-        y_labels = listify(y_label)
+        y_labels = utils.listify(y_label)
 
     del x, y, x_label, y_label
 
@@ -624,7 +604,7 @@ def plot_expression_violin(
     **kwargs,
 ):
     # genes = [genes] if isinstance(genes, str) else genes[:]
-    genes = listify(gene)
+    genes = utils.listify(gene)
     gene_ids = []
 
     secondary_column = adata.uns["config"]["secondary_var_names"]
@@ -752,7 +732,7 @@ def plot_spatial_feature(
     show_symbol: bool = True,
     **kwargs,
 ) -> Union[np.ndarray, Any]:
-    feat_ls = listify(features)
+    feat_ls = utils.listify(features)
 
     assert_basic_spatial_features(adata, dimension, errors="raise")
     if obsm is not None and obsm not in adata.obsm:
@@ -1577,7 +1557,7 @@ def plot_barcode_histogram(
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
 ) -> np.ndarray[Axes]:
-    features: List[str] = listify(feature)  # type: ignore
+    features: List[str] = utils.listify(feature)  # type: ignore
     nplot = len(features)
     ncol = min(ncol, nplot)
 
