@@ -7,7 +7,7 @@ from scipy.stats import mannwhitneyu
 from scipy import sparse
 
 
-def get_statistics(adata, clust1, clust2=None, test="mw", alternative="greater", skip=None):
+def get_statistics(adata, clust1, clust2=None, test="mw", alternative="greater", skip=None, clust_str: str = "cluster"):
     """Run the mann whitney test for genes in a given anndata object,between cells in clust1 and clust2.
 
     Parameters
@@ -37,10 +37,6 @@ def get_statistics(adata, clust1, clust2=None, test="mw", alternative="greater",
     """
     if not sparse.issparse(adata.X):
         adata.X = sparse.csr_matrix(adata.X)
-    if "cluster" in adata.obs:
-        clust_str = "cluster"
-    else:
-        clust_str = "leiden"
 
     # if "highly_variable" in adata.var:
     #    genes = np.array(adata.var.index.get_indexer(adata.var.loc[adata.var["highly_variable"] == True].index))
@@ -76,7 +72,7 @@ def get_statistics(adata, clust1, clust2=None, test="mw", alternative="greater",
     return arr_final
 
 
-def get_p_clusters(adata, clust, skip_precalc=False, pval_type="all"):
+def get_p_clusters(adata, clust, skip_precalc=False, pval_type="all", cluster: str = "cluster"):
     # rows = adata.X.shape[0]
     pval_arrs = []
     # nr_clust = adata.obs["cluster"].cat.codes
@@ -87,10 +83,10 @@ def get_p_clusters(adata, clust, skip_precalc=False, pval_type="all"):
     else:
         first = True
         skip_index = None
-    for i in np.array(adata.obs["cluster"].cat.categories):
+    for i in np.array(adata.obs[cluster].cat.categories):
         if str(clust) == str(i):
             continue
-        arr = get_statistics(adata, str(clust), str(i), test="mw", skip=skip_index)
+        arr = get_statistics(adata, str(clust), str(i), test="mw", skip=skip_index, clust_str=cluster)
         if first:
             skip_index = np.where(arr == 1)[0]
             first = False
@@ -111,17 +107,17 @@ def get_p_clusters(adata, clust, skip_precalc=False, pval_type="all"):
     return arr
 
 
-def get_marker_genes(adata, hvg=False, hvg_string="highly_variable"):
-    if "leiden" not in adata.obs or "cluster" not in adata.obs:
+def get_marker_genes(adata, hvg=False, hvg_string="highly_variable", cluster: str = "cluster"):
+    if cluster not in adata.obs:
         Exception("There need to be clusters defined for this anndata object")
-    nr_clust = adata.obs["cluster"].cat.codes
+    nr_clust = adata.obs[cluster].cat.codes
     markers_desc = []
-    for i in np.array(adata.obs["cluster"].cat.categories):
+    for i in np.array(adata.obs[cluster].cat.categories):
         if hvg is None:
-            curr_cl_data = get_p_clusters(adata, i)
+            curr_cl_data = get_p_clusters(adata, i, cluster=cluster)
         else:
-            curr_cl_data = get_p_clusters(adata[:, adata.var[hvg_string]], i)
+            curr_cl_data = get_p_clusters(adata[:, adata.var[hvg_string]].copy(), i, cluster=cluster)
         markers_desc.append(np.array(curr_cl_data[np.argsort(curr_cl_data)].index))
-    markers = pd.DataFrame(np.transpose(markers_desc), columns=["cluster_" + str(i) for i in range(np.max(nr_clust) + 1)])
+    markers = pd.DataFrame(np.transpose(markers_desc), columns=[f"{cluster}_{i}" for i in range(np.max(nr_clust) + 1)])
 
     return markers
