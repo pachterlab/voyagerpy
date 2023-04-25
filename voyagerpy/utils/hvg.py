@@ -168,7 +168,6 @@ def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
     _, pval_corr = fdrcorrection(filt_out["p_value"])
     output.loc[filt_out.index, "FDR"] = pval_corr
 
-    output = pd.concat([output, filt_out["FDR"]], axis=1)
     return output
     # 1 - norm().cdf(0.1)
 
