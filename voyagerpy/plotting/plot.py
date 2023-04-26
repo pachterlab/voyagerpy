@@ -266,9 +266,6 @@ def grouped_violinplot(
     if not vert:
         x, y = y, x
 
-    ax.set_xlabel(x_label or x)
-    ax.set_ylabel(y_label or y)
-
     colormap = plt.get_cmap(cmap)
     if scatter_points:
         for i, (label, violin) in enumerate(zip(labels, violins["bodies"])):
@@ -290,6 +287,9 @@ def grouped_violinplot(
                 color=colormap(i),
                 **kwargs,
             )
+
+    ax.set_xlabel(x_label or x)
+    ax.set_ylabel(y_label or y)
 
     if not legend:
         return ax
