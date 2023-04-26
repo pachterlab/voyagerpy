@@ -591,7 +591,13 @@ def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None):
     focal, neighbors = np.where(distances > 0)
     idx = adata.obs_names
 
-    graph_df = pd.DataFrame({"focal": idx[focal], "neighbor": idx[neighbors], "weight": distances[focal, neighbors]})
+    graph_df = pd.DataFrame(
+        {
+            "focal": idx[focal],
+            "neighbor": idx[neighbors],
+            "weight": distances[focal, neighbors],
+        }
+    )
     W = libpysal.weights.W.from_adjlist(graph_df)
     W.set_transform("r")
 
@@ -733,6 +739,8 @@ def losh(
     adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
 
     X = adata.X if layer is None else adata.layers[layer]
+    if sparse.issparse(X) or isinstance(X, np.matrix):
+        X = X.A
 
     for feat in features:
         if feat in adata.var_names:
@@ -816,7 +824,9 @@ def local_moran(
     return adata
 
 
-def compute_higher_order_neighbors(adata, graph_name=None, force: bool = False, *, order: int):
+def compute_higher_order_neighbors(
+    adata, graph_name=None, force: bool = False, *, order: int
+):
     if graph_name is None:
         graph_name = get_default_graph(adata)
 
@@ -886,7 +896,9 @@ def compute_correlogram(
         )
 
     if method not in ["moran", "losh", "corr"]:
-        raise NotImplementedError(f"Correlogram is not implemented for method {method}.")
+        raise NotImplementedError(
+            f"Correlogram is not implemented for method {method}."
+        )
 
     if graph_name is None:
         graph_name = get_default_graph(adata)
@@ -894,7 +906,9 @@ def compute_correlogram(
     higher_order = adata.uns["spatial"].setdefault("higher_order", {})
     Ws = higher_order.setdefault(graph_name, [])
     if not order and len(Ws) == 0:
-        raise RuntimeError("Please provide a positive integer value for `order`, or run `compute_higher_order_neighbors` first.")
+        raise RuntimeError(
+            "Please provide a positive integer value for `order`, or run `compute_higher_order_neighbors` first."
+        )
 
     if len(Ws) == 0 and order:
         Ws = compute_higher_order_neighbors(adata, graph_name=graph_name, order=order)
@@ -903,14 +917,24 @@ def compute_correlogram(
     order = order or (len(Ws) + 1)
 
     correlogram_dict = adata.uns["spatial"][method].setdefault(key_added, {})
-    correlogram_df = correlogram_dict.setdefault(graph_name, pd.DataFrame(columns=list(range(1, order + 1)), index=features))
+    correlogram_df = correlogram_dict.setdefault(
+        graph_name, pd.DataFrame(columns=list(range(1, order + 1)), index=features)
+    )
     W_og = adata.uns["spatial"][graph_name].sparse.copy()
 
     X = adata.X if layer is None else adata.layers[layer]
+    if sparse.issparse(X) or isinstance(X, np.matrix):
+        X = X.A
 
     for k_order, w in enumerate((Ws)[:order], 1):
-        W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(silence_warnings=True)
-        if k_order in correlogram_df.columns and (not any(correlogram_df[k_order].isna())) and not force:
+        W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(
+            silence_warnings=True
+        )
+        if (
+            k_order in correlogram_df.columns
+            and (not any(correlogram_df[k_order].isna()))
+            and not force
+        ):
             continue
 
         for feat in features:
