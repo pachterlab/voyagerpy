@@ -58,7 +58,7 @@ plt.rcParams["grid.alpha"] = 0.1
 plt.rcParams["grid.color"] = "k"
 plt.rcParams["image.origin"] = "lower"
 plt.rcParams["lines.markersize"] = 4
-plt.rcParams["figure.dpi"] = 80  # 100 is the default
+# plt.rcParams["figure.dpi"] = 100  # 100 is the default
 # figure.constrained_layout.wspace 0.02
 # figure.subplot.wspace 0.2
 """ #TODO: 
