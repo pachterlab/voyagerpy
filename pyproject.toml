@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "voyagerpy"
-version = "0.23.4"
+version = "0.1.0"
 description = "Python library for Voyager, the geo-spatialist."
 authors = [
 	"Pall Melsted <pmelsted@hi.is>",
