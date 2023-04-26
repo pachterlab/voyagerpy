@@ -111,14 +111,23 @@ def imshow(
         axs = ax
 
     im_kwargs = dict(origin="lower")
+    extent = kwargs.get("extent", None)
 
     axs.set_xticks([])
     axs.set_yticks([])
     im_kwargs.update(kwargs)
     if title is not None:
         axs.set_title(title)
+    if extent is not None:
+        left, right, top, bottom = extent
+        pad = 0
+        
+        left, top = np.maximum(np.floor([left - pad, top - pad]).astype(int), 0)
+        right, bottom = np.ceil([right + pad, bottom + pad]).astype(int)
 
-    axs.imshow(img, **im_kwargs)
+        axs.imshow(img[top : bottom + 1, left : right + 1], **im_kwargs)
+    else:
+        axs.imshow(img, **im_kwargs)
     return axs
 
 
@@ -796,7 +805,7 @@ def plot_spatial_feature(
     subplot_kwargs: Optional[Dict] = None,
     legend_kwargs: Optional[Dict] = None,
     dimension: str = "barcode",
-    image: bool = False,
+    image_kwargs: Optional[Dict] = None,
     figtitle: Optional[str] = None,
     feature_labels: Union[None, str, Sequence[Optional[str]]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
@@ -987,8 +996,16 @@ def plot_spatial_feature(
         if color is not None:
             curr_cmap = None
 
-        if image:
-            _ax = imshow(adata, None, _ax)
+        if image_kwargs is not None:
+            crop_img = image_kwargs.pop("crop", False)
+            extent = None
+            if crop_img:
+                x = geo.centroid.x
+                y = geo.centroid.y
+                x_min, x_max = x.min(), x.max()
+                y_min, y_max = y.min(), y.max()
+                extent = (x_min, x_max, y_min, y_max)
+            _ax = imshow(adata, None, _ax, extent=extent)
 
         if geom_is_poly:
             legend_kwargs_.pop("title", None)
