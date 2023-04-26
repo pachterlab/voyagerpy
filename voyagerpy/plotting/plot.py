@@ -1348,7 +1348,7 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
         fig, ax = plt.subplots()
     var_ratio = adata.uns[reduction]["variance_ratio"][:ndims]
     ndims = var_ratio.size
-    ax.scatter(np.arange(ndims, dtype=int), var_ratio * 100, s=8, c="k")
+    ax.plot(np.arange(ndims, dtype=int), var_ratio * 100, marker=".", markersize=6, linewidth=1, c="k")
     ax.set_xticks(np.arange(0, ndims + 1, 3, dtype=int))
     ax.set_ylabel("Variance explained (%)")
     ax.set_xlabel("PC")
