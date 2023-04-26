@@ -112,11 +112,13 @@ def get_marker_genes(adata, hvg=False, hvg_string="highly_variable", cluster: st
         Exception("There need to be clusters defined for this anndata object")
     nr_clust = adata.obs[cluster].cat.codes
     markers_desc = []
+    adata_obj = adata if not hvg else adata[:, adata.var[hvg_string]].copy()
     for i in np.array(adata.obs[cluster].cat.categories):
-        if hvg is None:
-            curr_cl_data = get_p_clusters(adata, i, cluster=cluster)
-        else:
-            curr_cl_data = get_p_clusters(adata[:, adata.var[hvg_string]].copy(), i, cluster=cluster)
+        curr_cl_data = get_p_clusters(adata_obj, i, cluster=cluster)
+        # if hvg is None:
+        #     curr_cl_data = get_p_clusters(adata, i, cluster=cluster)
+        # else:
+        #     curr_cl_data = get_p_clusters(adata[:, adata.var[hvg_string]].copy(), i, cluster=cluster)
         markers_desc.append(np.array(curr_cl_data[np.argsort(curr_cl_data)].index))
     markers = pd.DataFrame(np.transpose(markers_desc), columns=[f"{cluster}_{i}" for i in range(np.max(nr_clust) + 1)])
 
