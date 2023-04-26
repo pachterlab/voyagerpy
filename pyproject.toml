@@ -1,46 +1,26 @@
-[build-system]
-requires = [
-	"setuptools>=61.0"
-]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "voyagerpy"
 version = "0.23.4"
-authors = [
-	{name="Sindri Emmanuel Antonsson", email="sea7@hi.is"},
-	{name="Petur Helgi Einarsson", email="phe@hi.is"},
-	{name="Pall Melsted", email="pmelsted@hi.is"}
-]
-dependencies = [
-	"anndata>=0.6.22",
-	"geopandas>=0.12",
-	"matplotlib>=3.6,<3.7",
-	"numpy>=1.23",
-	"scipy>=1.9",
-	"seaborn>=0.12",
-	"shapely>=1.8.5",
-	"opencv-python>=4.7",
-	"networkx>=3.0"
-]
-description="Python library for Voyager, the geo-spatialist"
-readme="README.md"
-requires-python = ">=3.5"
-classifiers = ["Single-Cell", "Spatial", "voyager",
-	"Programming Language :: Python :: 3",
-	"Operating System :: OS Independent",
-	"Licence :: BSD-3-Clause",
-]
+description = "Python library for Voyager, the geo-spatialist."
+authors = ["Sindri Emmanuel Antonsson <sea7@hi.is>", "Petur Helgi Einarsson <phe@hi.is>", "Pall Melsted <pmelsted@hi.is>"]
+readme = "README.md"
+homepage = "https://pmelsted.github.io/voyagerpy"
+repository = "https://github.com/pmelsted/voyagerpy"
+keywords = ["Single-Cell", "Spatial", "voyager"]
+license = "BSD-3-Clause"
 
-[project.urls]
-"Homepage" = "https://pmelsted.github.io/voyagerpy"
-"Bug Tracker" = "https://github.com/pmelsted/voyagerpy/issues"
+[tool.poetry.dependencies]
+python = ">=3.8"
+anndata = ">=0.6.22"
+geopandas = ">=0.12"
+matplotlib = ">=3.6,<3.7"
+numpy = ">=1.23"
+scipy = ">=1.9"
+seaborn = ">=0.12"
+shapely = ">=1.8.5"
+opencv-python = ">=4.7"
+networkx = ">=3.0"
 
-[tool.setuptools]
-packages = ["voyagerpy", "voyagerpy.metrics", "voyagerpy.plotting", "voyagerpy.spatial", "voyagerpy.utils"]
-
-[tool.black]
-line-length = 140
-
-[tool.flake8]
-profile = "black"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
