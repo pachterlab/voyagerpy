@@ -74,6 +74,27 @@ def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=1
 
 
 def inverse_density_weights(x, adjust=1):
+    """\
+    Calculate inverse density weights for data x.
+
+    Parameters
+    ----------
+    x : ndarray
+        Array of points, in this case means.
+    adjust : int, optional
+        DESCRIPTION. The default is 1.
+
+    Raises
+    ------
+    Exception
+        Fail if zero length of means.
+
+    Returns
+    -------
+    w : ndarray
+        Array of inverse density weights.
+
+    """
     if len(x) == 0:
         raise Exception("Cannot parse nonzero array")
     kde = KDEUnivariate(x)
@@ -91,6 +112,28 @@ def inverse_density_weights(x, adjust=1):
 
 # define your function f with inputs x and parameters a, b, c
 def f(x, a, b, n):
+    """\
+    Variance function.
+
+    This function is used to describe the variances as a function of means.
+
+    Parameters
+    ----------
+    x : ndarray
+        Values to calculate
+    a : float
+        Parameter a.
+    b : float
+        Parameter b.
+    n : float
+        Parameter n.
+
+    Returns
+    -------
+    TYPE
+        return f(x).
+
+    """
     return (exp(a) * x) / (x ** (1 + exp(n)) + exp(b))
 
 
@@ -98,6 +141,28 @@ def f(x, a, b, n):
 
 
 def residual(params, _mean, _vars, _weight):
+    """\
+    Pseudo residual function for f.
+
+    Implemented with weights
+
+    Parameters
+    ----------
+    params : List
+        Params for function f.
+    _mean : ndarray
+        Array of means.
+    _vars : ndarray
+        Array of variances.
+    _weight : ndarray
+        Array of weights.
+
+    Returns
+    -------
+    rss : ndarray
+        weighted residuals.
+
+    """
     a, b, n = params
 
     rss = (_vars - f(_mean, a, b, n)) * np.sqrt(_weight)
@@ -106,6 +171,30 @@ def residual(params, _mean, _vars, _weight):
 
 
 def parametric_fit(_mean, _vars, _weight, start):
+    """\
+    Fit function with parameters for given data.
+
+    Parameters
+    ----------
+    _mean : ndarray
+        Array of means.
+    _vars : TYPE
+        Array of variances.
+    _weight : TYPE
+        Array of weights.
+    start : TYPE
+        Initial start values of parameters a,b,n.
+
+    Returns
+    -------
+    a : TYPE
+        Best guess of a.
+    b : TYPE
+        Best guess of b.
+    n : TYPE
+        Best guess of n.
+
+    """
     x = _mean
     y = _vars
     w = _weight  # set weights for each point
@@ -139,6 +228,22 @@ def correct_logged_expectation(x, y, w, FUN):
 
 
 def weighted_median(x, w):
+    """\
+    Return weighted median of x.
+
+    Parameters
+    ----------
+    x : ndarray
+        data points.
+    w : ndarray
+        weights.
+
+    Returns
+    -------
+    float
+        weighted median of x.
+
+    """
     if x.shape != w.shape or w is None:
         w = np.ones(x.shape[0])
 
@@ -158,6 +263,28 @@ def weighted_median(x, w):
 
 
 def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
+    """\
+    Decompose the variance into technical and biological.
+
+    Parameters
+    ----------
+    _means : ndarray
+        Means.
+    _vars : ndarray
+        Variances.
+    fit_means : ndarray
+        Kept for compatibility in R.
+    fit_vars : ndarray
+        Kept for compatibility in R.
+    names : array-like, optional
+        Gene names. The default is None.
+
+    Returns
+    -------
+    output : DataFrame
+        Returns dataframe with relevant columns.
+
+    """
     fit, std_dev = fit_trend_var(fit_means, fit_vars)
 
     output = pd.DataFrame({"mean": _means, "total": _vars, "tech": fit(_means)}, index=names)
@@ -173,6 +300,31 @@ def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
 
 
 def model_gene_var(adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None):
+    """\
+    Return the modelled gene variance.
+
+    Modelled on similar method in SCRAN package.
+    Parameters
+    ----------
+    adata : AnnData
+        DESCRIPTION.
+    block : None, optional
+        Compatibility with R. The default is None.
+    design : None, optional
+        Compatibility with R. The default is None.
+    subset_row : ndarray, optional
+        If only a subset of the rows are used. The default is None.
+    subset_fit : bool, optional
+        if subsetting should occur, yet to be implmented. The default is None.
+    gene_names : ndarray, optional
+        If gene names are provided. The default is None.
+
+    Returns
+    -------
+    collected : DataFrame
+        Information on modelled variance into biological and technical.
+
+    """
     if sparse.issparse(adata):
         x_means, x_vars = _get_mean_var(adata, axis=0)
         names = gene_names
@@ -192,6 +344,32 @@ def model_gene_var(adata, block=None, design=None, subset_row=None, subset_fit=N
 
 
 def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, lowess=False, density_weights=True):
+    """\
+    Fit the variance function to the data.
+
+    Parameters
+    ----------
+    gene_mean : ndarray
+        mean of each gene.
+    gene_var : ndarray
+        variances for each gene.
+    min_mean : float, optional
+        Minimum mean for a gene to be included in fitting the trend. The default is 0.1.
+    parametric : bool, optional
+        Whether to run a parametric trend fit. The default is True.
+    lowess : bool, optional
+        Whether to run a lowess trend fit. The default is False.
+    density_weights : bool, optional
+        Whether to include density weights in the fitting. The default is True.
+
+    Returns
+    -------
+    fit : function
+        fitted and corrected variance function.
+    std_dev : TYPE
+        standard deviation of fit.
+
+    """
     is_okay = np.intersect1d(np.where(gene_var > 1.0e-8), np.where(gene_mean >= min_mean))
     v = gene_var[is_okay]
     m = gene_mean[is_okay]
