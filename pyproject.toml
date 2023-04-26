@@ -5,11 +5,11 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "VoyagerPy"
-version = "0.0.0"
+name = "voyagerpy"
+version = "0.23.4"
 authors = [
 	{name="Sindri Emmanuel Antonsson", email="sea7@hi.is"},
-	{name="Petur Helgi Einarsson", email="peturhelgi@gmail.com"},
+	{name="Petur Helgi Einarsson", email="phe@hi.is"},
 	{name="Pall Melsted", email="pmelsted@hi.is"}
 ]
 dependencies = [
@@ -29,11 +29,12 @@ requires-python = ">=3.5"
 classifiers = ["Single-Cell", "Spatial", "voyager",
 	"Programming Language :: Python :: 3",
 	"Operating System :: OS Independent",
-	"Licence :: IDK"
+	"Licence :: BSD-3-Clause",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/baroona/voayagerpy"
+"Homepage" = "https://pmelsted.github.io/voyagerpy"
+"Bug Tracker" = "https://github.com/pmelsted/voyagerpy/issues"
 
 [tool.setuptools]
 packages = ["voyagerpy", "voyagerpy.metrics", "voyagerpy.plotting", "voyagerpy.spatial", "voyagerpy.utils"]
