@@ -581,15 +581,17 @@ def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None):
     import libpysal
 
     distances = adata.obsp[graph_name or get_default_graph(adata)].copy()
-    if isinstance(distances, sparse.csr_matrix):
+    if sparse.issparse(distances):
+        distances = distances.A
+    elif isinstance(distances, np.matrix):
         distances = distances.A
 
     assert isinstance(distances, np.ndarray)
 
     focal, neighbors = np.where(distances > 0)
     idx = adata.obs_names
-    graph_df = pd.DataFrame({"focal": idx[focal], "neighbor": idx[neighbors], "weight": distances[focal, neighbors]})
 
+    graph_df = pd.DataFrame({"focal": idx[focal], "neighbor": idx[neighbors], "weight": distances[focal, neighbors]})
     W = libpysal.weights.W.from_adjlist(graph_df)
     W.set_transform("r")
 
