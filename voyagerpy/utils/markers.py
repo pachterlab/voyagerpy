@@ -3,8 +3,15 @@
 
 import numpy as np
 import pandas as pd
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, wilcoxon, rankdata
 from scipy import sparse
+
+
+def fdr(p_vals):
+    ranked_p_vals = rankdata(p_vals)
+    fdr = p_vals * len(p_vals) / ranked_p_vals
+    fdr[fdr > 1] = 1
+    return fdr
 
 
 def get_statistics(adata, clust1, clust2=None, test="mw", alternative="greater", skip=None, clust_str: str = "cluster"):
@@ -60,8 +67,10 @@ def get_statistics(adata, clust1, clust2=None, test="mw", alternative="greater",
         it_values = range(adata.shape[1])
     if test == "mw":
         arr = mannwhitneyu(X_cl, X_comp, alternative=alternative)[1]
+    elif test == "wilcoxon":
+        arr = wilcoxon(X_cl, X_comp, alternative=alternative)[1]
     else:
-        pass
+        raise NotImplementedError(f"Test '{test}' is not implemented")
 
     if skip is not None:
         arr_final[it_values] = arr
