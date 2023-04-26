@@ -111,14 +111,26 @@ def imshow(
         axs = ax
 
     im_kwargs = dict(origin="lower")
+    extent = kwargs.get("extent", None)
 
     axs.set_xticks([])
     axs.set_yticks([])
     im_kwargs.update(kwargs)
     if title is not None:
         axs.set_title(title)
-
-    axs.imshow(img, **im_kwargs)
+    if extent is not None:
+        left, right, top, bottom = extent
+        y_rows, x_cols = img.shape[:2]
+        extent = (
+            max(0, left),
+            min(x_cols, right),
+            max(0, top),
+            min(y_rows, bottom),
+        )
+        im_kwargs["extent"] = extent
+        axs.imshow(img[top : bottom + 1, left : right + 1], **im_kwargs)
+    else:
+        axs.imshow(img, **im_kwargs)
     return axs
 
 
@@ -257,9 +269,6 @@ def grouped_violinplot(
     if not vert:
         x, y = y, x
 
-    ax.set_xlabel(x_label or x)
-    ax.set_ylabel(y_label or y)
-
     colormap = plt.get_cmap(cmap)
     if scatter_points:
         for i, (label, violin) in enumerate(zip(labels, violins["bodies"])):
@@ -281,6 +290,9 @@ def grouped_violinplot(
                 color=colormap(i),
                 **kwargs,
             )
+
+    ax.set_xlabel(x_label or x)
+    ax.set_ylabel(y_label or y)
 
     if not legend:
         return ax
@@ -796,7 +808,7 @@ def plot_spatial_feature(
     subplot_kwargs: Optional[Dict] = None,
     legend_kwargs: Optional[Dict] = None,
     dimension: str = "barcode",
-    image: bool = False,
+    image_kwargs: Optional[Dict] = None,
     figtitle: Optional[str] = None,
     feature_labels: Union[None, str, Sequence[Optional[str]]] = None,
     rc_context: Optional[Dict[str, Any]] = None,
@@ -960,6 +972,7 @@ def plot_spatial_feature(
 
     for _ax, (feature, label) in zip(axs.flat, labeled_features):
         legend_kwargs_ = deepcopy(legend_kwargs or {})
+        _image_kwargs = deepcopy(image_kwargs or {})
         _legend = legend
         curr_cmap = cmap
         values = obs[feature]
@@ -987,8 +1000,19 @@ def plot_spatial_feature(
         if color is not None:
             curr_cmap = None
 
-        if image:
-            _ax = imshow(adata, None, _ax)
+        if image_kwargs is not None:
+            crop_img = _image_kwargs.pop("crop", False)
+            extent = None
+            if crop_img:
+                x = geo.centroid.x
+                y = geo.centroid.y
+                pad = _image_kwargs.pop("pad", 5)
+                x_min, y_min = np.maximum(
+                    np.floor([x.min(), y.min()]).astype(int) - pad, 0
+                )
+                x_max, y_max = np.ceil([x.max(), y.max()]).astype(int) + pad
+                extent = (x_min, x_max, y_min, y_max)
+            _ax = imshow(adata, None, _ax, extent=extent)
 
         if geom_is_poly:
             legend_kwargs_.pop("title", None)
@@ -1331,7 +1355,7 @@ def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Opti
         fig, ax = plt.subplots()
     var_ratio = adata.uns[reduction]["variance_ratio"][:ndims]
     ndims = var_ratio.size
-    ax.scatter(np.arange(ndims, dtype=int), var_ratio * 100, s=8, c="k")
+    ax.plot(np.arange(ndims, dtype=int), var_ratio * 100, marker=".", markersize=6, linewidth=1, c="k")
     ax.set_xticks(np.arange(0, ndims + 1, 3, dtype=int))
     ax.set_ylabel("Variance explained (%)")
     ax.set_xlabel("PC")
