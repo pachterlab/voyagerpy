@@ -621,6 +621,9 @@ def compute_spatial_lag(
         raise TypeError("Distances should be of type None, str, or np.ndarray.")
     del graph_name
 
+    if sparse.issparse(dists) or isinstance(dists, np.matrix):
+        dists = dists.A
+
     features = [feature] if isinstance(feature, str) else feature[:]
     X = adata.X if layer is None else adata.layers[layer].A
     for feat in features:
@@ -629,6 +632,7 @@ def compute_spatial_lag(
             x = X[:, adata.var_names.get_loc(feat)]
         else:
             x = adata.obs[feat]
+
         adata.obs[lagged_feat] = dists.dot(x)
 
     return adata
