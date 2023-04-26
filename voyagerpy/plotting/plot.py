@@ -120,11 +120,14 @@ def imshow(
         axs.set_title(title)
     if extent is not None:
         left, right, top, bottom = extent
-        pad = 0
-        
-        left, top = np.maximum(np.floor([left - pad, top - pad]).astype(int), 0)
-        right, bottom = np.ceil([right + pad, bottom + pad]).astype(int)
-
+        y_rows, x_cols = img.shape[:2]
+        extent = (
+            max(0, left),
+            min(x_cols, right),
+            max(0, top),
+            min(y_rows, bottom),
+        )
+        im_kwargs["extent"] = extent
         axs.imshow(img[top : bottom + 1, left : right + 1], **im_kwargs)
     else:
         axs.imshow(img, **im_kwargs)
@@ -969,6 +972,7 @@ def plot_spatial_feature(
 
     for _ax, (feature, label) in zip(axs.flat, labeled_features):
         legend_kwargs_ = deepcopy(legend_kwargs or {})
+        _image_kwargs = deepcopy(image_kwargs or {})
         _legend = legend
         curr_cmap = cmap
         values = obs[feature]
@@ -997,13 +1001,16 @@ def plot_spatial_feature(
             curr_cmap = None
 
         if image_kwargs is not None:
-            crop_img = image_kwargs.pop("crop", False)
+            crop_img = _image_kwargs.pop("crop", False)
             extent = None
             if crop_img:
                 x = geo.centroid.x
                 y = geo.centroid.y
-                x_min, x_max = x.min(), x.max()
-                y_min, y_max = y.min(), y.max()
+                pad = _image_kwargs.pop("pad", 5)
+                x_min, y_min = np.maximum(
+                    np.floor([x.min(), y.min()]).astype(int) - pad, 0
+                )
+                x_max, y_max = np.ceil([x.max(), y.max()]).astype(int) + pad
                 extent = (x_min, x_max, y_min, y_max)
             _ax = imshow(adata, None, _ax, extent=extent)
 
