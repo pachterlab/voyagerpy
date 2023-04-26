@@ -4,6 +4,10 @@ This repo manages the VoyagerPy Python package, a Python implementation of the R
 
 ## Installation
 
+To install the latest release of VoyagerPy, you can install it via `pip`:
+
+```pip install voyagerpy```
+
 ### Clone the repo
 Clone this repo either using SSH:
 
