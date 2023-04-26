@@ -2,7 +2,11 @@
 name = "voyagerpy"
 version = "0.23.4"
 description = "Python library for Voyager, the geo-spatialist."
-authors = ["Sindri Emmanuel Antonsson <sea7@hi.is>", "Petur Helgi Einarsson <phe@hi.is>", "Pall Melsted <pmelsted@hi.is>"]
+authors = [
+	"Pall Melsted <pmelsted@hi.is>",
+	"Sindri Emmanuel Antonsson <sea7@hi.is>", 
+	"Petur Helgi Einarsson <phe@hi.is>", 
+]
 readme = "README.md"
 homepage = "https://pmelsted.github.io/voyagerpy"
 repository = "https://github.com/pmelsted/voyagerpy"
