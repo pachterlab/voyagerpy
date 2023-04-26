@@ -178,7 +178,9 @@ def simple_violinplot(
             x_offsets = np.arange(cols.shape[1]).ravel()
             x_vals += x_offsets
             x_colors += x_offsets
-            for violin, x_offset, y_col in zip(violins["bodies"], x_offsets, cols.values.T):
+            for violin, x_offset, y_col in zip(
+                violins["bodies"], x_offsets, cols.values.T
+            ):
                 x_vals[:, x_offset] = jitter_points(
                     violin.get_paths()[0],
                     y_col,
@@ -212,7 +214,9 @@ def simple_violinplot(
     return ax
 
 
-def jitter_points(violin: mplPath, y_vals: np.ndarray, x: int = 0, jitter: bool = False):
+def jitter_points(
+    violin: mplPath, y_vals: np.ndarray, x: int = 0, jitter: bool = False
+):
     x_vert, y_vert = np.array(violin.cleaned().vertices).T
     at_max_y = np.argmax(y_vert) + 1
     x_vals = x + np.ones_like(y_vals, dtype=float)
@@ -331,13 +335,35 @@ def plot_single_barcode_data(
             raise NotImplementedError('"Rectangule" plots not implemented')
         else:
             # Create a horizontal plot, so we group by y instead of x
-            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, x_label=x_label, y_label=y_label, vert=False)
+            ax = grouped_violinplot(
+                ax,
+                obs,
+                x,
+                y,
+                cmap,
+                legend=legend,
+                x_label=x_label,
+                y_label=y_label,
+                vert=False,
+            )
     else:
         if x is None:
-            ax = simple_violinplot(ax, obs, y, cmap, x_label=x_label, y_label=y_label, **kwargs)
+            ax = simple_violinplot(
+                ax, obs, y, cmap, x_label=x_label, y_label=y_label, **kwargs
+            )
 
         elif is_categorical_dtype(obs[x]):
-            ax = grouped_violinplot(ax, obs, x, y, cmap, legend=legend, x_label=x_label, y_label=y_label, **kwargs)
+            ax = grouped_violinplot(
+                ax,
+                obs,
+                x,
+                y,
+                cmap,
+                legend=legend,
+                x_label=x_label,
+                y_label=y_label,
+                **kwargs,
+            )
 
         else:
             _scatter_kwargs = dict(
@@ -345,12 +371,16 @@ def plot_single_barcode_data(
                 labels=dict(x=x_label or x, y=y_label or y),
             )
             _scatter_kwargs.update(kwargs)
-            ax = scatter(x, y, color_by=color_by, cmap=cmap, ax=ax, data=obs, **_scatter_kwargs)
+            ax = scatter(
+                x, y, color_by=color_by, cmap=cmap, ax=ax, data=obs, **_scatter_kwargs
+            )
 
     return ax
 
 
-def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
+def configure_subplots(
+    nplots: int, ncol: Optional[int] = 2, **kwargs
+) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
     ncol = min(ncol or 2, nplots)
     nrow = int(np.ceil(nplots / ncol))
 
@@ -387,7 +417,9 @@ def plot_barcode_data(
     x: Optional[str] = None,
     obsm: Optional[str] = None,
     ncol: Optional[int] = None,
-    cmap: Union[None, str, colors.ListedColormap, colors.LinearSegmentedColormap] = None,
+    cmap: Union[
+        None, str, colors.ListedColormap, colors.LinearSegmentedColormap
+    ] = None,
     color_by: Optional[str] = None,
     sharex: Union[None, Literal["none", "all", "row", "col"], bool] = None,
     sharey: Union[None, str, bool] = None,
@@ -589,8 +621,12 @@ def plot_bin2d(
         plot_kwargs["cmap"] = cmap_true
         im_true = plot_fun(x_dat[subset_true], y_dat[subset_true], **plot_kwargs)
 
-        plt.colorbar(im_false[-1] if isinstance(im_false, tuple) else im_false, label=name_false)
-        plt.colorbar(im_true[-1] if isinstance(im_true, tuple) else im_true, label=name_true)
+        plt.colorbar(
+            im_false[-1] if isinstance(im_false, tuple) else im_false, label=name_false
+        )
+        plt.colorbar(
+            im_true[-1] if isinstance(im_true, tuple) else im_true, label=name_true
+        )
 
     ax.set_ylabel(_legend_kwargs["y"])
     ax.set_xlabel(_legend_kwargs["x"])
@@ -628,6 +664,7 @@ def plot_expression_scatter(
     ax: Union[None, Axes] = None,
     color_by: Optional[str] = None,
     layer: Optional[str] = None,
+    show_symbol: bool = True,
     **kwargs,
 ):
     obs = adata.obs if obsm is None else adata.obsm[obsm]
@@ -667,10 +704,11 @@ def plot_expression_scatter(
         **kwargs,
     )
 
-    ax.set_title(gene)
+    ax.set_title(y_symbol if show_symbol else gene)
     ax.set_xlabel("Expression" + f" ({layer})" if layer is not None else "")
     if y_symbol is not None:
-        ax.set_ylabel(y_symbol + f" {obsm}" if obsm is not None else "")
+        y_lab = y_symbol if show_symbol else gene
+        ax.set_ylabel(y_lab + f" {obsm}" if obsm is not None else "")
 
     return ax
 
@@ -728,7 +766,9 @@ def plot_expression_violin(
 
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
-            grouped_violinplot(ax, obs, groupby, gene_id, legend=False, cmap=cmap, **kwargs)
+            grouped_violinplot(
+                ax, obs, groupby, gene_id, legend=False, cmap=cmap, **kwargs
+            )
             title = gene_id
             if show_symbol and secondary_column == "symbol":
                 title = adata.var.at[gene_id, secondary_column]
@@ -834,8 +874,14 @@ def plot_spatial_feature(
     df = adata.obs if obsm is None else adata.obsm[obsm]
     df_repr = f"adata.obs" if obsm is None else f'adata.obsm["{obsm}"]'
 
-    feature_labels = feature_labels if feature_labels is not None else [None] * len(feat_ls)
-    feature_labels = [feature_labels] if not isinstance(feature_labels, (tuple, list)) else feature_labels[:]
+    feature_labels = (
+        feature_labels if feature_labels is not None else [None] * len(feat_ls)
+    )
+    feature_labels = (
+        [feature_labels]
+        if not isinstance(feature_labels, (tuple, list))
+        else feature_labels[:]
+    )
 
     for feature, label in zip(feat_ls, feature_labels):
         label = label if label is not None else feature
@@ -877,7 +923,9 @@ def plot_spatial_feature(
     # Select the spots to work with
 
     barcode_selection = subset_barcodes if subset_barcodes is not None else slice(None)
-    gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
+    gene_selection = (
+        slice(None) if not var_features else utils.make_unique(var_features)
+    )
 
     if dimension == "barcode":
         geo = adata.obsm["geometry"].loc[barcode_selection].copy()
@@ -952,7 +1000,9 @@ def plot_spatial_feature(
     _rc_context.update(rc_context or {})
     if _ax is None:
         with plt.rc_context(_rc_context):
-            fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **_subplot_kwargs)
+            fig, axs = configure_subplots(
+                nplots=n_features, ncol=ncol, **_subplot_kwargs
+            )
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
         if isinstance(_ax, Axes):
@@ -1039,10 +1089,18 @@ def plot_spatial_feature(
             # This would only happen for categorical data
             if legend and not _legend:
                 cmap_colors = plt.get_cmap(curr_cmap).colors
-                legend_dict = {lab: color for lab, color in zip(sorted(np.unique(values)), cmap_colors)}
+                legend_dict = {
+                    lab: color
+                    for lab, color in zip(sorted(np.unique(values)), cmap_colors)
+                }
                 for key, color in legend_dict.items():
                     _ax.scatter([], [], label=key, color=color)
-                _ax.legend(loc="center left", bbox_to_anchor=(1.04, 0.5), title=label, frameon=False)
+                _ax.legend(
+                    loc="center left",
+                    bbox_to_anchor=(1.04, 0.5),
+                    title=label,
+                    frameon=False,
+                )
 
         else:
             _ax = scatter(
@@ -1066,7 +1124,9 @@ def plot_spatial_feature(
                 plg = adata.uns["spatial"]["geom"][annot_geom]
                 gpd.GeoSeries(plg).plot(**annot_kwargs)
             else:
-                raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
+                raise ValueError(
+                    f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']"
+                )
 
     if figtitle is not None:
         fig.suptitle(figtitle, x=0, ha="left", va="bottom")
@@ -1074,7 +1134,9 @@ def plot_spatial_feature(
     return axs
 
 
-def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "raise") -> Tuple[bool, str]:
+def assert_basic_spatial_features(
+    adata, dimension="barcode", errors: str = "raise"
+) -> Tuple[bool, str]:
     ret = True
     errors_to_raise = []
     get_geom_prompt = "Consider run voyagerpy.spatial.get_geom(adata) first."
@@ -1103,7 +1165,10 @@ def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "rai
         return False, error_msg
 
     if adata.obs.geometry.name not in adata.obs:
-        error_msg = f'"{adata.obs.geometry.name}" must be a column in adata.obs. ' + get_geom_prompt
+        error_msg = (
+            f'"{adata.obs.geometry.name}" must be a column in adata.obs. '
+            + get_geom_prompt
+        )
         if errors == "raise":
             raise KeyError(error_msg)
         return False, error_msg
@@ -1116,7 +1181,9 @@ def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "rai
     return True, ""
 
 
-def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs):
+def plot_local_result(
+    adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs
+):
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
 
@@ -1131,7 +1198,9 @@ def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[s
         "axes.spines.right": True,
     }
 
-    axs = plot_spatial_feature(adata, features=features, obsm=obsm, rc_context=rc_context, **kwargs)
+    axs = plot_spatial_feature(
+        adata, features=features, obsm=obsm, rc_context=rc_context, **kwargs
+    )
     return axs
 
 
@@ -1172,7 +1241,13 @@ def spatial_reduced_dim(
 
 
 def add_colorbar_discrete(
-    ax, fig, cmap, cbar_title: str, cat_names: list, scale: bool = False, title_kwargs: Optional[Dict] = None
+    ax,
+    fig,
+    cmap,
+    cbar_title: str,
+    cat_names: list,
+    scale: bool = False,
+    title_kwargs: Optional[Dict] = None,
 ) -> Colorbar:
     # catnr = adata.obs[feat_ls[i]].unique().shape[0]
 
@@ -1248,7 +1323,9 @@ def subplots_single_colorbar(
     if has_layout:
         ax_width = plot_width / ncol
         width_ratios = [ax_width] * ncol + [cax_width]
-        main_spec = fig.add_gridspec(nrow, ncol + 1, wspace=wspace, hspace=hspace, width_ratios=width_ratios)
+        main_spec = fig.add_gridspec(
+            nrow, ncol + 1, wspace=wspace, hspace=hspace, width_ratios=width_ratios
+        )
         cax_spec = main_spec[:, -1]
     else:
         gridspec_kw = dict(
@@ -1302,7 +1379,9 @@ def plot_dim_loadings(
     varm: str = "PCs",
     **kwargs,
 ):
-    components = list(range(components)) if isinstance(components, int) else list(components)
+    components = (
+        list(range(components)) if isinstance(components, int) else list(components)
+    )
     dat = adata.varm[varm][:, components]
     nplots = len(components)
 
@@ -1350,12 +1429,21 @@ def plot_dim_loadings(
     return axs
 
 
-def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Optional[Axes] = None):
+def elbow_plot(
+    adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Optional[Axes] = None
+):
     if ax is None:
         fig, ax = plt.subplots()
     var_ratio = adata.uns[reduction]["variance_ratio"][:ndims]
     ndims = var_ratio.size
-    ax.plot(np.arange(ndims, dtype=int), var_ratio * 100, marker=".", markersize=6, linewidth=1, c="k")
+    ax.plot(
+        np.arange(ndims, dtype=int),
+        var_ratio * 100,
+        marker=".",
+        markersize=6,
+        linewidth=1,
+        c="k",
+    )
     ax.set_xticks(np.arange(0, ndims + 1, 3, dtype=int))
     ax.set_ylabel("Variance explained (%)")
     ax.set_xlabel("PC")
@@ -1408,7 +1496,9 @@ def plot_pca(
     for row in range(ndim):
         if ndim > 1:
             scatters_in_row = [ax for i, ax in enumerate(axs[row, :]) if i != row]
-            scatters_in_row[0].get_shared_y_axes().join(scatters_in_row[0], *scatters_in_row)
+            scatters_in_row[0].get_shared_y_axes().join(
+                scatters_in_row[0], *scatters_in_row
+            )
             axs[1, row].get_shared_x_axes().join(axs[1, row], *axs[1:, row])
 
         for col in range(ndim):
@@ -1424,7 +1514,9 @@ def plot_pca(
 
         axs[0, row].set_xlabel(f"PC{row} ({var_expl[row]:d}%)")
         axs[0, row].xaxis.set_label_position("top")
-        axs[row, -1].set_ylabel(f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15)
+        axs[row, -1].set_ylabel(
+            f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15
+        )
         axs[row, -1].yaxis.set_label_position("right")
 
         density = gaussian_kde(data[:, row])
@@ -1432,7 +1524,11 @@ def plot_pca(
         axs[row, row].plot(xs, density(xs), c="k", linewidth=1)
 
     if ndim > 1:
-        legend_elements = axs.flat[1].collections[0].legend_elements(num=_legend_kwargs.pop("num", None))
+        legend_elements = (
+            axs.flat[1]
+            .collections[0]
+            .legend_elements(num=_legend_kwargs.pop("num", None))
+        )
         # cax.legend(*legend_elements, loc="center", title=colorby, frameon=False, num=None)
         cax.legend(*legend_elements, **_legend_kwargs)
     else:
@@ -1475,7 +1571,9 @@ def contour_plot(
     kernel = gaussian_kde(points)
     Z = np.reshape(kernel(positions), X.shape)
 
-    ax.contour(X, Y, Z, levels=levels, colors=colors, linewidths=linewidths, origin=origin)
+    ax.contour(
+        X, Y, Z, levels=levels, colors=colors, linewidths=linewidths, origin=origin
+    )
 
     return ax
 
@@ -1529,7 +1627,9 @@ def moran_plot(
     for i_plot, (feature, ax) in enumerate(zip(features, axs.flat)):
         lagged_feature = f"lagged_{feature}"
         if lagged_feature not in adata.obs:
-            spatial.compute_spatial_lag(adata, feature, graph_name=graph_name, inplace=True)
+            spatial.compute_spatial_lag(
+                adata, feature, graph_name=graph_name, inplace=True
+            )
 
         rc_context = {
             "axes.grid": True,
@@ -1555,7 +1655,9 @@ def moran_plot(
             i_feature = adata.var_names.get_loc(feature)
             adata.obs[feature] = X[:, i_feature]
             if show_symbol:
-                symbol = adata.var.at[feature, adata.uns["config"]["secondary_var_names"]]
+                symbol = adata.var.at[
+                    feature, adata.uns["config"]["secondary_var_names"]
+                ]
                 labels["x"] = symbol
                 labels["y"] = f"Spatially lagged {symbol}"
 
@@ -1631,7 +1733,9 @@ def plot_moran_mc(
         (p,) = ax.plot(xs, kernel(xs), label=label, linewidth=linewidth)
         ax.axvline(I, color=p.get_c(), linewidth=linewidth)
 
-    ax.legend(loc="center left", bbox_to_anchor=(1.04, 0.5), title=legend_title, frameon=False)
+    ax.legend(
+        loc="center left", bbox_to_anchor=(1.04, 0.5), title=legend_title, frameon=False
+    )
 
     return ax
 
@@ -1718,7 +1822,13 @@ def plot_barcode_histogram(
                 if True:
                     zeros = np.zeros((centers.shape[0], 1))
                     counts = np.hstack([zeros, counts, zeros])
-                    centers = np.hstack([centers[:, :1] - bin_width, centers, centers[:, -1:] + bin_width])
+                    centers = np.hstack(
+                        [
+                            centers[:, :1] - bin_width,
+                            centers,
+                            centers[:, -1:] + bin_width,
+                        ]
+                    )
 
                 # we plot counts + log to map zero to zero without losing plotted data
                 counts += log
@@ -1736,7 +1846,13 @@ def plot_barcode_histogram(
             handles = [patch[0] for patch in rects]
         else:
             handles = rects
-        cax.legend(handles=handles, labels=keys, loc="center left", title=color_by, frameon=False)
+        cax.legend(
+            handles=handles,
+            labels=keys,
+            loc="center left",
+            title=color_by,
+            frameon=False,
+        )
     else:
         fig, axs = configure_subplots(nplot, ncol)
         # TODO
@@ -1764,9 +1880,15 @@ def plot_correlogram(
     if graph_name is None:
         graph_name = spatial.get_default_graph(adata)
 
-    corr_dict = adata.uns.setdefault("spatial", {}).setdefault(metric, {}).setdefault("correlogram", {})
+    corr_dict = (
+        adata.uns.setdefault("spatial", {})
+        .setdefault(metric, {})
+        .setdefault("correlogram", {})
+    )
     if graph_name not in corr_dict:
-        raise KeyError(f"Graph {graph_name} not found in adata.uns['spatial']['{metric}']['correlogram']")
+        raise KeyError(
+            f"Graph {graph_name} not found in adata.uns['spatial']['{metric}']['correlogram']"
+        )
 
     df = corr_dict[graph_name]
     # df = adata.uns["spatial"][metric]["correlogram"][graph_name]
@@ -1828,7 +1950,15 @@ def plot_features_histogram(
             hist_mid = hist_range.mean()
             hist_range = tuple((hist_range - hist_mid) * 1.05 + hist_mid)
 
-            hist_data = [np.histogram(adata.obs.loc[group, feat].values, bins=bins, range=hist_range, **_hist_kwargs) for group in groups]
+            hist_data = [
+                np.histogram(
+                    adata.obs.loc[group, feat].values,
+                    bins=bins,
+                    range=hist_range,
+                    **_hist_kwargs,
+                )
+                for group in groups
+            ]
 
             counts, bin_edges = zip(*hist_data)
             bin_edges = np.array(bin_edges)
@@ -1861,25 +1991,47 @@ def plot_features_histogram(
             ax.grid(False, "minor")
             ax.set_xlabel(feat, size=10)
 
-            add_markers(adata.var, feat, markers, ax=ax, cmap=cmap, label_col="symbol", legend=True)
+            add_markers(
+                adata.var,
+                feat,
+                markers,
+                ax=ax,
+                cmap=cmap,
+                label_col="symbol",
+                legend=True,
+            )
 
         if histtype.startswith("step"):
             # Hack to get the actual handles
             handles = [patch[0] for patch in rects]
         else:
             handles = rects
-        cax.legend(handles=handles, labels=keys, loc="center left", title=fill_by, frameon=False)
+        cax.legend(
+            handles=handles,
+            labels=keys,
+            loc="center left",
+            title=fill_by,
+            frameon=False,
+        )
     else:
         fig, axs = configure_subplots(nplot, ncol, figsize=figsize)
         _hist_kwargs.setdefault("color", "#666666ff")
 
         for ax, feat in zip(axs.flat, features):
             if histtype != "line":
-                n, _, rects = ax.hist(adata.var[feat], bins=bins, log=log, histtype=histtype, **_hist_kwargs)
+                n, _, rects = ax.hist(
+                    adata.var[feat],
+                    bins=bins,
+                    log=log,
+                    histtype=histtype,
+                    **_hist_kwargs,
+                )
             else:
                 _hist_kwargs.pop("ec", None)
                 _hist_kwargs.pop("edgecolor", None)
-                counts, bin_edges = np.histogram(adata.var[feat].dropna(inplace=False).values, bins=bins)
+                counts, bin_edges = np.histogram(
+                    adata.var[feat].dropna(inplace=False).values, bins=bins
+                )
                 centers = np.diff(bin_edges) / 2 + bin_edges[:-1]
                 rects = ax.plot(centers, counts, **_hist_kwargs)
 
@@ -2006,7 +2158,9 @@ def scatter(
 
     xdat, xstr = (data[x], x) if isinstance(x, str) else (x, None)
     ydat, ystr = (data[y], y) if isinstance(y, str) else (y, None)
-    color_dat, color_str = (data[color_by], color_by) if isinstance(color_by, str) else (color_by, None)
+    color_dat, color_str = (
+        (data[color_by], color_by) if isinstance(color_by, str) else (color_by, None)
+    )
 
     del color_by, x, y
 
