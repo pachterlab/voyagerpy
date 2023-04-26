@@ -642,6 +642,7 @@ def moran(
     adata: AnnData,
     feature: Union[str, Sequence[str]],
     graph_name: Optional[str] = None,
+    layer: Optional[str] = None,
     dim: Literal["obs", "var"] = "obs",
     permutations: int = 0,
 ):
@@ -650,7 +651,9 @@ def moran(
     try:
         import esda
     except ImportError:
-        raise ImportError("Moran's I requires the `esda` package. Please install it with `pip install esda`.")
+        raise ImportError(
+            "Moran's I requires the `esda` package. Please install it with `pip install esda`."
+        )
 
     if graph_name is None:
         graph_name = get_default_graph(adata)
@@ -663,15 +666,21 @@ def moran(
     features = [feature] if isinstance(feature, str) else list(feature[:])
 
     if dim == "obs":
-        morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
+        morans = [
+            esda.Moran(adata.obs[feat], W, permutations=permutations)
+            for feat in features
+        ]
     elif dim == "var":
         feat_idx = list(map(adata.var.index.get_loc, features))
-        morans = [esda.Moran(adata.X[:, i], W, permutations=permutations) for i in feat_idx]
+        X = adata.X.A if layer is None else adata.layers[layer].A
+        morans = [esda.Moran(X[:, i], W, permutations=permutations) for i in feat_idx]
     else:
         raise ValueError('dim must either be "obs" or "var"')
 
     moran_dict = adata.uns["spatial"].setdefault("moran", {})
-    df = moran_dict.setdefault(graph_name, pd.DataFrame(columns=["I", "EI"], dtype=("double", "double")))
+    df = moran_dict.setdefault(
+        graph_name, pd.DataFrame(columns=["I", "EI"], dtype=("double", "double"))
+    )
 
     for feat, moran in zip(features, morans):
         df.at[feat, "I"] = moran.I
