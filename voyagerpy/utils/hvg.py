@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import warnings
 from math import exp
 
 import numpy as np
@@ -62,8 +63,9 @@ def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=1
     b_grid_pts = 2 ** np.linspace(-b_grid_range, b_grid_range, n_grid_max)
     n_grid_pts = 2 ** np.linspace(0, n_grid_max, grid_length)
     hits = np.array([(x, y) for x in b_grid_pts for y in n_grid_pts], dtype=np.float64)
-
-    possible_vals = np.apply_along_axis(lambda x: sum((_vars - (1.13 * x[0] * _means) / ((_means ** x[1]) + x[0] + 0.001)) ** 2), 1, hits)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        possible_vals = np.apply_along_axis(lambda x: sum((_vars - (1.13 * x[0] * _means) / ((_means ** x[1]) + x[0] + 0.001)) ** 2), 1, hits)
 
     min_ind = np.argmin(possible_vals)
     b_start = np.log(hits[min_ind][0])
