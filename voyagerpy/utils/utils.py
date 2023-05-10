@@ -43,16 +43,20 @@ def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
     if res not in [None, "hi", "hires", "lo", "lowres"]:
         raise ValueError(f"Unrecognized value {res} for res.")
 
+    scale_dict = adata.uns["spatial"].get("scale", {})
     scale_key = None
+
     if is_lowres(adata) and res in [None, "lowres", "lo"]:
         scale_key = "tissue_lowres_scalef"
-    if is_highres(adata) and res in [None, "hires", "hi"]:
+    elif is_highres(adata) and res in [None, "hires", "hi"]:
         scale_key = "tissue_hires_scalef"
 
     if scale_key is None:
         raise ValueError("Invalid resolution. Make sure the correct image is loaded.")
+    elif scale_key not in scale_dict:
+        raise KeyError(f"Could not find scale factor {scale_key} for {res}")
 
-    return adata.uns["spatial"]["scale"][scale_key]
+    return scale_dict[scale_key]
 
 
 def add_per_gene_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
