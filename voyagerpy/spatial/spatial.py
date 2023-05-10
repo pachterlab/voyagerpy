@@ -311,6 +311,20 @@ def to_points(
     return points
 
 
+def get_visium_spots(adata: AnnData, with_radius: bool = False, res: Optional[str] = None) -> gpd.GeoSeries:
+    scale = utl.get_scale(adata, res=res)
+    scale_dict = adata.uns['spatial'].get("scale", {})
+    spot_diam = scale_dict.get("spot_diameter_fullres")
+    return to_points(
+        x="pxl_col_in_fullres",
+        y="pxl_row_in_fullres",
+        data=adata.obs,
+        scale=scale,
+        radius=scale * spot_diam / 2 if with_radius else None,
+    )
+
+
+
 def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = False, res: Optional[str] = None) -> AnnData:
     if not inplace:
         adata = adata.copy()
