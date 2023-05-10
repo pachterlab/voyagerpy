@@ -640,7 +640,7 @@ def plot_expression(
     gene: Union[str, Sequence[str]],
     y: Optional[str] = None,
     obsm: Optional[str] = None,
-    ax: Union[None, Axes, np.ndarray[Axes]] = None,
+    ax: Union[None, Axes, npt.NDArray[Axes]] = None,
     **kwargs,
 ):
     _rc_params = {
@@ -1755,7 +1755,7 @@ def plot_barcode_histogram(
     label: Optional[Sequence[str]] = None,
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
-) -> np.ndarray[Axes]:
+) -> npt.NDArray[Axes]:
     features: List[str] = utils.listify(feature)  # type: ignore
     nplot = len(features)
     ncol = min(ncol, nplot)
@@ -1926,7 +1926,7 @@ def plot_features_histogram(
     markers: Union[None, str, Sequence[str]] = None,
     show_symbol: bool = True,
     **hist_kwargs,
-) -> np.ndarray[Axes]:
+) -> npt.NDArray[Axes]:
     features = [features] if isinstance(features, str) else features
     nplot = len(features)
     ncol = min(ncol, nplot)
