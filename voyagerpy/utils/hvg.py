@@ -393,12 +393,12 @@ def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, lowess=Fal
         PARAMFUN = lambda x: f_predict(x, a, b, n)
         # return PARAMFUN
 
+    UNSCALEDFUN = PARAMFUN
     if lowess:
         # idx = np.round(np.linspace(0, len(m) - 1, 200)).astype(int)
         # ll = lowess(to_fit, exog=m, xvals=idx, resid_weights=w)
-        pass
-    else:
-        UNSCALEDFUN = PARAMFUN
+        warnings.warn("Lowess not implemented.")
+
     fit, std_dev = correct_logged_expectation(m, v, w, UNSCALEDFUN)
     return fit, std_dev
 
