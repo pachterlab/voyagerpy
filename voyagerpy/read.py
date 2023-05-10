@@ -13,23 +13,29 @@ from anndata import AnnData, read_mtx
 from matplotlib.pyplot import imread
 from .spatial import set_geometry, to_points
 from .utils import get_scale
+import warnings
 
 
-def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "high") -> AnnData:
+def read_img_data(path: Union[Path, PathLike], adata: AnnData, res: str = "hires") -> AnnData:
     path = Path(path)
 
-    loc = "hires" if res == "high" else "lowres"
-    spatial_path = path / "spatial"
-    scalefactors_path = spatial_path / "scalefactors_json.json"
-    img_path = spatial_path / f"tissue_{loc}_image.png"
+    scalefactors_path = path / "scalefactors_json.json"
+    img_path = path / f"tissue_{res}_image.png"
 
-    if img_path.exists() and scalefactors_path.exists():
+    spatial_dict = adata.uns.setdefault("spatial", {})
+
+    if img_path.exists():
         image = imread(str(img_path))
-        adata.uns.setdefault("spatial", {}).setdefault("img", {})
-        adata.uns["spatial"]["img"][loc] = image
-        adata.uns["spatial"]["scale"] = json.load(scalefactors_path.open("rt"))
+        img_dict = spatial_dict.setdefault("img", {})
+        img_dict[res] = image
     else:
-        raise ValueError("Cannot read tissue image or scaling file")
+        warnings.warn(f"Could not find image {img_path}")
+
+    if scalefactors_path.exists():
+        spatial_dict["scale"] = json.load(scalefactors_path.open("rt"))
+    else:
+        warnings.warn(f"Could not find scalefactors_json.json in {scalefactors_path}")
+
     return adata
 
 
@@ -212,7 +218,7 @@ def read_10x_visium(
     else:
         raise ValueError("Cannot read file tissue_positions.csv")
 
-    adata = read_img_data(path, adata, res=res)
+    adata = read_img_data(path / "spatial", adata, res=res)
     metadata = {
         "data_source": "visium",
         "img_res": [res for res in ("lowres", "hires") if (path / "spatial" / f"tissue_{res}_image.png").exists()],
