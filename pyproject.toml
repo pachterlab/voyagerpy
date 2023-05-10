@@ -33,6 +33,9 @@ networkx = ">=3.0"
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/pmelsted/voyagerpy/issues"
 
+[tool.black]
+line-length = 140
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
