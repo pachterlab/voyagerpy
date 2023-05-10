@@ -112,6 +112,7 @@ def log_norm_counts(
     inplace: bool = True,
     base: Optional[int] = 2,
     pseudocount: int = 1,
+    zero_to_zero: bool = False,
 ):
     # Roughly equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
@@ -132,7 +133,7 @@ def log_norm_counts(
     other_log = lambda x: np.log(x) / np.log(base)  # type: ignore # noqa: E731
     log = log_funcs.get(base, other_log)
 
-    if pseudocount == 1:
+    if pseudocount == 1 or zero_to_zero:
         # This ensures we don't interact with the zeros in X
         X.data = log(X.data + pseudocount)
     else:
