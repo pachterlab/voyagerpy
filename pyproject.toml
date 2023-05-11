@@ -29,6 +29,8 @@ shapely = ">=1.8.5"
 statsmodels = ">=0.13"
 opencv-python = ">=4.7"
 networkx = ">=3.0"
+libpysal = "^4.7"
+esda = "^2.4"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/pmelsted/voyagerpy/issues"
