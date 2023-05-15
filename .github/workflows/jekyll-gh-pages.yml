@@ -33,7 +33,6 @@ jobs:
       - name: Build notebooks
         run: |
           pip install jupyterlab
-          git checkout main examples
           find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --to html --output-dir notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}
           find notebooks -type f -name "*.html" | cut -f2 -d'/' | cut -f1 -d'.' | xargs -I {} python notebooks/nb_strip.py --output _includes/notebooks/{}.html notebooks/{}.html
           mv notebooks/*_files img/
