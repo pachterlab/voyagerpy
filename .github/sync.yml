@@ -1,0 +1,7 @@
+group:
+  repos: |
+    pmelsted/voyagerpy@gh-pages
+    
+  files:
+    - source: examples/
+      dest: examples/
