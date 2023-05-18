@@ -148,12 +148,12 @@ def log_norm_counts(
 
 
 def scale(
-    X,
-    center=True,
+    X: Union[sp.spmatrix, np.ndarray, np.matrix],
+    center: bool = True,
     unit_variance: bool = True,
     center_before_scale: bool = True,
     ddof: int = 1,
-):
+) -> np.ndarray:
 
     if sp.issparse(X):  # or isinstance(X, np.matrix):
         A = X.todense()  # type: ignore
