@@ -373,18 +373,17 @@ def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = Fa
 
 def get_spot_coords(
     adata: AnnData,
-    tissue: bool = True,
+    subset: Union[None, pd.Series, slice] = None,
     as_tuple: bool = True,
     as_df: bool = False,
     res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
     h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
-    if tissue:
-        coords = adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc
-    else:
-        coords = adata.obs.loc[:, cols] * h_sc
 
+    subset = slice(None) if subset is None else subset
+    coords = adata.obs.loc[subset, cols] * h_sc
+    
     if as_df:
         return coords
     coords = coords.values
