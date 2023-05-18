@@ -1181,9 +1181,46 @@ def assert_basic_spatial_features(
     return True, ""
 
 
-def plot_local_result(
-    adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs
+def draw_graph(
+    adata: AnnData,
+    graph_key: str = None,
+    ax: Optional[Axes] = None,
+    width: float = 0.4,
+    subset: Optional[Sequence[str]] = None,
+    geom: Optional[str] = None,
+    **kwargs,
 ):
+    if ax is None:
+        fig, ax = configure_subplots(1, 1, squeeze=True)
+
+    if isinstance(ax, np.ndarray):
+        ax = ax.flat[0]
+
+    G = spatial.find_visium_graph(
+        adata,
+        subset=subset,
+        geom=geom,
+        graph_key=graph_key,
+        inplace=False,  # This is important as we don't want to modify the original graph
+    )
+
+    try:
+        import networkx as nx
+    except ImportError:
+        raise ImportError("This function requires networkx to be installed.")
+
+    nx_kwargs = dict(
+        pos=nx.get_node_attributes(G, "pos"),
+        ax=ax,
+        width=width,
+        **kwargs,
+    )
+
+    nx.draw_networkx_edges(G, **nx_kwargs)
+    return ax
+
+
+def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs):
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
 
