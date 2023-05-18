@@ -19,8 +19,6 @@ from shapely.geometry import Point, Polygon
 from voyagerpy import utils
 from voyagerpy.spatial import spatial
 
-# from .spatial import get_default_graph
-
 
 def compute_weights(coords: gpd.GeoSeries, func="euclidean") -> Any:
     if func == "euclidean":
@@ -65,74 +63,102 @@ def dnn(
     return ret
 
 
-def graph2np(g: Any) -> List[List[Tuple[str, float]]]:
-    neighbour_list = []
+def compute_visium_graph(adata, graph_key: str, inplace: bool = True, force: bool = False) -> sp.csr_matrix:
+    from .spatial import get_default_graph
 
-    return neighbour_list
+    if graph_key is None:
+        graph_key = get_default_graph(adata)
 
+    if graph_key in adata.obsp and not force:
+        return adata.obsp[graph_key]
 
-_spatial_nb_methods = ["tri2nb", "knn", "dnn", "gabriel", "relative", "soi", "poly2nb"]
-_dist_types = ["none", "idw", "exp", "dpd"]
+    coord_names = ["array_row", "array_col"]
+    max_row, max_col = adata.obs[coord_names].max()
+    coords = adata.obs[coord_names].values
+    coord2barcode = dict(zip(map(tuple, coords), adata.obs_names))
 
+    rows = []
+    cols = []
+    index = adata.obs_names
+    for row, col in coord2barcode:
+        barcode = coord2barcode[(row, col)]
+        barcode_idx = index.get_loc(barcode)
 
-def compute_visium_dists(adata, filt):
-    select = select_obs(adata, filt)
+        nbrs = [(row, col + 2), (row + 1, col - 1), (row + 1, col + 1)]
+        for nbr_row, nbr_col in nbrs:
+            nbr_barcode = coord2barcode.get((nbr_row, nbr_col))
+            if nbr_barcode is None:
+                continue
+            nbr_idx = index.get_loc(nbr_barcode)
+            rows.extend([barcode_idx, nbr_idx])
+            cols.extend([nbr_idx, barcode_idx])
+    vals = [1] * len(rows)
+    visium_graph = sp.csr_matrix((vals, (rows, cols)), shape=(adata.n_obs, adata.n_obs))
 
-    coords = adata[select].obs[["array_col", "array_row"]] * np.array([1, np.sqrt(3)])
-    positions = gpd.GeoSeries(map(Point, coords.values), index=coords.index)
-    dists = compute_weights(positions)
-    return dists
+    if inplace:
+        adata.obsp[graph_key] = visium_graph
 
-
-def select_obs(adata: AnnData, filt: Optional[Tuple[str, Any]]) -> Union[slice, pd.Series]:
-    if filt is None:
-        return slice(None)
-
-    filt_key, filt_val = filt
-    if not isinstance(filt_val, (tuple, list)):
-        filt_val = (filt_val,)
-
-    return adata.obs[filt_key].isin(filt_val)
-
-
-def compute_visium_graph(adata, filt, dist_key: str) -> sp.csr_matrix:
-    if dist_key not in adata.obsp:
-        select = select_obs(adata, filt)
-        dists = compute_visium_dists(adata, filt)
-
-        if filt is not None:
-            (idx,) = np.where(select)
-            rows = np.tile(idx, len(idx))
-            cols = np.repeat(idx, len(idx))
-            matrix_data = (dists.values.ravel(), (rows, cols))
-
-            adata.obsp[dist_key] = sp.csr_matrix(matrix_data, shape=(adata.n_obs, adata.n_obs))
-        else:
-            adata.obsp[dist_key] = sp.csr_matrix(dists.values, shape=(adata.n_obs, adata.n_obs))
-
-    visium_graph = dnn(adata.obsp[dist_key].todense(), max_dist=3, full=True).astype(float)
-    return sp.csr_matrix(visium_graph, shape=(adata.n_obs, adata.n_obs))
+    return visium_graph
 
 
 def find_visium_graph(
-    adata: AnnData, filt=("in_tissue", 1), graph_key: str = "visium", dist_key: str = "dists", row_normalize: bool = True
+    adata: AnnData,
+    subset: Union[None, pd.Series, List[str]] = None,
+    graph_key: str = "visium",
+    geom: Optional[str] = None,
+    row_normalize: bool = True,
+    inplace: bool = True,
 ) -> nx.Graph:
-    if graph_key not in adata.obsp:
-        adata.obsp[graph_key] = compute_visium_graph(adata, filt, dist_key)
-        # adata.obsp[graph_key].eliminate_zeros()
+    """Find Visium graph from AnnData object.
+
+    Parameters
+    ----------
+    adata : AnnData
+        AnnData object containing Visium data.
+    subset : list, optional
+        Subset of spots to include in graph, by default None
+    graph_key : str, optional
+        Key in `adata.obsp` to store graph, by default "visium"
+    row_normalize : bool, optional
+        Whether to row normalize the graph, by default True
+    inplace : bool, optional
+        Whether to store graph in `adata.obsp`, by default True
+
+    Returns
+    -------
+    nx.Graph
+        NetworkX graph object.
+    """
+
+    visium_graph = compute_visium_graph(adata, graph_key, inplace=inplace, force=False)
 
     if row_normalize is True:
-        adata.obsp[graph_key] = utils.normalize_csr(adata.obsp[graph_key], byrow=True)
+        visium_graph = utils.normalize_csr(visium_graph, byrow=True)
 
-    G = nx.Graph()
-    nodes_out, nodes_in = np.where(adata.obsp[graph_key].todense())
+    if inplace is True and graph_key not in adata.obsp:
+        adata.obsp[graph_key] = visium_graph
 
-    # Add node names or mappings
-    edges = list(zip(nodes_out, nodes_in))
-    G.add_edges_from(edges)
-    nx.relabel_nodes(G, dict(enumerate(adata.obs.index)), copy=False)
+    if subset is None:
+        subset = slice(None)
 
-    positions: pd.DataFrame = spatial.get_spot_coords(adata, tissue=True, as_df=True)
-    positions = dict(zip(positions.index, positions.values))
-    nx.set_node_attributes(G, positions, "pos")
+    barcodes = adata[subset].obs_names
+    index = adata.obs_names.get_indexer(barcodes)
+
+    adj_mat = visium_graph[index, :][:, index]
+    G = nx.Graph(adj_mat)
+    nx.relabel_nodes(G, dict(enumerate(barcodes)), copy=False)
+
+    # Get positions of nodes
+    geo = adata.obsm["geometry"]
+    if not isinstance(geo, gpd.GeoDataFrame):
+        geo = gpd.GeoDataFrame(geo, geometry=geo.columns[0])
+    if geom is None or geom not in geo.columns:
+        points = geo.geometry.centroid
+    else:
+        points = geo[geom].centroid
+
+    geo_subset = pd.DataFrame({"x": points.x, "y": points.y}, index=geo.index)[subset]
+    pos_dict = dict(zip(geo_subset.index, geo_subset[["x", "y"]].values))
+
+    nx.set_node_attributes(G, pos_dict, "pos")
     return G

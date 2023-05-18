@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from voyagerpy.spatial.graphs import find_visium_graph
+from voyagerpy.spatial.graphs import compute_visium_graph, find_visium_graph
 from voyagerpy.spatial.spatial import (
     apply_transforms,
     cancel_transforms,
