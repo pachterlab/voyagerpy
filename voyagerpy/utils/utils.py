@@ -154,29 +154,36 @@ def scale(
     center_before_scale: bool = True,
     ddof: int = 1,
 ):
-    is_sparse = isinstance(X, sp.csr_matrix)
-    if is_sparse:
-        X = X.todense()
+
+    if sp.issparse(X):  # or isinstance(X, np.matrix):
+        A = X.todense()  # type: ignore
+    elif isinstance(X, np.ndarray):
+        A = X.copy()
     else:
-        X = X.copy()
+        raise TypeError("X must be of type np.ndarray or sp.spmatrix.")
+
+    del X
+
+    # if not isinstance(A, np.ndarray) or isinstance(A, np.matrix):
+    #     raise RuntimeError("A must be a numpy array. This should not happen.")
 
     kwargs = dict(axis=0, keepdims=True)
-    if isinstance(X, np.matrix):
+    if isinstance(A, np.matrix):
         kwargs.pop("keepdims")
 
     if center and center_before_scale:
-        X -= X.mean(**kwargs)
+        A -= A.mean(**kwargs)
 
     if unit_variance:
-        std = X.std(ddof=ddof, **kwargs)
+        std = A.std(ddof=ddof, **kwargs)
         w = np.where(std < 1e-8)
         std[w] = 1
-        X = np.divide(X, std)
+        A = np.divide(A, std)
 
     if center and not center_before_scale:
-        X -= X.mean(axis=0)
+        A -= A.mean(axis=0)
 
-    return X
+    return A
 
 
 def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:
