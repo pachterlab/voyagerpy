@@ -831,6 +831,7 @@ def plot_spatial_feature(
     features: Union[str, Sequence[str]],
     ncol: int = 2,
     barcode_geom: Optional[str] = None,
+    barcode_graph_kwargs: Optional[Dict] = None,
     annot_geom: Optional[str] = None,
     subset_barcodes: Union[None, slice, Sequence[str]] = None,
     layer: Optional[str] = None,
@@ -1064,6 +1065,12 @@ def plot_spatial_feature(
                 extent = (x_min, x_max, y_min, y_max)
             _ax = imshow(adata, None, _ax, extent=extent)
 
+        graph_on_top = (barcode_graph_kwargs or {}).pop("on_top", True)
+        if barcode_graph_kwargs is not None and not graph_on_top:
+            _barcode_graph_kwargs = dict(subset=barcode_selection, geom=geo.geometry.name, ax=_ax)
+            _barcode_graph_kwargs.update(barcode_graph_kwargs)
+            _ax = draw_graph(adata, **_barcode_graph_kwargs)
+
         if geom_is_poly:
             legend_kwargs_.pop("title", None)
 
@@ -1114,6 +1121,11 @@ def plot_spatial_feature(
                 **extra_kwargs,
                 **kwargs,
             )
+
+        if barcode_graph_kwargs is not None and graph_on_top:
+            _barcode_graph_kwargs = dict(subset=barcode_selection, geom=geo.geometry.name, ax=_ax)
+            _barcode_graph_kwargs.update(barcode_graph_kwargs)
+            _ax = draw_graph(adata, **_barcode_graph_kwargs)
 
         if annot_geom is not None:
             if annot_geom in adata.uns["spatial"]["geom"]:
