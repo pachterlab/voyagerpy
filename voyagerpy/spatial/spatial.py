@@ -592,7 +592,10 @@ def rollback_transforms(adata: AnnData, apply: bool = True):
 
 
 def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None):
-    import libpysal
+    try:
+        import libpysal
+    except ImportError:
+        raise ImportError("Spatial Weights require libpysal to be installed. Please install it with `pip install libpysal`.")
 
     distances = adata.obsp[graph_name or get_default_graph(adata)].copy()
     if sparse.issparse(distances):
@@ -736,7 +739,12 @@ def losh(
     key_added: str = "losh",
     layer: Optional[str] = None,
 ) -> AnnData:
-    import esda
+    try:
+        import esda
+    except ImportError:
+        raise ImportError(
+            "LOSH requires the `esda` package. Please install it with `pip install esda`."
+        )
 
     if not inplace:
         adata = adata.copy()
@@ -784,7 +792,12 @@ def local_moran(
     layer: Optional[str] = None,
     **kwargs,
 ) -> AnnData:
-    import esda
+    try:
+        import esda
+    except ImportError:
+        raise ImportError(
+            "Local Moran's I requires the `esda` package. Please install it with `pip install esda`."
+        )
 
     if not inplace:
         adata = adata.copy()
