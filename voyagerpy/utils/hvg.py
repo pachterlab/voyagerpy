@@ -293,10 +293,10 @@ def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
 
     output = pd.DataFrame({"mean": _means, "total": _vars, "tech": fit(_means)}, index=names)
     output["bio"] = output["total"] - output["tech"]
-    output["p_value"] = 1 - norm.cdf(output["bio"] / output["tech"], scale=std_dev)
-    filt_out = output[~output["p_value"].isna()]
-    # filt_out["FDR"] = fdrcorrection(filt_out["p_value"])[1]
-    _, pval_corr = fdrcorrection(filt_out["p_value"])
+    output["p.value"] = 1 - norm.cdf(output["bio"] / output["tech"], scale=std_dev)
+    filt_out = output[~output["p.value"].isna()]
+    # filt_out["FDR"] = fdrcorrection(filt_out["p.value"])[1]
+    _, pval_corr = fdrcorrection(filt_out["p.value"])
     output.loc[filt_out.index, "FDR"] = pval_corr
 
     return output
