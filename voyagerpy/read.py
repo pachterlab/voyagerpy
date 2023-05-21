@@ -206,7 +206,7 @@ def read_10x_visium(
 
     # spatial
     tissue_pos_path = path / "spatial" / "tissue_positions.csv"
-    tissue_alt_path = tissue_pos_path.with_stem("tissue_positions_list")
+    tissue_alt_path = tissue_pos_path.with_name("tissue_positions_list").with_suffix(".csv")
 
     if tissue_pos_path.exists():
         version = 2
