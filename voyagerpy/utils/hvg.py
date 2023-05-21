@@ -8,6 +8,7 @@ from math import exp
 import numpy as np
 import pandas as pd
 
+from anndata import AnnData
 from scipy.optimize import least_squares
 from scipy import sparse
 from scipy.stats import iqr, norm
@@ -15,7 +16,8 @@ from sklearn.linear_model import LinearRegression
 
 from statsmodels.stats.multitest import fdrcorrection
 from statsmodels.nonparametric.kde import KDEUnivariate
-from scanpy.preprocessing._utils import _get_mean_var
+
+from typing import Optional, Tuple, Union
 
 
 def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=10, b_grid_range=5, n_grid_max=10):
@@ -301,7 +303,38 @@ def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
     # 1 - norm().cdf(0.1)
 
 
-def model_gene_var(adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None):
+def get_mean_var(X: Union[np.ndarray, sparse.csr_matrix, sparse.csc_matrix], axis=0, ddof=1) -> Tuple[np.ndarray, np.ndarray]:
+    """\
+    Calculate mean and variance of X.
+
+    Parameters
+    ----------
+    X : Union[np.ndarray, sparse.csr_matrix, sparse.csc_matrix]
+        The array to compute the mean and variance over.
+    axis : int, optional
+        Axis to calculate mean and variance. The default is 0.
+
+    Returns
+    -------
+    mean : ndarray
+        Mean of X over axis.
+    var : ndarray
+        Variance of X over axis.
+
+    """
+    if sparse.issparse(X):
+        mean = X.mean(axis=axis).A.reshape(-1)
+        var = X.A.var(axis=axis, ddof=ddof)
+    else:
+        mean = X.mean(axis=axis).reshape(-1)
+        var = X.var(axis=axis, ddof=ddof)
+
+    return mean.squeeze(), var.squeeze()
+
+
+def model_gene_var(
+    adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None, layer: Optional[str] = None, ddof: int = 1
+):
     """\
     Return the modelled gene variance.
 
@@ -327,13 +360,17 @@ def model_gene_var(adata, block=None, design=None, subset_row=None, subset_fit=N
         Information on modelled variance into biological and technical.
 
     """
-    if sparse.issparse(adata):
-        x_means, x_vars = _get_mean_var(adata, axis=0)
-        names = gene_names
+
+    if isinstance(adata, AnnData):
+        X = adata.X if layer is None else adata.layers[layer]
+        names = adata.var_names
     else:
-        x_means, x_vars = _get_mean_var(adata.X, axis=0)
-        names = adata.var.index
-    # decompose_log_exprs(x_means, x_vars)
+        X = adata
+        names = gene_names
+
+    del adata
+    x_means, x_vars = get_mean_var(X, axis=0, ddof=ddof)
+
     if subset_fit is None:
         fit_stats_means = x_means
         fit_stats_vars = x_vars
