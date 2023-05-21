@@ -827,7 +827,12 @@ def local_moran(
 
     adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
     moran_df = adata.obsm[key_added]
+
+    n = adata.n_obs
+    correction = n / (n - 1)
     for feat, lm in zip(features, local_morans):
+        # TODO: correct wrt n-1 vs n
+        # moran_df[f"{feat}"] = lm.Is * correction
         moran_df[f"{feat}"] = lm.Is
 
     # Keep metadata for this run
