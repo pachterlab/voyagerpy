@@ -311,6 +311,20 @@ def to_points(
     return points
 
 
+def get_visium_spots(adata: AnnData, with_radius: bool = False, res: Optional[str] = None) -> gpd.GeoSeries:
+    scale = utl.get_scale(adata, res=res)
+    scale_dict = adata.uns['spatial'].get("scale", {})
+    spot_diam = scale_dict.get("spot_diameter_fullres")
+    return to_points(
+        x="pxl_col_in_fullres",
+        y="pxl_row_in_fullres",
+        data=adata.obs,
+        scale=scale,
+        radius=scale * spot_diam / 2 if with_radius else None,
+    )
+
+
+
 def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = False, res: Optional[str] = None) -> AnnData:
     if not inplace:
         adata = adata.copy()
@@ -359,18 +373,17 @@ def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = Fa
 
 def get_spot_coords(
     adata: AnnData,
-    tissue: bool = True,
+    subset: Union[None, pd.Series, slice] = None,
     as_tuple: bool = True,
     as_df: bool = False,
     res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
     h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
-    if tissue:
-        coords = adata.obs.loc[adata.obs["in_tissue"] == 1, cols] * h_sc
-    else:
-        coords = adata.obs.loc[:, cols] * h_sc
 
+    subset = slice(None) if subset is None else subset
+    coords = adata.obs.loc[subset, cols] * h_sc
+    
     if as_df:
         return coords
     coords = coords.values
@@ -578,7 +591,10 @@ def rollback_transforms(adata: AnnData, apply: bool = True):
 
 
 def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None):
-    import libpysal
+    try:
+        import libpysal
+    except ImportError:
+        raise ImportError("Spatial Weights require libpysal to be installed. Please install it with `pip install libpysal`.")
 
     distances = adata.obsp[graph_name or get_default_graph(adata)].copy()
     if sparse.issparse(distances):
@@ -722,7 +738,12 @@ def losh(
     key_added: str = "losh",
     layer: Optional[str] = None,
 ) -> AnnData:
-    import esda
+    try:
+        import esda
+    except ImportError:
+        raise ImportError(
+            "LOSH requires the `esda` package. Please install it with `pip install esda`."
+        )
 
     if not inplace:
         adata = adata.copy()
@@ -770,7 +791,12 @@ def local_moran(
     layer: Optional[str] = None,
     **kwargs,
 ) -> AnnData:
-    import esda
+    try:
+        import esda
+    except ImportError:
+        raise ImportError(
+            "Local Moran's I requires the `esda` package. Please install it with `pip install esda`."
+        )
 
     if not inplace:
         adata = adata.copy()
@@ -801,7 +827,12 @@ def local_moran(
 
     adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
     moran_df = adata.obsm[key_added]
+
+    n = adata.n_obs
+    correction = n / (n - 1)
     for feat, lm in zip(features, local_morans):
+        # TODO: correct wrt n-1 vs n
+        # moran_df[f"{feat}"] = lm.Is * correction
         moran_df[f"{feat}"] = lm.Is
 
     # Keep metadata for this run

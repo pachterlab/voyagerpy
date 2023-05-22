@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from voyagerpy.spatial.graphs import find_visium_graph
+from voyagerpy.spatial.graphs import compute_visium_graph, find_visium_graph
 from voyagerpy.spatial.spatial import (
     apply_transforms,
     cancel_transforms,
@@ -15,6 +15,7 @@ from voyagerpy.spatial.spatial import (
     get_spot_coords,
     get_tissue_boundary,
     get_tissue_contour_score,
+    get_visium_spots,
     local_moran,
     losh,
     mirror_img,
@@ -40,6 +41,7 @@ __all__ = [
     "get_spot_coords",
     "get_tissue_boundary",
     "get_tissue_contour_score",
+    "get_visium_spots",
     "local_moran",
     "losh",
     "mirror_img",

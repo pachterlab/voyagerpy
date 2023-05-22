@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
+import warnings
 from math import exp
 
 import numpy as np
 import pandas as pd
 
+from anndata import AnnData
 from scipy.optimize import least_squares
 from scipy import sparse
 from scipy.stats import iqr, norm
@@ -14,7 +16,8 @@ from sklearn.linear_model import LinearRegression
 
 from statsmodels.stats.multitest import fdrcorrection
 from statsmodels.nonparametric.kde import KDEUnivariate
-from scanpy.preprocessing._utils import _get_mean_var
+
+from typing import Optional, Tuple, Union
 
 
 def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=10, b_grid_range=5, n_grid_max=10):
@@ -62,8 +65,9 @@ def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=1
     b_grid_pts = 2 ** np.linspace(-b_grid_range, b_grid_range, n_grid_max)
     n_grid_pts = 2 ** np.linspace(0, n_grid_max, grid_length)
     hits = np.array([(x, y) for x in b_grid_pts for y in n_grid_pts], dtype=np.float64)
-
-    possible_vals = np.apply_along_axis(lambda x: sum((_vars - (1.13 * x[0] * _means) / ((_means ** x[1]) + x[0] + 0.001)) ** 2), 1, hits)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        possible_vals = np.apply_along_axis(lambda x: sum((_vars - (1.13 * x[0] * _means) / ((_means ** x[1]) + x[0] + 0.001)) ** 2), 1, hits)
 
     min_ind = np.argmin(possible_vals)
     b_start = np.log(hits[min_ind][0])
@@ -289,17 +293,48 @@ def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
 
     output = pd.DataFrame({"mean": _means, "total": _vars, "tech": fit(_means)}, index=names)
     output["bio"] = output["total"] - output["tech"]
-    output["p_value"] = 1 - norm.cdf(output["bio"] / output["tech"], scale=std_dev)
-    filt_out = output[~output["p_value"].isna()]
-    # filt_out["FDR"] = fdrcorrection(filt_out["p_value"])[1]
-    _, pval_corr = fdrcorrection(filt_out["p_value"])
+    output["p.value"] = 1 - norm.cdf(output["bio"] / output["tech"], scale=std_dev)
+    filt_out = output[~output["p.value"].isna()]
+    # filt_out["FDR"] = fdrcorrection(filt_out["p.value"])[1]
+    _, pval_corr = fdrcorrection(filt_out["p.value"])
     output.loc[filt_out.index, "FDR"] = pval_corr
 
     return output
     # 1 - norm().cdf(0.1)
 
 
-def model_gene_var(adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None):
+def get_mean_var(X: Union[np.ndarray, sparse.csr_matrix, sparse.csc_matrix], axis=0, ddof=1) -> Tuple[np.ndarray, np.ndarray]:
+    """\
+    Calculate mean and variance of X.
+
+    Parameters
+    ----------
+    X : Union[np.ndarray, sparse.csr_matrix, sparse.csc_matrix]
+        The array to compute the mean and variance over.
+    axis : int, optional
+        Axis to calculate mean and variance. The default is 0.
+
+    Returns
+    -------
+    mean : ndarray
+        Mean of X over axis.
+    var : ndarray
+        Variance of X over axis.
+
+    """
+    if sparse.issparse(X):
+        mean = X.mean(axis=axis).A.reshape(-1)
+        var = X.A.var(axis=axis, ddof=ddof)
+    else:
+        mean = X.mean(axis=axis).reshape(-1)
+        var = X.var(axis=axis, ddof=ddof)
+
+    return mean.squeeze(), var.squeeze()
+
+
+def model_gene_var(
+    adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None, layer: Optional[str] = None, ddof: int = 1
+):
     """\
     Return the modelled gene variance.
 
@@ -325,13 +360,17 @@ def model_gene_var(adata, block=None, design=None, subset_row=None, subset_fit=N
         Information on modelled variance into biological and technical.
 
     """
-    if sparse.issparse(adata):
-        x_means, x_vars = _get_mean_var(adata, axis=0)
-        names = gene_names
+
+    if isinstance(adata, AnnData):
+        X = adata.X if layer is None else adata.layers[layer]
+        names = adata.var_names
     else:
-        x_means, x_vars = _get_mean_var(adata.X, axis=0)
-        names = adata.var.index
-    # decompose_log_exprs(x_means, x_vars)
+        X = adata
+        names = gene_names
+
+    del adata
+    x_means, x_vars = get_mean_var(X, axis=0, ddof=ddof)
+
     if subset_fit is None:
         fit_stats_means = x_means
         fit_stats_vars = x_vars
@@ -391,12 +430,12 @@ def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, lowess=Fal
         PARAMFUN = lambda x: f_predict(x, a, b, n)
         # return PARAMFUN
 
+    UNSCALEDFUN = PARAMFUN
     if lowess:
         # idx = np.round(np.linspace(0, len(m) - 1, 200)).astype(int)
         # ll = lowess(to_fit, exog=m, xvals=idx, resid_weights=w)
-        pass
-    else:
-        UNSCALEDFUN = PARAMFUN
+        warnings.warn("Lowess not implemented.")
+
     fit, std_dev = correct_logged_expectation(m, v, w, UNSCALEDFUN)
     return fit, std_dev
 

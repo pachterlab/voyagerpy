@@ -43,16 +43,20 @@ def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
     if res not in [None, "hi", "hires", "lo", "lowres"]:
         raise ValueError(f"Unrecognized value {res} for res.")
 
+    scale_dict = adata.uns["spatial"].get("scale", {})
     scale_key = None
+
     if is_lowres(adata) and res in [None, "lowres", "lo"]:
         scale_key = "tissue_lowres_scalef"
-    if is_highres(adata) and res in [None, "hires", "hi"]:
+    elif is_highres(adata) and res in [None, "hires", "hi"]:
         scale_key = "tissue_hires_scalef"
 
     if scale_key is None:
         raise ValueError("Invalid resolution. Make sure the correct image is loaded.")
+    elif scale_key not in scale_dict:
+        raise KeyError(f"Could not find scale factor {scale_key} for {res}")
 
-    return adata.uns["spatial"]["scale"][scale_key]
+    return scale_dict[scale_key]
 
 
 def add_per_gene_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
@@ -108,6 +112,7 @@ def log_norm_counts(
     inplace: bool = True,
     base: Optional[int] = 2,
     pseudocount: int = 1,
+    zero_to_zero: bool = False,
 ):
     # Roughly equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
@@ -128,7 +133,7 @@ def log_norm_counts(
     other_log = lambda x: np.log(x) / np.log(base)  # type: ignore # noqa: E731
     log = log_funcs.get(base, other_log)
 
-    if pseudocount == 1:
+    if pseudocount == 1 or zero_to_zero:
         # This ensures we don't interact with the zeros in X
         X.data = log(X.data + pseudocount)
     else:
@@ -143,35 +148,42 @@ def log_norm_counts(
 
 
 def scale(
-    X,
-    center=True,
+    X: Union[sp.spmatrix, np.ndarray, np.matrix],
+    center: bool = True,
     unit_variance: bool = True,
     center_before_scale: bool = True,
     ddof: int = 1,
-):
-    is_sparse = isinstance(X, sp.csr_matrix)
-    if is_sparse:
-        X = X.todense()
+) -> np.ndarray:
+
+    if sp.issparse(X):  # or isinstance(X, np.matrix):
+        A = X.todense()  # type: ignore
+    elif isinstance(X, np.ndarray):
+        A = X.copy()
     else:
-        X = X.copy()
+        raise TypeError("X must be of type np.ndarray or sp.spmatrix.")
+
+    del X
+
+    # if not isinstance(A, np.ndarray) or isinstance(A, np.matrix):
+    #     raise RuntimeError("A must be a numpy array. This should not happen.")
 
     kwargs = dict(axis=0, keepdims=True)
-    if isinstance(X, np.matrix):
+    if isinstance(A, np.matrix):
         kwargs.pop("keepdims")
 
     if center and center_before_scale:
-        X -= X.mean(**kwargs)
+        A -= A.mean(**kwargs)
 
     if unit_variance:
-        std = X.std(ddof=ddof, **kwargs)
+        std = A.std(ddof=ddof, **kwargs)
         w = np.where(std < 1e-8)
         std[w] = 1
-        X = np.divide(X, std)
+        A = np.divide(A, std)
 
     if center and not center_before_scale:
-        X -= X.mean(axis=0)
+        A -= A.mean(axis=0)
 
-    return X
+    return A
 
 
 def normalize_csr(X: sp.csr_matrix, byrow: bool = True) -> sp.csr_matrix:

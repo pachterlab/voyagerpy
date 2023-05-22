@@ -298,7 +298,7 @@ def find_markers(adata: AnnData, hvg: bool = False, hvg_string: str = "highly_va
         res[f"{cluster}_{i}"] = pd.DataFrame(
             {"p_vals": pval_max[sort_order], "FDR": p_adjust_bh(pval_max)[sort_order], "summary_es": es[sort_order]},
             index=np.array(pval_max[sort_order].index, dtype=str),
-        )
+        ).rename(columns={"summary_es": "summary.AUC", "p_vals": "p.value"})
 
     return res
 

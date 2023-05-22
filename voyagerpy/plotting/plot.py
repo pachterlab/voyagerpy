@@ -640,7 +640,7 @@ def plot_expression(
     gene: Union[str, Sequence[str]],
     y: Optional[str] = None,
     obsm: Optional[str] = None,
-    ax: Union[None, Axes, np.ndarray[Axes]] = None,
+    ax: Union[None, Axes, npt.NDArray[Axes]] = None,
     **kwargs,
 ):
     _rc_params = {
@@ -831,6 +831,7 @@ def plot_spatial_feature(
     features: Union[str, Sequence[str]],
     ncol: int = 2,
     barcode_geom: Optional[str] = None,
+    barcode_graph_kwargs: Optional[Dict] = None,
     annot_geom: Optional[str] = None,
     subset_barcodes: Union[None, slice, Sequence[str]] = None,
     layer: Optional[str] = None,
@@ -1064,6 +1065,12 @@ def plot_spatial_feature(
                 extent = (x_min, x_max, y_min, y_max)
             _ax = imshow(adata, None, _ax, extent=extent)
 
+        graph_on_top = (barcode_graph_kwargs or {}).pop("on_top", True)
+        if barcode_graph_kwargs is not None and not graph_on_top:
+            _barcode_graph_kwargs = dict(subset=barcode_selection, geom=geo.geometry.name, ax=_ax)
+            _barcode_graph_kwargs.update(barcode_graph_kwargs)
+            _ax = draw_graph(adata, **_barcode_graph_kwargs)
+
         if geom_is_poly:
             legend_kwargs_.pop("title", None)
 
@@ -1114,6 +1121,11 @@ def plot_spatial_feature(
                 **extra_kwargs,
                 **kwargs,
             )
+
+        if barcode_graph_kwargs is not None and graph_on_top:
+            _barcode_graph_kwargs = dict(subset=barcode_selection, geom=geo.geometry.name, ax=_ax)
+            _barcode_graph_kwargs.update(barcode_graph_kwargs)
+            _ax = draw_graph(adata, **_barcode_graph_kwargs)
 
         if annot_geom is not None:
             if annot_geom in adata.uns["spatial"]["geom"]:
@@ -1181,9 +1193,46 @@ def assert_basic_spatial_features(
     return True, ""
 
 
-def plot_local_result(
-    adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs
+def draw_graph(
+    adata: AnnData,
+    graph_key: str = None,
+    ax: Optional[Axes] = None,
+    width: float = 0.4,
+    subset: Optional[Sequence[str]] = None,
+    geom: Optional[str] = None,
+    **kwargs,
 ):
+    if ax is None:
+        fig, ax = configure_subplots(1, 1, squeeze=True)
+
+    if isinstance(ax, np.ndarray):
+        ax = ax.flat[0]
+
+    G = spatial.find_visium_graph(
+        adata,
+        subset=subset,
+        geom=geom,
+        graph_key=graph_key,
+        inplace=False,  # This is important as we don't want to modify the original graph
+    )
+
+    try:
+        import networkx as nx
+    except ImportError:
+        raise ImportError("This function requires networkx to be installed.")
+
+    nx_kwargs = dict(
+        pos=nx.get_node_attributes(G, "pos"),
+        ax=ax,
+        width=width,
+        **kwargs,
+    )
+
+    nx.draw_networkx_edges(G, **nx_kwargs)
+    return ax
+
+
+def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs):
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
 
@@ -1755,7 +1804,7 @@ def plot_barcode_histogram(
     label: Optional[Sequence[str]] = None,
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
-) -> np.ndarray[Axes]:
+) -> npt.NDArray[Axes]:
     features: List[str] = utils.listify(feature)  # type: ignore
     nplot = len(features)
     ncol = min(ncol, nplot)
@@ -1926,7 +1975,7 @@ def plot_features_histogram(
     markers: Union[None, str, Sequence[str]] = None,
     show_symbol: bool = True,
     **hist_kwargs,
-) -> np.ndarray[Axes]:
+) -> npt.NDArray[Axes]:
     features = [features] if isinstance(features, str) else features
     nplot = len(features)
     ncol = min(ncol, nplot)

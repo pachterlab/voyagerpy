@@ -5,6 +5,7 @@ from matplotlib.pyplot import rcParams
 
 from voyagerpy.plotting.cmap_helper import register_listed_cmap, register_segmented_cmap
 from voyagerpy.plotting.plot import (
+    draw_graph,
     elbow_plot,
     grouped_violinplot,
     imshow,
@@ -59,6 +60,7 @@ __all__ = [
     "elbow_plot",
     "grouped_violinplot",
     "imshow",
+    "draw_graph",
     "moran_plot",
     "plot_barcode_data",
     "plot_barcode_histogram",
