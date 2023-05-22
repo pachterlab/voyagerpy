@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+__version__ = "0.1.1"
+
 
 from voyagerpy import metrics as mtr
 from voyagerpy import plotting as plt
