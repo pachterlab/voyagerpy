@@ -41,11 +41,13 @@ jobs:
           ref: "gh-pages"
       - name: Build notebooks
         run: |
+          pip install --upgrade pip
+          pip install git+https://github.com/pmelsted/voyagerpy.git@main
           pip install jupyterlab "scanpy[leiden]"
           find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --execute --to html --output-dir notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}
           find notebooks -type f -name "*.html" | cut -f2 -d'/' | cut -f1 -d'.' | xargs -I {} python notebooks/nb_strip.py --output _includes/notebooks/{}.html notebooks/{}.html
           # mv notebooks/*_files img/ 2>/dev/null
-        
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Build with Jekyll
