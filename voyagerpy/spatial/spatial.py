@@ -3,8 +3,10 @@
 
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterable,
+    List,
     Literal,
     Optional,
     Sequence,
@@ -36,6 +38,20 @@ from voyagerpy import utils as utl
 
 # create spatial functions with shapely
 def get_approx_tissue_boundary(adata: AnnData, size: str = "hires", paddingx: int = 0, paddingy: int = 0) -> Tuple[int, int, int, int]:
+    """\
+Compute approx tissue. Get the approximate tissue boundary from an image in the AnnData object. Hello.
+
+:param adata: The AnnData object to get the tissue boundary from
+:type adata: AnnData
+:param size: The image resolution for, defaults to "hires"
+:type size: str
+:param paddingx: Horizontal paddding for cropping the image, defaults to 0
+:type paddingx: int, optional
+:param paddingy: Vertical padding for cropping the image, defaults to 0
+:type paddingy: int, optional
+:return: The top, bottom, left, and right coordinates of the tissue boundary, in pixels
+:rtype: Tuple[int, int, int, int]
+    """
     if size == "hires":
         scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
     else:
@@ -60,20 +76,17 @@ Contour = Any
 
 ## write a docstring for this function
 def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires") -> float:
-    # docstring
-    """
-    This function takes a contour and returns a score for how well it fits the tissue
+    """\
+Get the score of a contour. This function takes a contour and returns a score for how well it fits the tissue.
 
-    Parameters
-    ----------
-    cntr : Contour
-        The contour to score, represented as a list of points from a cv2 findContours function
-    adata: AnnData object describing the voyager dataset
-    size: str = "hires" or "lowres", the resolution of the image to use
-
-    Returns
-    -------
-    float the score of the contour
+:param cntr: The contour to score, represented as a list of points from a cv2 findContours function
+:type cntr: Contour
+:param adata: AnnData object describing the dataset
+:type adata: AnnData
+:param size: ``"hires"`` or ``"lowres"``, the resolution of the image to use, defaults to ``"hires"``
+:type size: str
+:return: Score of the contour of how well it fits the tissue.
+:rtype: float
     """
     scl = utl.get_scale(adata, res=size)
 
@@ -108,6 +121,21 @@ def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires")
 
 
 def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200, high: int = 255) -> Tuple[int, Optional[Contour]]:
+    """\
+Detect the tissue boundary using a thresholding method. The contours are 
+evaluated from the image in ``adata.uns["spatial"]["img"][size]``
+
+:param adata: The AnnData object to get the tissue boundary from.
+:type adata: AnnData
+:param size: The resolution of the image to use for tissue detection, defaults to "hires"
+:type size: str, optional
+:param low: The minimum threshold value, defaults to 200
+:type low: int, optional
+:param high: The maximum threshold value, defaults to 255
+:type high: int, optional
+:return: The threshold value and the contour of the tissue boundary
+:rtype: Tuple[int, Any]
+    """
     bgr_img = cvtColor(adata.uns["spatial"]["img"][size], COLOR_RGB2BGR)
     bgr_img = (bgr_img * 255).astype("uint8")  # type: ignore
     imgray = cvtColor(bgr_img, COLOR_BGR2GRAY)
@@ -165,6 +193,24 @@ def get_tissue_boundary(
     inplace: bool = False,
     # detect_threshold: bool = False,
 ) -> Polygon:
+    """\
+Detect the tissue boundary. This function computes the tissue boundary from the image in ``adata.uns["spatial"]["img"][size]``
+
+:param adata: _description_
+:type adata: AnnData
+:param threshold_low: _description_, defaults to None
+:type threshold_low: Optional[int], optional
+:param size: _description_, defaults to "hires"
+:type size: Optional[str], optional
+:param strictness: _description_, defaults to None
+:type strictness: Optional[int], optional
+:param inplace: _description_, defaults to False
+:type inplace: bool, optional
+:raises ValueError: _description_
+:return: _description_
+:rtype: Polygon
+    """
+
     if size not in (None, "lowres", "hires"):
         raise ValueError('Expected size to be one of None, "lowres", or "hires", but got `{size}`')
 
@@ -260,6 +306,28 @@ def set_geometry(
     dim: Union[str, Literal["barcode", "gene"]] = "barcode",
     inplace: bool = True,
 ) -> AnnData:
+    """\
+Set the geometry of the AnnData object. This function sets the geometry of the AnnData object in ``adata.obsm["geometry"]``, which is a ``gpd.GeoDataFrame``.
+If the geometry dataframe does not exist, it will be created. If values is not None, it will be set as the geometry values. 
+
+
+:param adata: The AnnData object to set the geometry of.
+:type adata: AnnData
+:param geom: The name of the geometry column to set. If the column does not exist, it will be created and populated with ``values``.
+:type geom: str
+:param values: The geometry series to populate the ``geom`` column with, defaults to None. Must be supplied if the ``geom`` column does not exist.
+:type values: Optional[gpd.GeoSeries], optional
+:param index: The index to associate with the ``values``. If ``None``, will use the geometry dataframe's indexind, defaults to `None`
+:type index: Optional[pd.Index], optional
+:param dim: The type of geometry to set, defaults to "barcode"
+:type dim: Union[str, Literal[&quot;barcode&quot;, &quot;gene&quot;]], optional
+:param inplace: Whether to copy the AnnData object or modify it inplace, defaults to True
+:type inplace: bool, optional
+:raises ValueError: If ``geom`` is not a column in the geometry dataframe and ``values`` is ``None``.
+:return: Updated AnnData object. The geometry dataframe contains a column with the name supplied by ``geom`` and set as the default geometry. \
+If ``values`` is not ``None``, the values will be set as the geometry values.
+:rtype: AnnData
+    """
     if not inplace:
         adata = adata.copy()
 
@@ -300,6 +368,25 @@ def to_points(
     scale: float = 1,
     radius: Optional[float] = None,
 ) -> gpd.GeoSeries:
+    """\
+Create a GeoSeries from x and y coordinates. If radius is not None, will create a circle with the given radius around each point.
+Otherwise, will create a point at each x,y coordinate.
+
+:param x: The x coordinates of the points. If ``str``, will use ``data[x]``.
+:type x: Union[str, pd.Series, np.ndarray]
+:param y: The y coordinates of the points. If ``str``, will use ``data[y]``.
+:type y: Union[str, pd.Series, np.ndarray]
+:param data: The dataframe to get ``x`` and ``y`` from if they are of type ``str``, defaults to None
+:type data: Union[gpd.GeoDataFrame, pd.DataFrame, None], optional
+:param scale: The scale to convert the coordinates to pixel coordinates, defaults to 1
+:type scale: float, optional
+:param radius: If supplied, the radius of the circle at each coordinate, defaults to None
+:type radius: Optional[float], optional
+:raises ValueError: If ``data`` is ``None`` and either ``x`` or ``y`` is of type ``str``.
+:raises KeyError: If either ``x`` or ``y`` is of type ``str`` and the key does not exist in ``data``.
+:return: GeoSeries of points at the given coordinates. If radius is not ``None``, will be a circle (Polygon) with the given radius.
+:rtype: gpd.GeoSeries
+    """
     if data is None and (isinstance(x, str) or isinstance(y, str)):
         raise ValueError("data must not be None if either x or y is str")
     xdat = data[x] if isinstance(x, str) else x
@@ -312,8 +399,20 @@ def to_points(
 
 
 def get_visium_spots(adata: AnnData, with_radius: bool = False, res: Optional[str] = None) -> gpd.GeoSeries:
+    """\
+Return a GeoSeries of the spots in the Visium slide. If ``with_radius`` is ``True``, will return circular polygons with the radius of the spot diameter, otherwise will return points.
+
+:param adata: _description_
+:type adata: AnnData
+:param with_radius: _description_, defaults to False
+:type with_radius: bool, optional
+:param res: _description_, defaults to None
+:type res: Optional[str], optional
+:return: _description_
+:rtype: gpd.GeoSeries
+    """
     scale = utl.get_scale(adata, res=res)
-    scale_dict = adata.uns['spatial'].get("scale", {})
+    scale_dict = adata.uns["spatial"].get("scale", {})
     spot_diam = scale_dict.get("spot_diameter_fullres")
     return to_points(
         x="pxl_col_in_fullres",
@@ -324,8 +423,27 @@ def get_visium_spots(adata: AnnData, with_radius: bool = False, res: Optional[st
     )
 
 
+def get_geom(
+    adata: AnnData,
+    threshold: Optional[int] = None,
+    inplace: bool = False,
+    res: Optional[str] = None,
+) -> AnnData:
+    """\
+Get the tissue polygons and tissue boundary from the sample image.
+If they don't exist, they will be computed.
 
-def get_geom(adata: AnnData, threshold: Optional[int] = None, inplace: bool = False, res: Optional[str] = None) -> AnnData:
+:param adata: The AnnData object to get the geometry from.
+:type adata: AnnData
+:param threshold: The threshold for computing the tissue segmentation, defaults to None
+:type threshold: Optional[int], optional
+:param inplace: Whether to copy the AnnData object or not, defaults to False
+:type inplace: bool, optional
+:param res: The resolution of the image to use for tissue segmentation, defaults to None
+:type res: Optional[str], optional
+:return: The updated AnnData object
+:rtype: AnnData
+    """
     if not inplace:
         adata = adata.copy()
 
@@ -378,12 +496,28 @@ def get_spot_coords(
     as_df: bool = False,
     res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
+    """\
+Get the spot coordinates in the image.
+
+:param adata: The AnnData object to get the spot coordinates from.
+:type adata: AnnData
+:param subset: Subset of observations which to get the spot coordinates from, defaults to None
+:type subset: Union[None, pd.Series, slice], optional
+:param as_tuple: Whether to return the coordinates as a tuple of arrays, defaults to True
+:type as_tuple: bool, optional
+:param as_df: Whether to return a dataframe with the coordinates , defaults to False
+:type as_df: bool, optional
+:param res: Which resolution to scale the coordinates for, defaults to None
+:type res: Optional[str], optional
+:return: The x and y coordinates of the spots from the AnnData object, as a tuple, dataframe or Nx2 array.
+:rtype: Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]
+    """
     h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
 
     subset = slice(None) if subset is None else subset
     coords = adata.obs.loc[subset, cols] * h_sc
-    
+
     if as_df:
         return coords
     coords = coords.values
@@ -402,6 +536,12 @@ def get_spot_coords(
 
 
 def cancel_transforms(adata: AnnData) -> None:
+    """\
+Cancel unapplied transforms.
+
+:param adata: The AnnData object to cancel the transforms for.
+:type adata: AnnData
+    """
     spatial_dict = adata.uns["spatial"]
     transforms = spatial_dict.get("transform", ([], []))
     pxl_coord_cols = ["pxl_col_in_fullres_tmp", "pxl_row_in_fullres_tmp"]
@@ -411,7 +551,12 @@ def cancel_transforms(adata: AnnData) -> None:
     adata.obs.drop(pxl_coord_cols, axis="columns", inplace=True, errors="ignore")
 
 
-def apply_transforms(adata) -> None:
+def apply_transforms(adata: AnnData) -> None:
+    """Apply unapplied transforms.
+
+    :param adata: The AnnData object to apply the transforms for.
+    :type adata: AnnData
+    """
     spatial_dict = adata.uns["spatial"]
     transforms = spatial_dict.get("transform", ([], []))
     pxl_coord_cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
@@ -431,6 +576,18 @@ def apply_transforms(adata) -> None:
 
 
 def _rotate_coordinate_system(img: np.ndarray, coords: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    """\
+Rotate the coordinate system. Rotates the image and the coordinates by 90 degrees k times.
+
+:param img: The image to rotate.
+:type img: np.ndarray
+:param coords: The coordinates to rotate.
+:type coords: np.ndarray
+:param k: The number of times to rotate the image and coordinates by 90 degrees.
+:type k: int
+:return: The rotated image and coordinates.
+:rtype: Tuple[np.ndarray, np.ndarray]
+    """
     rotation_mats = rotation_mats = [
         np.array([[1, 0], [0, 1]]),
         np.array([[0, -1], [1, 0]]),
@@ -453,7 +610,19 @@ def _rotate_coordinate_system(img: np.ndarray, coords: np.ndarray, k: int) -> Tu
     return img, coords
 
 
-def _mirror_coordinate_system(img, coords, axis):
+def _mirror_coordinate_system(img: np.ndarray, coords: np.ndarray, axis: int) -> Tuple[np.ndarray, np.ndarray]:
+    """\
+Mirror the coordinate system. Mirrors the image and the coordinates along the given axis.`
+
+:param img: The image to mirror.
+:type img: np.ndarray
+:param coords: The coordinates to mirror.
+:type coords: np.ndarray
+:param axis: Which axis to use for mirroring.
+:type axis: int
+:return: The mirrored image and coordinates.
+:rtype: Tuple[np.ndarray, np.ndarray]
+    """
     n_rows, n_cols = img.shape[:2]
 
     if axis % 2 == 0:
@@ -467,14 +636,33 @@ def _mirror_coordinate_system(img, coords, axis):
     return img, coords
 
 
-def get_transformation_function(which: str):
+def get_transformation_function(which: str) -> Callable[[AnnData, bool, Optional[int], Optional[int]], Dict[str, np.ndarray]]:
     def mirror_param_eval(k: Optional[int] = None, axis: Optional[int] = None) -> int:
+        """Evaluate the mirror parameters.
+
+        :param k: Rotation parameter - not used, defaults to None
+        :type k: Optional[int], optional
+        :param axis: The axis to mirror along, defaults to None
+        :type axis: Optional[int], optional
+        :raises ValueError: If axis not in [None, 0, 1]
+        :return: The axis. If axis is None, returns 0.
+        :rtype: int
+        """
         axis = axis or 0
         if axis not in range(2):
             raise ValueError("Invalid mirror axis, must be either 0 or 1")
         return axis
 
     def rotate_param_eval(k: Optional[int] = None, axis: Optional[int] = None) -> int:
+        """Evaluate the rotation parameters.
+
+        :param k: The number of 90-degree rotatons, defaults to None
+        :type k: Optional[int], optional
+        :param axis: Mirror axis - not used, defaults to None
+        :type axis: Optional[int], optional
+        :return: k modulo 4. If k is None, returns 1.
+        :rtype: int
+        """
         k = k or 1
         return k % 4
 
@@ -487,7 +675,25 @@ def get_transformation_function(which: str):
     else:
         raise ValueError('`which` must be either "rotate" and "mirror"')
 
-    def inner(adata: AnnData, apply: bool = True, k: Optional[int] = None, axis: Optional[int] = None):
+    def inner(
+        adata: AnnData,
+        apply: bool = True,
+        k: Optional[int] = None,
+        axis: Optional[int] = None,
+    ) -> Dict[str, np.ndarray]:
+        """The actual function performing the transformation.
+
+        :param adata: The AnnData object to transform.
+        :type adata: AnnData
+        :param apply: Whether to apply the transformations or store them in a temporary object, defaults to True
+        :type apply: bool, optional
+        :param k: The number of 90-degree rotations, defaults to None
+        :type k: Optional[int], optional
+        :param axis: The axis to mirror along, defaults to None
+        :type axis: Optional[int], optional
+        :return: The transformed images
+        :rtype: Dict[str, np.ndarray]
+        """
         param = param_evaluator(k, axis)
         del k, axis
         imgs_ret = {}
@@ -547,6 +753,14 @@ mirror_img = get_transformation_function("mirror")
 
 
 def rollback_transforms(adata: AnnData, apply: bool = True):
+    """\
+Rollback all transformations. Use this function to cancel applied transformations.
+
+:param adata: The annotated data matrix.
+:type adata: AnnData
+:param apply: If True, drop the temporary transformation, defaults to True
+:type apply: bool, optional
+    """
     spatial_dict = adata.uns["spatial"]
     transforms = spatial_dict.get("transform", ([], []))
     if len(transforms[0]) == 0:
@@ -590,7 +804,18 @@ def rollback_transforms(adata: AnnData, apply: bool = True):
 # %%
 
 
-def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None):
+def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None) -> AnnData:
+    """\
+Convert a graph adjacency matrix to a spatial weights matrix.
+
+:param adata: The AnnData object storing the graph
+:type adata: AnnData
+:param graph_name: The key in ``obsp`` storing the matrix, defaults to None. If None, the default graph is used.
+:type graph_name: Optional[str], optional
+:raises ImportError: If libpysal is not installed.
+:return: The updated AnnData object. The libpysal spatial weights matrix is stored in ``adata.uns["spatial"][graph_name]``.
+:rtype: AnnData
+    """
     try:
         import libpysal
     except ImportError:
@@ -629,6 +854,23 @@ def compute_spatial_lag(
     inplace: bool = False,
     layer: Optional[str] = None,
 ) -> AnnData:
+    """\
+Compute the spatial lag of a feature. The spatial lag is the weighted average of the feature in the neighborhood of each spot.
+
+:param adata: the AnnData object to compute the spatial lag for.
+:type adata: AnnData
+:param feature: The feature to compute the spatial lag for. Must be a column in ``adata.obs`` or in``adata.var_names``.
+:type feature: str
+:param graph_name: The neighborhood graph to use, defaults to None. If None, use the default graph. If a string, use the graph stored in ``adata.uns["spatial"][graph_name]``. If an array, use the array as the adjacency matrix.
+:type graph_name: Union[None, str, np.ndarray], optional
+:param inplace: Whether to add the lagged_features to the AnnData object in place or copy it, defaults to False
+:type inplace: bool, optional
+:param layer: If not None, use this layer for the feature if the feature is a gene, defaults to None
+:type layer: Optional[str], optional
+:raises TypeError: If the graph_name is not of type ``None``, ``str``, or ``np.ndarray``.
+:return: The updated AnnData object. The spatial lag is stored in ``adata.obs["lagged_" + feature]``. If inplace is False, the return a copy of AnnData.
+:rtype: AnnData
+    """
     if not inplace:
         adata = adata.copy()
 
@@ -667,15 +909,29 @@ def moran(
     layer: Optional[str] = None,
     dim: Literal["obs", "var"] = "obs",
     permutations: int = 0,
-):
-    # import esda
-    ## write code to check if esda is installed, otherwise complain
+) -> None:
+    """\
+Compute Moran's I.
+
+:param adata: The AnnData object to compute Moran's I for.
+:type adata: AnnData
+:param feature: The feature(s) to compute Moran's I for. Must be a column in ``adata.obs`` or in``adata.var_names``.
+:type feature: Union[str, Sequence[str]]
+:param graph_name: The neighborhood graph defining the weights, defaults to None. If None, use the default graph. Must be a key in ``adata.uns["spatial"]`` or ``adata.obsp["spatial"]``.
+:type graph_name: Optional[str], optional
+:param layer: If the feature is a gene id, use this layer for its value, defaults to None
+:type layer: Optional[str], optional
+:param dim: Whether the feature is a gene or in obs. Will be deprecated, defaults to "obs"
+:type dim: Literal[&quot;obs&quot;, &quot;var&quot;], optional
+:param permutations: How many permutations to use when simulating Moran's I, defaults to 0
+:type permutations: int, optional
+:raises ImportError: If esda is not installed
+:raises ValueError: If ``dim`` not in ``["obs", "var"]``.
+    """
     try:
         import esda
     except ImportError:
-        raise ImportError(
-            "Moran's I requires the `esda` package. Please install it with `pip install esda`."
-        )
+        raise ImportError("Moran's I requires the `esda` package. Please install it with `pip install esda`.")
 
     if graph_name is None:
         graph_name = get_default_graph(adata)
@@ -688,10 +944,7 @@ def moran(
     features = [feature] if isinstance(feature, str) else list(feature[:])
 
     if dim == "obs":
-        morans = [
-            esda.Moran(adata.obs[feat], W, permutations=permutations)
-            for feat in features
-        ]
+        morans = [esda.Moran(adata.obs[feat], W, permutations=permutations) for feat in features]
     elif dim == "var":
         feat_idx = list(map(adata.var.index.get_loc, features))
         X = adata.X.A if layer is None else adata.layers[layer].A
@@ -700,9 +953,7 @@ def moran(
         raise ValueError('dim must either be "obs" or "var"')
 
     moran_dict = adata.uns["spatial"].setdefault("moran", {})
-    df = moran_dict.setdefault(
-        graph_name, pd.DataFrame(columns=["I", "EI"], dtype=("double", "double"))
-    )
+    df = moran_dict.setdefault(graph_name, pd.DataFrame(columns=["I", "EI"], dtype=("double", "double")))
 
     for feat, moran in zip(features, morans):
         df.at[feat, "I"] = moran.I
@@ -710,7 +961,7 @@ def moran(
 
     if permutations > 0:
         moran_sims = adata.uns["spatial"].setdefault("moran_mc", {})
-        sims_dict = adata.uns["spatial"]["moran_mc"].setdefault(graph_name, {})
+        sims_dict = moran_sims.setdefault(graph_name, {})
         for feat, moran in zip(features, morans):
             df = sims_dict.setdefault(feat, pd.DataFrame(columns=["sim", "p_sim"]))
             df["sim"] = moran.sim
@@ -721,11 +972,27 @@ def moran(
 
 
 def set_default_graph(adata: AnnData, graph_name: str) -> None:
+    """\
+Set the default graph for spatial operations.
+
+:param adata: The AnnData object to set the default graph for.
+:type adata: AnnData
+:param graph_name: The name of the graph to set as default. Should be a key in ``adata.obsp``.
+:type graph_name: str
+    """
     adata.uns.setdefault("spatial", {})
     adata.uns["spatial"]["default_graph"] = graph_name
 
 
 def get_default_graph(adata: AnnData) -> str:
+    """\
+Get the default graph for spatial operations. A shorthand for ``adata.uns["spatial"]["default_graph"]``.
+
+:param adata: The AnnData object to get the default graph for.
+:type adata: AnnData
+:return: The name of the default graph. If none is set, return "connectivities".
+:rtype: str
+    """
     return adata.uns.get("spatial", {}).get("default_graph", "connectivities")
 
 
@@ -738,12 +1005,31 @@ def losh(
     key_added: str = "losh",
     layer: Optional[str] = None,
 ) -> AnnData:
+    """\
+Compute LOSH for a feature. Local spatial heterogeneity (LOSH) is a measure of how spatially clustered a feature is. It is defined as the ratio of the variance of the feature in the neighborhood of a cell to the variance of the feature in the entire dataset. The neighborhood is defined by the spatial graph.
+
+:param adata: The AnnData object to compute LOSH for.
+:type adata: AnnData
+:param feature: The feature(s) to compute LOSH for. Must be a column in ``adata.obs`` or in``adata.var_names``.
+:type feature: Union[str, Sequence[str]]
+:param graph_name: The neighborhood graph name, defaults to None.
+:type graph_name: Optional[str], optional
+:param inference: The inference method to pass to esda.LOSH constructor, defaults to None
+:type inference: Union[None, Literal[&quot;permutation&quot;], Literal[&quot;chi, optional
+:param inplace: Whether to add the results to adata inplace or copy it, defaults to True
+:type inplace: bool, optional
+:param key_added: The key in ``adata.obsm`` to store the results in, defaults to "losh"
+:type key_added: str, optional
+:param layer: If not None, use this layer for gene features, defaults to None
+:type layer: Optional[str], optional
+:raises ImportError: If esda is not installed.
+:return: The updated AnnData object. If inflace is False, returns a copy.
+:rtype: AnnData
+    """
     try:
         import esda
     except ImportError:
-        raise ImportError(
-            "LOSH requires the `esda` package. Please install it with `pip install esda`."
-        )
+        raise ImportError("LOSH requires the `esda` package. Please install it with `pip install esda`.")
 
     if not inplace:
         adata = adata.copy()
@@ -789,14 +1075,37 @@ def local_moran(
     graph_name: Optional[str] = None,
     keep_simulations: bool = False,
     layer: Optional[str] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> AnnData:
+    """\
+Compute local Moran's I for a feature.
+
+:param adata: The AnnData object to compute local Moran's I for.
+:type adata: AnnData
+:param feature: The feature(s) to compute local Moran's I for. Must be a column in ``adata.obs`` or in``adata.var_names``.
+:type feature: Union[str, Sequence[str]]
+:param inplace: Whether to add the results to the adata object inplace or copy it, defaults to True
+:type inplace: bool, optional
+:param permutations: The number of permutations to permform for simulations, defaults to 0
+:type permutations: int, optional
+:param key_added: The key in ``adata.obsm`` to add, defaults to "local_moran"
+:type key_added: str, optional
+:param graph_name: The neighborhood graph to use, defaults to None
+:type graph_name: Optional[str], optional
+:param keep_simulations: Whether to keep the simulations if permutations > 0, defaults to False
+:type keep_simulations: bool, optional
+:param layer: If not None, use this layer for gene features, defaults to None
+:type layer: Optional[str], optional
+:raises ImportError: if esda is not installed.
+:return: The updated AnnData object. If inplace is False, returns a copy.
+The results are stored in ``adata.obsm[key_added]``. If permutations > 0, the simulations are stored in ``adata.uns["spatial"][key_added]["sim"][feature]``. If feature is a list of strings, stores each of the features as such.
+:rtype: AnnData
+
+    """
     try:
         import esda
     except ImportError:
-        raise ImportError(
-            "Local Moran's I requires the `esda` package. Please install it with `pip install esda`."
-        )
+        raise ImportError("Local Moran's I requires the `esda` package. Please install it with `pip install esda`.")
 
     if not inplace:
         adata = adata.copy()
@@ -856,8 +1165,27 @@ def local_moran(
 
 
 def compute_higher_order_neighbors(
-    adata, graph_name=None, force: bool = False, *, order: int
-):
+    adata: AnnData,
+    graph_name: Optional[str] = None,
+    force: bool = False,
+    *,
+    order: int,
+) -> List[sparse.csr_matrix]:
+    """\
+Compute higher order neighbors of graph. The first order neighbors is the graph itself.
+
+:param adata: The AnnData object storing the graph.
+:type adata: AnnData
+:param order: The order of neighbors to compute. Will compute all orders up to this order.
+:type order: int
+:param graph_name: The key in ``adata.uns["spatial"]`` storing the spatial weights neighborhood graph, defaults to None.
+:type graph_name: Optional[str], optional
+:param force: If True, recompute all pre-computed orders. Otherwise, start with the highest pre-computed order. Defaults to False.
+:type force: bool, optional
+:return: List of libpysal spatial weights matrices. The first element is the original graph, the second element is the first order neighbors, etc.\
+This list is a reference to ``adata.uns["spatial"]["higher_order"][graph_name]``.
+:rtype: List[sparse.csr_matrix]
+    """
     if graph_name is None:
         graph_name = get_default_graph(adata)
 
@@ -914,8 +1242,32 @@ def compute_correlogram(
     layer: Optional[str] = None,
     force: bool = False,
     key_added: str = "correlogram",
-):
-    # try importing libpysal and esda
+) -> pd.DataFrame:
+    """Compute the correlogram of a feature.
+
+    :param adata: The AnnData object storing the graph.
+    :type adata: AnnData
+    :param feature: The feature(s) to compute the correlogram for.
+    :type feature: Union[str, Sequence[str]]
+    :param method: The metric to compute at each order of neighbors, defaults to "moran"
+    :type method: str, optional
+    :param graph_name: The name of the neighborhood graph, defaults to None. \
+Should be a key in ``adata.uns["spatial"]["higher_order]`` or ``adata.uns["spatial"]``.
+    :type graph_name: Optional[str], optional
+    :param order: The order to use for computing the correlogram. If None, compute_higher_order_neighbors must have been called, defaults to None.
+    :type order: Optional[int], optional
+    :param layer: If not None, use this layer for gene features, defaults to None
+    :type layer: Optional[str], optional
+    :param force: Whether to recompute the correlogram for values computed in an earlier call to this function, defaults to False
+    :type force: bool, optional
+    :param key_added: The key to add to ``adata.uns["spatial"][method]`` for storing the correlogram, defaults to "correlogram"
+    :type key_added: str, optional
+    :raises ImportError: If either libpysal or esda are not installed.
+    :raises NotImplementedError: If method is not "moran" or "corr".
+    :raises RuntimeError: If order is None and compute_higher_order_neighbors has not been called.
+    :return: The dataframe containing the correlogram. It is stored in ``adata.uns["spatial"][method][key_added][graph_name]``.
+    :rtype: pd.DataFrame
+    """
     try:
         import libpysal
         import esda
@@ -926,10 +1278,8 @@ def compute_correlogram(
             "https://pysal.org/esda/installation.html for installation instructions."
         )
 
-    if method not in ["moran", "losh", "corr"]:
-        raise NotImplementedError(
-            f"Correlogram is not implemented for method {method}."
-        )
+    if method not in ["moran", "corr"]:
+        raise NotImplementedError(f"Correlogram is not implemented for method {method}.")
 
     if graph_name is None:
         graph_name = get_default_graph(adata)
@@ -937,9 +1287,7 @@ def compute_correlogram(
     higher_order = adata.uns["spatial"].setdefault("higher_order", {})
     Ws = higher_order.setdefault(graph_name, [])
     if not order and len(Ws) == 0:
-        raise RuntimeError(
-            "Please provide a positive integer value for `order`, or run `compute_higher_order_neighbors` first."
-        )
+        raise RuntimeError("Please provide a positive integer value for `order`, or run `compute_higher_order_neighbors` first.")
 
     if len(Ws) == 0 and order:
         Ws = compute_higher_order_neighbors(adata, graph_name=graph_name, order=order)
@@ -948,9 +1296,7 @@ def compute_correlogram(
     order = order or (len(Ws) + 1)
 
     correlogram_dict = adata.uns["spatial"][method].setdefault(key_added, {})
-    correlogram_df = correlogram_dict.setdefault(
-        graph_name, pd.DataFrame(columns=list(range(1, order + 1)), index=features)
-    )
+    correlogram_df = correlogram_dict.setdefault(graph_name, pd.DataFrame(columns=list(range(1, order + 1)), index=features))
     W_og = adata.uns["spatial"][graph_name].sparse.copy()
 
     X = adata.X if layer is None else adata.layers[layer]
@@ -958,14 +1304,8 @@ def compute_correlogram(
         X = X.A
 
     for k_order, w in enumerate((Ws)[:order], 1):
-        W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(
-            silence_warnings=True
-        )
-        if (
-            k_order in correlogram_df.columns
-            and (not any(correlogram_df[k_order].isna()))
-            and not force
-        ):
+        W = libpysal.weights.WSP(w, id_order=adata.obs_names.to_list()).to_W(silence_warnings=True)
+        if k_order in correlogram_df.columns and (not any(correlogram_df[k_order].isna())) and not force:
             continue
 
         for feat in features:
