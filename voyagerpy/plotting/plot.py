@@ -159,8 +159,12 @@ def simple_violinplot(
     **kwargs,
 ):
     # Handle NaNs and Infs
-    isnan = np.logical_or(df[y].isna(), np.isinf(df[y]))
-    df = df.loc[~isnan, [y]]
+    y = utils.listify(y)
+    isnan = np.logical_or(df[y].isna(), np.isinf(df[y])).squeeze()
+    if isnan.ndim > 1:
+        isnan = isnan.any(axis=1)
+
+    df = df.loc[~isnan, y]
 
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
@@ -775,7 +779,7 @@ def plot_expression_violin(
     fig, axs = configure_subplots(nplots, ncol, **_subplot_kwargs)
 
     if groupby is None:
-        gene_ids = [gene_ids]
+        gene_ids = [utils.listify(gene_ids)]
 
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
