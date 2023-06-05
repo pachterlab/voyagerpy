@@ -157,7 +157,7 @@ def find_visium_graph(
     else:
         points = geo[geom].centroid
 
-    geo_subset = pd.DataFrame({"x": points.x, "y": points.y}, index=geo.index)[subset]
+    geo_subset = pd.DataFrame({"x": points.x, "y": points.y}, index=geo.index).loc[subset]
     pos_dict = dict(zip(geo_subset.index, geo_subset[["x", "y"]].values))
 
     nx.set_node_attributes(G, pos_dict, "pos")
