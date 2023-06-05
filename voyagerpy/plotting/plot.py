@@ -1051,12 +1051,13 @@ def plot_spatial_feature(
         curr_cmap = cmap
         values = obs[feature]
 
-        valid_idx = obs.index
+        valid_idx = Series(True, index=obs.index)
 
         extra_kwargs = dict()
         if values.dtype != "category":
             # Handle NaNs and Infs. We need to do this for the colorscale.
             # isnan and isinf for categorical columns are not defined.
+
             valid_idx = ~(np.isnan(values) | np.isinf(values))
             values = values[valid_idx]
 
@@ -1096,11 +1097,12 @@ def plot_spatial_feature(
             _ax = imshow(adata, None, _ax, extent=extent)
 
         graph_on_top = (barcode_graph_kwargs or {}).pop("on_top", True)
+
         _barcode_graph_kwargs = dict(
             subset=barcode_selection,
             geom=geo.geometry.name,
             ax=_ax,
-            exclude_nodes=valid_idx[~valid_idx].index.tolist(),
+            exclude_nodes=obs.index[~valid_idx].tolist(),
         )
         _barcode_graph_kwargs.update(barcode_graph_kwargs or {})
 
