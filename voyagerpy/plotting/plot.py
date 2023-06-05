@@ -158,6 +158,14 @@ def simple_violinplot(
     jitter: bool = False,
     **kwargs,
 ):
+    # Handle NaNs and Infs
+    y = utils.listify(y)
+    isnan = np.logical_or(df[y].isna(), np.isinf(df[y])).squeeze()
+    if isnan.ndim > 1:
+        isnan = isnan.any(axis=1)
+
+    df = df.loc[~isnan, :]
+
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
 
@@ -247,6 +255,13 @@ def grouped_violinplot(
 ):
     if not vert:
         x, y = y, x
+
+    # Handle NaNs and Infs
+    isna = df[[x, y]].isna().any(axis=1)
+    isinf = np.isinf(df[[x, y]].values.astype(float)).any(axis=1)
+    isna = isna | isinf
+
+    df = df.loc[~isna, [x, y]]
 
     groups = df.groupby(x)[y].groups
     keys = sorted(groups.keys())
@@ -550,7 +565,8 @@ def plot_bin2d(
     )
 
     figsize = plot_kwargs.pop("figsize", None)
-    plot_kwargs.update(_plot_kwargs)
+    _plot_kwargs.update(plot_kwargs)
+    del plot_kwargs
 
     if hex_plot:
         # hexbin has similar arguments as hist2d, but some names are different
@@ -559,11 +575,11 @@ def plot_bin2d(
             ("mincnt", "cmin", 1),
         ]
         for hex_name, hist_name, default in renaming:
-            val = plot_kwargs.pop(hist_name, default)
-            plot_kwargs.setdefault(hex_name, val)
+            val = _plot_kwargs.pop(hist_name, default)
+            _plot_kwargs.setdefault(hex_name, val)
 
-        plot_kwargs.setdefault("edgecolor", "#8c8c8c")
-        plot_kwargs.setdefault("linewidth", 0.2)
+        _plot_kwargs.setdefault("edgecolor", "#8c8c8c")
+        _plot_kwargs.setdefault("linewidth", 0.2)
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -571,29 +587,30 @@ def plot_bin2d(
         fig = ax.get_figure()
 
     plot_fun = ax.hexbin if hex_plot else ax.hist2d
-    x_dat = obs[x]
-    y_dat = obs[y]
-    del x, y
+
+    cols = [x, y]
+    if isinstance(filt, str):
+        cols.append(filt)
+
+    # Handle NaNs and Infs
+    isinf = np.isinf(obs[[x, y]].values).any(axis=1)
+    isna = obs[cols].isna().any(axis=1)
+    isna = np.logical_or(isna, isinf)
 
     if filt is None:
-        selection = ...
+        selection = ~isna
     elif isinstance(filt, str):
-        selection = obs[filt].astype(bool)
+        selection = obs[filt].astype(bool) & ~isna
     else:
-        selection = filt
+        selection = filt & ~isna
 
-    x_dat = x_dat[selection]
-    y_dat = y_dat[selection]
+    x_dat = obs.loc[selection, x]
+    y_dat = obs.loc[selection, y]
+
+    del x, y
 
     if subset is None:
-        if filt is None:
-            selection = ...
-        elif isinstance(filt, str):
-            selection = obs[filt].astype(bool)
-        else:
-            selection = filt
-
-        im = plot_fun(x_dat, y_dat, **plot_kwargs)  # type: ignore
+        im = plot_fun(x_dat, y_dat, **_plot_kwargs)  # type: ignore
         cbar = fig.colorbar(im[-1] if isinstance(im, tuple) else im, label="count")
     else:
         subset_name = ""
@@ -612,13 +629,13 @@ def plot_bin2d(
         y_min, y_max = y_dat.min(), y_dat.max()
 
         if hex_plot:
-            plot_kwargs["extent"] = (x_min, x_max, y_min, y_max)
+            _plot_kwargs["extent"] = (x_min, x_max, y_min, y_max)
         else:
-            plot_kwargs["range"] = [[x_min, x_max], [y_min, y_max]]
+            _plot_kwargs["range"] = [[x_min, x_max], [y_min, y_max]]
 
-        im_false = plot_fun(x_dat[subset_false], y_dat[subset_false], **plot_kwargs)
+        im_false = plot_fun(x_dat[subset_false], y_dat[subset_false], **_plot_kwargs)
 
-        plot_kwargs["cmap"] = cmap_true
+        _plot_kwargs["cmap"] = cmap_true
         im_true = plot_fun(x_dat[subset_true], y_dat[subset_true], **plot_kwargs)
 
         plt.colorbar(
@@ -762,7 +779,7 @@ def plot_expression_violin(
     fig, axs = configure_subplots(nplots, ncol, **_subplot_kwargs)
 
     if groupby is None:
-        gene_ids = [gene_ids]
+        gene_ids = [utils.listify(gene_ids)]
 
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
@@ -928,6 +945,12 @@ def plot_spatial_feature(
         slice(None) if not var_features else utils.make_unique(var_features)
     )
 
+    if isinstance(barcode_selection, Series):
+        barcode_selection = adata.obs_names[barcode_selection]
+
+    if isinstance(gene_selection, Series):
+        gene_selection = adata.var_names[gene_selection]
+
     if dimension == "barcode":
         geo = adata.obsm["geometry"].loc[barcode_selection].copy()
         gene_selection = gene_selection if var_features else 0
@@ -1028,8 +1051,15 @@ def plot_spatial_feature(
         curr_cmap = cmap
         values = obs[feature]
 
+        valid_idx = obs.index
+
         extra_kwargs = dict()
         if values.dtype != "category":
+            # Handle NaNs and Infs. We need to do this for the colorscale.
+            # isnan and isinf for categorical columns are not defined.
+            valid_idx = ~(np.isnan(values) | np.isinf(values))
+            values = values[valid_idx]
+
             curr_cmap = cmap
             vmax = None
 
@@ -1066,9 +1096,15 @@ def plot_spatial_feature(
             _ax = imshow(adata, None, _ax, extent=extent)
 
         graph_on_top = (barcode_graph_kwargs or {}).pop("on_top", True)
+        _barcode_graph_kwargs = dict(
+            subset=barcode_selection,
+            geom=geo.geometry.name,
+            ax=_ax,
+            exclude_nodes=valid_idx[~valid_idx].index.tolist(),
+        )
+        _barcode_graph_kwargs.update(barcode_graph_kwargs or {})
+
         if barcode_graph_kwargs is not None and not graph_on_top:
-            _barcode_graph_kwargs = dict(subset=barcode_selection, geom=geo.geometry.name, ax=_ax)
-            _barcode_graph_kwargs.update(barcode_graph_kwargs)
             _ax = draw_graph(adata, **_barcode_graph_kwargs)
 
         if geom_is_poly:
@@ -1080,7 +1116,8 @@ def plot_spatial_feature(
                 extra_kwargs["cax"] = cax
                 cax.set_title(label)
 
-            _ax = geo.plot(
+            # Handle NaNs and Infs
+            _ax = geo.loc[valid_idx].plot(
                 column=values,
                 ax=_ax,
                 color=color,
@@ -1123,8 +1160,6 @@ def plot_spatial_feature(
             )
 
         if barcode_graph_kwargs is not None and graph_on_top:
-            _barcode_graph_kwargs = dict(subset=barcode_selection, geom=geo.geometry.name, ax=_ax)
-            _barcode_graph_kwargs.update(barcode_graph_kwargs)
             _ax = draw_graph(adata, **_barcode_graph_kwargs)
 
         if annot_geom is not None:
@@ -1205,6 +1240,8 @@ def draw_graph(
     if ax is None:
         fig, ax = configure_subplots(1, 1, squeeze=True)
 
+    exclude_nodes = kwargs.pop("exclude_nodes", [])
+
     if isinstance(ax, np.ndarray):
         ax = ax.flat[0]
 
@@ -1215,6 +1252,7 @@ def draw_graph(
         graph_key=graph_key,
         inplace=False,  # This is important as we don't want to modify the original graph
     )
+    G.remove_nodes_from(exclude_nodes)
 
     try:
         import networkx as nx
@@ -1225,10 +1263,12 @@ def draw_graph(
         pos=nx.get_node_attributes(G, "pos"),
         ax=ax,
         width=width,
-        **kwargs,
+        with_labels=False,
+        node_size=0,
     )
+    nx_kwargs.update(kwargs)
 
-    nx.draw_networkx_edges(G, **nx_kwargs)
+    nx.draw_networkx(G, **nx_kwargs)
     return ax
 
 
@@ -2213,7 +2253,19 @@ def scatter(
 
     del color_by, x, y
 
-    # if color_dat is not None and data is not None and data[color_dat].dtype == "category":
+    # Handle NaNs and Infs
+    isinf = np.logical_or(np.isinf(xdat), np.isinf(ydat))
+    isnan = np.logical_or(np.isnan(xdat), np.isnan(ydat)) | isinf
+    if color_dat is not None:
+        isinf = np.isinf(color_dat.astype(float))
+        isnan = np.logical_or(isnan, np.isnan(color_dat.astype(float))) | isinf
+        if isnan.any():
+            color_dat = color_dat[~isnan]
+
+    if isnan.any():
+        xdat = xdat[~isnan]
+        ydat = ydat[~isnan]
+
     if is_categorical or color_dat is not None and color_dat.dtype == "category":
         is_categorical = True
         _scatter_kwargs.update(

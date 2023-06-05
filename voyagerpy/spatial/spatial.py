@@ -787,15 +787,17 @@ def local_moran(
     permutations: int = 0,
     key_added: str = "local_moran",
     graph_name: Optional[str] = None,
-    keep_simulations: bool = False,
+    keep_simulations: Optional[bool] = None,
     layer: Optional[str] = None,
+    na_action: Literal["omit", "exclude", "fail", "pass"] = "fail",
     **kwargs,
 ) -> AnnData:
     try:
         import esda
+        import libpysal
     except ImportError:
         raise ImportError(
-            "Local Moran's I requires the `esda` package. Please install it with `pip install esda`."
+            "Local Moran's I requires the `esda` and `libpysal` packages. Please install it with `pip install libpysal esda`."
         )
 
     if not inplace:
@@ -814,44 +816,79 @@ def local_moran(
     get_loc = adata.var.index.get_loc
     W = adata.uns["spatial"][graph_name]
 
-    local_morans = [
-        esda.Moran_Local(
-            X[:, get_loc(feat)] if feat in adata.var_names else adata.obs[feat],
-            W,
+    localmoran_df = adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names, dtype="float64"))
+    local_morans = []
+
+    if keep_simulations is None:
+        keep_simulations = permutations > 0
+
+    exclude_nan = na_action in ("omit", "exclude")
+    fail_on_nan = na_action == "fail"
+    pass_on_nan = na_action == "pass"
+
+    for feat in features:
+        y = X[:, get_loc(feat)] if feat in adata.var_names else adata.obs[feat]
+        y = y.A if sparse.issparse(y) else y
+        localmoran_df[feat] = np.nan
+        isna = (np.isnan(y) | np.isinf(y)).squeeze()
+
+        if fail_on_nan and isna.any():
+            raise ValueError(f"Feature {feat} contains NaN or inf values")
+
+        if pass_on_nan:
+            W1 = W
+            idx_keep = adata.obs_names
+        else:
+            y = y[~isna]
+            idx_keep = adata.obs_names[~isna]
+            W1 = libpysal.weights.w_subset(W, idx_keep)
+
+        lm = esda.Moran_Local(
+            y,
+            W1,
             permutations=permutations,
             keep_simulations=keep_simulations,
             **kwargs,
         )
-        for feat in features
-    ]
-
-    adata.obsm.setdefault(key_added, pd.DataFrame(index=adata.obs_names))
-    moran_df = adata.obsm[key_added]
-
-    n = adata.n_obs
-    correction = n / (n - 1)
-    for feat, lm in zip(features, local_morans):
+        local_morans.append(lm)
+        n = y.size
+        correction = n / (n - 1)
         # TODO: correct wrt n-1 vs n
-        # moran_df[f"{feat}"] = lm.Is * correction
-        moran_df[f"{feat}"] = lm.Is
+        localmoran_df.loc[idx_keep, feat] = lm.Is
 
     # Keep metadata for this run
-    adata.uns["spatial"].setdefault(key_added, {})
+    metadata = adata.uns["spatial"].setdefault(key_added, {})
 
     # Simulations
     if permutations > 0 and keep_simulations:
         for feat, lm in zip(features, local_morans):
-            adata.uns["spatial"][key_added].setdefault("sim", {})
-            sims_df = pd.DataFrame(lm.sim.T, index=adata.obs_names)
-            adata.uns["spatial"][key_added]["sim"][feat] = sims_df
+            sim_dict = metadata.setdefault("sim", {})
+
+            nan_idx = None
+            if exclude_nan:
+                index = localmoran_df[feat].dropna().index
+                nan_idx = localmoran_df[localmoran_df[feat].isna()].index
+            else:
+                index = localmoran_df[feat].index
+
+            sims_df = pd.DataFrame(index=localmoran_df.index, columns=np.arange(lm.sim.shape[0]), dtype="float64")
+            sims_df.loc[index, :] = lm.sim.T
+
+            if nan_idx is not None and na_action == 'omit':
+                sims_df.drop(nan_idx, inplace=True, axis=0)
+
+            sim_dict[feat] = sims_df
 
     # Parameters
-    adata.uns["spatial"][key_added].setdefault("params", {})
-    param_dict = adata.uns["spatial"][key_added]["params"]
+    param_dict = metadata.setdefault("params", {})
     param_dict["graph_name"] = graph_name
     param_dict["permutations"] = permutations
     param_dict["keep_simulations"] = keep_simulations
     param_dict["seed"] = kwargs.get("seed", None)
+    param_dict["na_action"] = na_action
+    param_dict["layer"] = layer
+    param_dict["features"] = features
+
     return adata
 
 
