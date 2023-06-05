@@ -945,6 +945,12 @@ def plot_spatial_feature(
         slice(None) if not var_features else utils.make_unique(var_features)
     )
 
+    if isinstance(barcode_selection, Series):
+        barcode_selection = adata.obs_names[barcode_selection]
+
+    if isinstance(gene_selection, Series):
+        gene_selection = adata.var_names[gene_selection]
+
     if dimension == "barcode":
         geo = adata.obsm["geometry"].loc[barcode_selection].copy()
         gene_selection = gene_selection if var_features else 0
