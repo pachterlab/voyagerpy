@@ -1236,6 +1236,8 @@ def draw_graph(
     if ax is None:
         fig, ax = configure_subplots(1, 1, squeeze=True)
 
+    exclude_nodes = kwargs.pop("exclude_nodes", [])
+
     if isinstance(ax, np.ndarray):
         ax = ax.flat[0]
 
@@ -1246,6 +1248,7 @@ def draw_graph(
         graph_key=graph_key,
         inplace=False,  # This is important as we don't want to modify the original graph
     )
+    G.remove_nodes_from(exclude_nodes)
 
     try:
         import networkx as nx
@@ -1256,10 +1259,12 @@ def draw_graph(
         pos=nx.get_node_attributes(G, "pos"),
         ax=ax,
         width=width,
-        **kwargs,
+        with_labels=False,
+        node_size=0,
     )
+    nx_kwargs.update(kwargs)
 
-    nx.draw_networkx_edges(G, **nx_kwargs)
+    nx.draw_networkx(G, **nx_kwargs)
     return ax
 
 
