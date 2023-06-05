@@ -1100,6 +1100,7 @@ def plot_spatial_feature(
             subset=barcode_selection,
             geom=geo.geometry.name,
             ax=_ax,
+            exclude_nodes=valid_idx[~valid_idx].index.tolist(),
         )
         _barcode_graph_kwargs.update(barcode_graph_kwargs or {})
 
