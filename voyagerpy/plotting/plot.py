@@ -164,7 +164,7 @@ def simple_violinplot(
     if isnan.ndim > 1:
         isnan = isnan.any(axis=1)
 
-    df = df.loc[~isnan, y]
+    df = df.loc[~isnan, :]
 
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
