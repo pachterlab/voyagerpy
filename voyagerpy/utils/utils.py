@@ -107,44 +107,91 @@ def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
 
 
 def log_norm_counts(
-    adata: AnnData,
+    adata: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix, AnnData],
     layer: Optional[str] = None,
-    inplace: bool = True,
-    base: Optional[int] = 2,
+    inplace: bool = False,
+    base: Union[None, int, bool] = 2,
     pseudocount: int = 1,
-    zero_to_zero: bool = False,
-):
+    zero_to_zero: bool = True,
+) -> Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]:
+    """\
+Compute log-normalized counts. If ``adata`` is of type AnnData and ``layer`` is not ``None``, the layer is used instead of ``adata.X``.
+Otherwise, ``adata`` is assumed to be a sparse matrix or a dense matrix. All rows are normalized to sum to :math:`\\bar{N}`, then log-transformed,
+where :math:`\\bar{N}` is the mean of the total counts across all cells. If `zero_to_zero` is `True`, then zeros in the input matrix will map to zeros in the output matrix.
+If pseudocount is not 1 and zero_to_zero is False, will add pseudocount to all values before log-transforming. This makes the matrix dense in an intermediate step
+and may take a long time with large memory footprint.
+
+:param adata: The matrix or AnnData object to normalize.
+:type adata: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix, AnnData]
+:param layer: If not None, normalize this layer, defaults to None
+:type layer: Optional[str], optional
+:param inplace: Whether to normalize the matrix in-place, defaults to False
+:type inplace: bool, optional
+:param base: The logarithm base to use, defaults to 2. If None, use natural logarithm. If False, do not log-transform.
+:type base: Union[None, int, bool], optional
+:param pseudocount: Pseudocounts to use. If 1, compute log1p, defaults to 1
+:type pseudocount: int, optional
+:param zero_to_zero: If True, zeros in the input matrix will map to zeros in the output matrix, defaults to True
+:type zero_to_zero: bool, optional
+:raises TypeError: if adata is not AnnData, np.ndarray, sp.csr_matrix, or scipy.sparse.csc_matrix
+:return: The log-normalized counts
+:rtype: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]
+    """
+
     # Roughly equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
     # sc.pp.normalize_total(adata, target_sum=target_sum)
-    # sc.pp.log1p(adata, base=2)
+    # sc.pp.log1p(adata, base=base)
+
+    if isinstance(adata, AnnData):
+        X = adata.X if layer is None else adata.layers[layer]
+    elif isinstance(adata, (np.ndarray, sp.csr_matrix, sp.csc_matrix)):
+        X = adata
+    else:
+        raise TypeError("adata must be AnnData, np.ndarray, sp.csr_matrix, or scipy.sparse.csc_matrix")
 
     if not inplace:
-        adata = adata.copy()
+        X = X.copy()
 
-    X = adata.X if layer is None else adata.layers[layer]
-
-    cell_sums = sp.csr_matrix(X.sum(axis=1)).toarray()
+    cell_sums = np.ravel(X.sum(axis=1))
     cell_sums /= cell_sums.mean()
 
-    X = sp.csr_matrix(X / cell_sums)
+    # Normalize matrix in-place
+    if sp.issparse(X):
+        if sp.isspmatrix_csr(X):
+            X.data /= np.repeat(cell_sums, np.diff(X.indptr))
+        elif sp.isspmatrix_csc(X):
+            X.data /= cell_sums[X.indices]
 
-    log_funcs = {2: np.log2, 10: np.log10, None: np.log}
-    other_log = lambda x: np.log(x) / np.log(base)  # type: ignore # noqa: E731
-    log = log_funcs.get(base, other_log)
-
-    if pseudocount == 1 or zero_to_zero:
-        # This ensures we don't interact with the zeros in X
-        X.data = log(X.data + pseudocount)
+        # Add pseudocount
+        if pseudocount != 1:
+            if zero_to_zero:
+                X.data += pseudocount - 1
+            else:
+                # Let's try to avoid this state
+                cls_ = type(X)
+                X = cls_(X.A + pseudocount - 1)
     else:
-        X = log(X + pseudocount)
+        X /= np.expand_dims(cell_sums, axis=1)
 
-    if layer is None:
-        adata.X = X
-    else:
-        adata.layers[layer] = X
+        if pseudocount != 1:
+            if zero_to_zero:
+                nonzero = np.where(X != 0)
+                X[nonzero] += pseudocount - 1
+            else:
+                X += pseudocount - 1
 
-    return adata
+    if base is False:
+        return X
+
+    # in-place log1p
+    data, where = (X.data, True) if sp.issparse(X) else (X, X > 0)
+    np.log1p(data, out=data, where=where)
+
+    if base is not None and base is not True:
+        data /= np.log(base)
+
+    return X
 
 
 def scale(
