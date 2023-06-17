@@ -52,6 +52,7 @@ Compute approx tissue. Get the approximate tissue boundary from an image in the 
 :return: The top, bottom, left, and right coordinates of the tissue boundary, in pixels
 :rtype: Tuple[int, int, int, int]
     """
+
     if size == "hires":
         scl = adata.uns["spatial"]["scale"]["tissue_hires_scalef"]
     else:
@@ -746,13 +747,55 @@ def get_transformation_function(which: str) -> Callable[[AnnData, bool, Optional
     return inner
 
 
-# %%
+def rotate_img90(
+    adata: AnnData,
+    apply: bool = True,
+    k: Optional[int] = None,
+    axis: Optional[int] = None,
+) -> Dict[str, np.ndarray]:
+    """\
+Rotate the image by 90 degrees k times.
 
-rotate_img90 = get_transformation_function("rotate")
-mirror_img = get_transformation_function("mirror")
+:param adata: The AnnData object to transform.
+:type adata: AnnData
+:param apply: Whether to apply the transformations or store them in a temporary object, defaults to True
+:type apply: bool, optional
+:param k: The number of 90-degree rotations, defaults to None
+:type k: Optional[int], optional
+:param axis: Mirror axis - not used, defaults to None
+:type axis: Optional[int], optional
+:return: The transformed images
+:rtype: Dict[str, np.ndarray]
+    """
+
+    func = get_transformation_function("rotate")
+    return func(adata, apply, k, axis)
 
 
-def rollback_transforms(adata: AnnData, apply: bool = True):
+def mirror_img(
+    adata: AnnData,
+    apply: bool = True,
+    k: Optional[int] = None,
+    axis: Optional[int] = None,
+) -> Dict[str, np.ndarray]:
+    """\
+Mirror the image along an axis.
+
+:param adata: The AnnData object to transform.
+:type adata: AnnData
+:param apply: Whether to apply the transformations or store them in a temporary object, defaults to True
+:type apply: bool, optional
+:param axis: The axis to mirror along, defaults to None
+:type axis: Optional[int], optional
+:return: The transformed images
+:rtype: Dict[str, np.ndarray]
+    """
+
+    func = get_transformation_function("mirror")
+    return func(adata, apply, k, axis)
+
+
+def rollback_transforms(adata: AnnData, apply: bool = True) -> None:
     """\
 Rollback all transformations. Use this function to cancel applied transformations.
 
@@ -1097,11 +1140,9 @@ Compute local Moran's I for a feature.
 :param layer: If not None, use this layer for gene features, defaults to None
 :type layer: Optional[str], optional
 :raises ImportError: if esda is not installed.
-:return: The updated AnnData object. If inplace is False, returns a copy.
-The results are stored in ``adata.obsm[key_added]``. If permutations > 0, the simulations are stored in ``adata.uns["spatial"][key_added]["sim"][feature]``. If feature is a list of strings, stores each of the features as such.
-:rtype: AnnData
+:return: The updated AnnData object. If inplace is False, returns a copy. The results are stored in ``adata.obsm[key_added]``. If permutations > 0, the simulations are stored in ``adata.uns["spatial"][key_added]["sim"][feature]``. If feature is a list of strings, stores each of the features as such.
+:rtype: AnnData"""
 
-    """
     try:
         import esda
     except ImportError:
