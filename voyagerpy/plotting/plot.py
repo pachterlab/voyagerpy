@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Nov 25 14:08:42 2022
-
-@author: sinant
+This module provides plotting functions for spatial transcriptomics data.
 """
 
 import functools
@@ -78,21 +76,25 @@ def imshow(
 ) -> Axes:
     """Show an image stored in adata.uns["spatial"].
 
+    Draw the image stored in adata.uns["spatial"]["img"][`res`] on the axis `ax`. If `ax` is `None`, a new axis is created.
+    If `tmp` is `True`, use a temporary image, which is useful to show an image with unapplied transformations.
+
     Parameters
     ----------
     adata : AnnData
         The AnnData object containing the image.
     res : Optional[str], optional
-        The resolution of the image to show. If None, the first resolution found is used, by default None.
+        The resolution of the image to show. If `None`, the first resolution found is used, by default `None`.
     ax : Optional[Axes], optional
-        The axis showing the image. If None, a new axis is created, by default None.
+        The axis showing the image. If `None`, a new axis is created, by default `None`.
     tmp : bool, optional
         If True, a temporary image is shown, by default False. This is useful to show an image with
         unapplied transformations.
     title : Optional[str], optional
-        The title for the axis, by default None
+        The title for the axis, by default `None`
+    **kwargs : optional
+        Parameters passed to :func:`matplotlib.axes.Axes.imshow`.
 
-    **kwargs: Parameters passed to matplotlib.axes.Axes.imshow.
     Returns
     -------
     Axes
@@ -141,6 +143,28 @@ def configure_violins(
     alpha: float = 0.7,
     facecolor: Optional[str] = None,
 ) -> Tuple[str, float]:
+    """Configure the violins in a violinplot.
+
+    Set the facecolor, edgecolor and alpha of the violins in a violinplot.
+
+    Parameters
+    ----------
+    violins : dict
+        A dictionary containing the violins in a violinplot. The violins are stored in the key "bodies".
+    cmap : Optional[str], optional
+        The colormap to use for the faces if `facecolor` is `None`. If `None`, use the default colormap, by default `None`.
+    edgecolor : str, optional
+        The edgecolor to use for the violins, by default "#00000050"
+    alpha : float, optional
+        The alpha value to use for the violins, by default 0.7
+    facecolor : Optional[str], optional
+        The facecolor to use for all violins. If `None`, use colors from `cmap`, by default `None`.
+
+    Returns
+    -------
+    Tuple[str, float]
+        The edgecolor and alpha used.
+    """
     colormap = plt.get_cmap(cmap) if isinstance(cmap, (str, type(None))) else cmap
     for i_color, violin in enumerate(violins["bodies"]):
         violin.set_facecolor(facecolor or colormap(i_color))
@@ -157,7 +181,35 @@ def simple_violinplot(
     scatter_points: bool = True,
     jitter: bool = False,
     **kwargs,
-):
+) -> Axes:
+    """Draw a simple violinplot.
+
+    Parameters
+    ----------
+    ax : Axes
+        The axis to draw the violinplot on.
+    df : DataFrame
+        The dataframe containing the data to plot.
+    y : Union[str, int]
+        The column to plot.
+    cmap : Optional[str], optional
+        The colormap to use for the violins, by default `None`.
+    scatter_points : bool, optional
+        Draw points along the center of the violins, with the values from `y`, by default `True`.
+    jitter : bool, optional
+        Draw the points randomly distributed along the x-axis within the violin, by default `False`.
+    **kwargs
+        Keyword arguments to pass to :func:`matplotlib.axes.Axes.violinplot`. Additionally, these keys are used:
+
+            - `x_label`: The label for the x-axis, by default `None`.
+            - `y_label`: The label for the y-axis, by default `y`.
+            - `legend`: If `True`, show a legend, by default `False`.
+
+    Returns
+    -------
+    Axes
+        The axis containing the violinplot.
+    """
     violin_opts = dict(showmeans=False, showextrema=False, showmedians=False)
     kwargs.pop("legend", False)
 
@@ -178,9 +230,7 @@ def simple_violinplot(
             x_offsets = np.arange(cols.shape[1]).ravel()
             x_vals += x_offsets
             x_colors += x_offsets
-            for violin, x_offset, y_col in zip(
-                violins["bodies"], x_offsets, cols.values.T
-            ):
+            for violin, x_offset, y_col in zip(violins["bodies"], x_offsets, cols.values.T):
                 x_vals[:, x_offset] = jitter_points(
                     violin.get_paths()[0],
                     y_col,
@@ -214,9 +264,25 @@ def simple_violinplot(
     return ax
 
 
-def jitter_points(
-    violin: mplPath, y_vals: np.ndarray, x: int = 0, jitter: bool = False
-):
+def jitter_points(violin: mplPath, y_vals: np.ndarray, x: int = 0, jitter: bool = False) -> npt.NDArray[float]:
+    """Distibute points along the x-axis within a violin.
+
+    Parameters
+    ----------
+    violin : mplPath
+        The matplotlib path of the violin.
+    y_vals : np.ndarray
+        The values of the points to distribute.
+    x : int, optional
+        The x coordinate of the center of the violin, by default 0,
+    jitter : bool, optional
+        Distribute the points horizontally, by default `False`.
+
+    Returns
+    -------
+    npt.NDArray[float]
+        The new x-values of the points.
+    """
     x_vert, y_vert = np.array(violin.cleaned().vertices).T
     at_max_y = np.argmax(y_vert) + 1
     x_vals = x + np.ones_like(y_vals, dtype=float)
@@ -244,7 +310,41 @@ def grouped_violinplot(
     scatter_points: bool = True,
     jitter: bool = False,
     **kwargs,
-):
+) -> Axes:
+    """Draw a grouped violinplot.
+
+    Parameters
+    ----------
+    ax : Axes
+        The axis to draw the violinplot on.
+    df : DataFrame
+        The dataframe containing the data to plot.
+    x : str
+        The column name of the values to plot.
+    y : str
+        The column name to group by.
+    cmap : Optional[str], optional
+        The colormap to use, by default `None`.
+    legend : bool, optional
+        Whether to draw a legend, by default `True`.
+    vert : bool, optional
+        Whether to draw the violins vertically, by default `True`.
+    x_label : Optional[str], optional
+        The label to display on the x-axis, by default `None`.
+    y_label : Optional[str], optional
+        The label to dispaly on the y-axis, by default `None`.
+    scatter_points : bool, optional
+        Whether to draw scatter points within the violins, by default `True`.
+    jitter : bool, optional
+        Whether to distribute the scattered points along the width of the violins, by default `False`.
+    **kwargs
+        Keyword arguments to pass to :func:`scatter`.
+
+    Returns
+    -------
+    Axes
+        The axis containing the violinplot.
+    """
     if not vert:
         x, y = y, x
 
@@ -317,7 +417,64 @@ def plot_single_barcode_data(
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
     **kwargs,
-):
+) -> Axes:
+    """Plot barcode data on a single axis.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    y : Union[int, str]
+        The column name for the data to show on the y-axis.
+    x : Union[int, str, None], optional
+        The column name for the data to show on the x-axis, by default `None`.
+    obsm : Optional[str], optional
+        The obsm to use. If `None`, use `adata.obs`, by default `None`.
+    cmap : Optional[str], optional
+        The colormap to use, by default `None`
+    ax : Optional[Axes], optional
+        The axis to draw on, by default `None`. If `None`, create a new figure and axis.
+    legend : bool, optional
+        Whether to draw a legend, by default `False`.
+    color_by : Optional[str], optional
+        The column name to color by, by default `None`.
+    x_label : Optional[str], optional
+        The label to show on the x-axis, by default `None`. If `None`, use `x`.
+    y_label : Optional[str], optional
+        The label to show on the y-axis, by default `None`. If `None`, use `y`.
+    **kwargs
+        Keyword arguments to pass to the corresponding plotting function, which is one of
+
+            -:func:`scatter`.
+            -:func:`simple_violinplot`.
+            -:func:`grouped_violinplot`.
+
+    Returns
+    -------
+    Axes
+        The axis containing the plot.
+
+    Raises
+    ------
+    NotImplementedError
+        If `y` is categorical and `x` is `None`.
+    NotImplementedError
+        If `y` and `x` are both categorical.
+
+    Note
+    ----
+    If `y` is categorical and `x` is continuous, a horizontal grouped violinplot is drawn.
+    If `y` and `x` are both continuous, a scatterplot is drawn.
+    If `y` is continuous and `x` is categorical, a grouped violinplot is drawn.
+    If `y` is continuous and `x` is `None`, a simple violinplot is drawn.
+
+    See also
+    --------
+    :func:`simple_violinplot`
+    :func:`grouped_violinplot`
+    :func:`scatter`
+    :func:`plot_barcode_data`
+    """
     if obsm is not None:
         obs = adata.obsm[obsm].copy()
         if color_by is not None and color_by not in obs:
@@ -348,9 +505,7 @@ def plot_single_barcode_data(
             )
     else:
         if x is None:
-            ax = simple_violinplot(
-                ax, obs, y, cmap, x_label=x_label, y_label=y_label, **kwargs
-            )
+            ax = simple_violinplot(ax, obs, y, cmap, x_label=x_label, y_label=y_label, **kwargs)
 
         elif is_categorical_dtype(obs[x]):
             ax = grouped_violinplot(
@@ -371,16 +526,31 @@ def plot_single_barcode_data(
                 labels=dict(x=x_label or x, y=y_label or y),
             )
             _scatter_kwargs.update(kwargs)
-            ax = scatter(
-                x, y, color_by=color_by, cmap=cmap, ax=ax, data=obs, **_scatter_kwargs
-            )
+            ax = scatter(x, y, color_by=color_by, cmap=cmap, ax=ax, data=obs, **_scatter_kwargs)
 
     return ax
 
 
-def configure_subplots(
-    nplots: int, ncol: Optional[int] = 2, **kwargs
-) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
+def configure_subplots(nplots: int, ncol: Optional[int] = 2, **kwargs) -> Tuple[Figure, npt.NDArray[plt.Axes]]:
+    """Configure subplots for a given number of plots.
+
+    Create a figure with a grid of subplots, with the number of columns supplied.
+    If `layout` is set to `"tight"`, then `gridspec_kw` is ignored.
+
+    Parameters
+    ----------
+    nplots : int
+        The number of plots to draw. Each plot will be drawn on a different axis.
+    ncol : Optional[int], optional
+        The number of columns in the grid, by default 2.
+    **kwargs
+        Additional arguments to pass to :func:`matplotlib.pyplot.subplots`.
+
+    Returns
+    -------
+    Tuple[Figure, npt.NDArray[plt.Axes]]
+        The figure and the axes.
+    """
     ncol = min(ncol or 2, nplots)
     nrow = int(np.ceil(nplots / ncol))
 
@@ -417,9 +587,7 @@ def plot_barcode_data(
     x: Optional[str] = None,
     obsm: Optional[str] = None,
     ncol: Optional[int] = None,
-    cmap: Union[
-        None, str, colors.ListedColormap, colors.LinearSegmentedColormap
-    ] = None,
+    cmap: Union[None, str, colors.ListedColormap, colors.LinearSegmentedColormap] = None,
     color_by: Optional[str] = None,
     sharex: Union[None, Literal["none", "all", "row", "col"], bool] = None,
     sharey: Union[None, str, bool] = None,
@@ -429,7 +597,49 @@ def plot_barcode_data(
     ax: Optional[Axes] = None,
     subplot_kwargs: Optional[Dict] = None,
     **kwargs,
-):
+) -> np.ndarray:
+    """Plot barcode data from `adata.obs` or `adata.obsm`.
+
+    If multiple features are provided, the data will be plotted in a grid.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The AnnData object to plot.
+    y : Union[str, Sequence[str]]
+        The name of the column(s) to plot on the y-axis.
+    x : Optional[str], optional
+        If not `None`, the name of the column(s) to plot on the x-axis, by default `None`,
+    obsm : Optional[str], optional
+        If not `None`, use the columns from this `obsm` dataframe instead of `obs` , by default `None`.
+    ncol : Optional[int], optional
+        The number of columns in the figure. If `None`, will use the number of x features, by default `None`.
+    cmap : Union[None, str, colors.ListedColormap, colors.LinearSegmentedColormap], optional
+        The colormap to use, by default `None`.
+    color_by : Optional[str], optional
+        The column name to use for coloring, by default `None`.
+    sharex : Union[None, Literal[&quot;none&quot;, &quot;all&quot;, &quot;row&quot;, &quot;col&quot;], bool], optional
+        The sharex parameter to pass to matplotlib.pyplot.subplots, by default `None.`
+    sharey : Union[None, str, bool], optional
+        The sharex parameter to pass to matplotlib.pyplot.subplots, by default `None`.
+    x_label : Union[None, str, Sequence[str]], optional
+        The label to use for each `x` feature in the figure, by default `None`.
+    y_label : Union[None, str, Sequence[str]], optional
+        The label to use for each `y` feature in the feature, by default `None`.
+    rc_context : Optional[Dict[str, Any]], optional
+        matplotlib rc_context to override styling, by default `None`.
+    ax : Optional[Axes], optional
+        The axes to draw on. If `None`, axes matching the number of features will be created, by default `None`.
+    subplot_kwargs : Optional[Dict], optional
+        Parameters to pass to matplotlib.pyplot.subplots, by default `None`.
+    **kwargs
+        Additional arguments to pass to :func:`plot_single_barcode_data`.
+
+    Returns
+    -------
+    np.ndarray[plt.Axes]
+        An array of axes objects.
+    """
     x_features = utils.listify(x)
     y_features = utils.listify(y)
 
@@ -535,6 +745,66 @@ def plot_bin2d(
     ax: Optional[Axes] = None,
     **plot_kwargs,
 ) -> Axes:
+    """Plot a 2D histogram of two features.
+
+    If `hex_plot` is `True`, a hexbin plot is used instead of an ordinary 2D histogram.
+
+    To split the data by a third feature, pass the name of the column to `subset`. This subset will be evaluated
+    as a boolean mask, and the data will be split into two histograms in the same axes, one for each truth value in `subset`.
+
+    To filter the data by a third feature, pass the name of the column to `filt`. This filter will be evaluated
+    as a boolean mask, and the data will be filtered before plotting. This is useful for removing outliers from the plot.
+
+    Parameters
+    ----------
+    data : Union[AnnData, DataFrame]
+        AnnData or DataFrame containing the data to plot. If an AnnData is passed, the `obs` dataframe is used.
+    x : str
+        The name of the column in `data` to use as the x-axis.
+    y : str
+        The name of the column in `data` to use as the y-axis.
+    filt : Optional[str], optional
+        The name of the column in `data` to filter by, by default `None`. This argument can also be `bool` array-like.
+    subset : Optional[str], optional
+        The name of the column in `data` to subset by, by default `None`. If `None`, all data is used. Otherwise, two histograms
+        are overlain, one for each truth value in `subset`. This argument can also be `bool` array-like.
+    bins : int, optional
+        The number of bins to use along both axes of the plot, by default 101.
+    name_true : Optional[str], optional
+        The colorbar title for when `subset` is `True`, by default `None`.
+    name_false : Optional[str], optional
+        The colorbar title for when `subset` is `False`, by default `None`.
+    hex_plot : bool, optional
+        Create hexagonal bins, by default False.
+    cmap : Optional[str], optional
+        The colormap to use for the histogram, by default "Blues7".
+    cmap_true : Optional[str], optional
+        The colormap to use for the histogram for when `subset` is False, by default "Reds".
+    binwidth : Optional[float], optional
+        The width of the bins, by default `None`.
+    ax : Optional[Axes], optional
+        The axis to use, by default `None`.
+    **plot_kwargs
+        Additional keyword arguments to pass to the corresponding plotting function. Additionally, the following keys are supported:
+
+            - `x_label`: The label for the x-axis.
+            - `y_label`: The label for the y-axis.
+            - `figsize`: The size of the figure if ax is `None`.
+
+    Returns
+    -------
+    Axes
+        The axis containing the plot.
+
+    Notes
+    -----
+    If `hex_plot` is `True`, this function renames some of the keyword arguments to match the names used by `matplotlib.pyplot.hexbin`.
+    The following renames are performed:
+
+        - `bins` -> `gridsize`
+        - `cmin` -> `mincnt`
+    """
+
     get_dataframe = lambda df: df.obs if x in df.obs and y in df.obs else df.var
     obs = get_dataframe(data) if isinstance(data, AnnData) else data
 
@@ -621,12 +891,8 @@ def plot_bin2d(
         plot_kwargs["cmap"] = cmap_true
         im_true = plot_fun(x_dat[subset_true], y_dat[subset_true], **plot_kwargs)
 
-        plt.colorbar(
-            im_false[-1] if isinstance(im_false, tuple) else im_false, label=name_false
-        )
-        plt.colorbar(
-            im_true[-1] if isinstance(im_true, tuple) else im_true, label=name_true
-        )
+        plt.colorbar(im_false[-1] if isinstance(im_false, tuple) else im_false, label=name_false)
+        plt.colorbar(im_true[-1] if isinstance(im_true, tuple) else im_true, label=name_true)
 
     ax.set_ylabel(_legend_kwargs["y"])
     ax.set_xlabel(_legend_kwargs["x"])
@@ -642,7 +908,38 @@ def plot_expression(
     obsm: Optional[str] = None,
     ax: Union[None, Axes, npt.NDArray[Axes]] = None,
     **kwargs,
-):
+) -> Union[Axes, npt.NDArray[Axes]]:
+    """Plot expression of genes in adata.
+
+    If `y` is not `None`, then the expression of the gene(s) is plotted against the values in `adata.obs[y]`,
+    resulting in a scatter plot using ``plot_expression_scatter``. Otherwise,
+    the genes are plotted as violin plots using ``plot_expression_violin``.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    gene : Union[str, Sequence[str]]
+        The gene(s) to plot.
+    y : Optional[str], optional
+        The column name of the value on the y-axis to plos, by default `None`.
+    obsm : Optional[str], optional
+        The name of the `obsm` dataframe to use for plotting. If `None`, then `obs` is used, by default `None`.
+    ax : Union[None, Axes, npt.NDArray[Axes]], optional
+        The axes to draw on. If `None`, new axes will be created, by default `None`.
+    **kwargs
+        Keyword arguments passed to the corresponding plotting function.
+
+    Returns
+    -------
+    Union[Axes, npt.NDArray[Axes]]
+        The Axes object or array of Axes objects that were drawn on.
+
+    See Also
+    --------
+    :func:`plot_expression_violin`
+    :func:`plot_expression_scatter`
+    """
     _rc_params = {
         "axes.spines.top": False,
         "axes.spines.right": False,
@@ -666,7 +963,39 @@ def plot_expression_scatter(
     layer: Optional[str] = None,
     show_symbol: bool = True,
     **kwargs,
-):
+) -> Axes:
+    """Create a scatter plot of gene expression.
+
+    Scatters the points with the expression of `gene` on the x-axis and the values in `adata.obs[y]` on the y-axis.
+    If `obsm` is not `None`, then the values in `adata.obsm[obsm]` are used instead of `adata.obs`.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    gene : str
+        The gene name to plot.
+    y : str
+        The column name of the value on the y-axis to plot.
+    obsm : Optional[str], optional
+        If not `None` use this dataframe for the `y` column, by default `None`.
+    ax : Union[None, Axes], optional
+        The ax to plot on. If `None`, a new axis will be be created, by default `None.`
+    color_by : Optional[str], optional
+        The name of the column to color the scatter points by, by default `None`. By default the color values are taken from the same
+        dataframe as `y` if it exists, otherwise from `adata.obs`.
+    layer : Optional[str], optional
+        The layer to use for the gene expression, by default `None`.
+    show_symbol : bool, optional
+        Show the gene symbol instead of its id, by default `True`.
+    **kwargs
+        Additional keyword arguments are passed to :func:`scatter`.
+
+    Returns
+    -------
+    Axes
+        The axes that were drawn on.
+    """
     obs = adata.obs if obsm is None else adata.obsm[obsm]
     X = adata.X if layer is None else adata.layers[layer]
 
@@ -723,7 +1052,36 @@ def plot_expression_violin(
     cmap: Optional[str] = None,
     subplot_kwargs: Optional[Dict] = None,
     **kwargs,
-):
+) -> np.ndarray:
+    """Create a violin plot of gene expression.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    gene : Union[str, Sequence[str]]
+        The gene name(s) to plot.
+    groupby : Optional[str], optional
+        If not `None` group by this column, by default `None.`
+    ncol : Optional[int], optional
+        The number of columns of axes in the output plot, by default 2.
+    show_symbol : bool, optional
+        Show the symbol of the gene as opposed to its id, by default `False`.
+    layer : Optional[str], optional
+        The layer to use for the gene expression. If `None`, use `adata.X`, by default `None`.
+    cmap : Optional[str], optional
+        The colormap to use, by default `None`.
+    subplot_kwargs : Optional[Dict], optional
+        Keyword arguments supplied to :func:`plot.configure_subplots`, by default `None`.
+    **kwargs
+        Additional keyword arguments are passed to :func:`grouped_violinplot` or :func:`simple_violinplot`.
+
+    Returns
+    -------
+    np.ndarray[Axes]
+        Array of axes that were drawn on.
+    """
+
     # genes = [genes] if isinstance(genes, str) else genes[:]
     genes = utils.listify(gene)
     gene_ids = []
@@ -766,9 +1124,7 @@ def plot_expression_violin(
 
     for ax, gene_id in zip(axs.flat, gene_ids):
         if groupby is not None:
-            grouped_violinplot(
-                ax, obs, groupby, gene_id, legend=False, cmap=cmap, **kwargs
-            )
+            grouped_violinplot(ax, obs, groupby, gene_id, legend=False, cmap=cmap, **kwargs)
             title = gene_id
             if show_symbol and secondary_column == "symbol":
                 title = adata.var.at[gene_id, secondary_column]
@@ -796,10 +1152,36 @@ def plot_expression_violin(
 
 
 def plot_features_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
+    """Plot gene features in a 2D histogram.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    **kwargs : Any
+        Keyword arguments passed to :func:`plot_bin2d`.
+
+    Returns
+    -------
+    Axes
+        The Axes drawn on.
+    """
     return plot_bin2d(adata.var, *args, **kwargs)
 
 
 def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
+    """Plot barcode features in a 2D histogram.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+
+    Returns
+    -------
+    Axes
+        The Axes drawn on.
+    """
     return plot_bin2d(adata.obs, *args, **kwargs)
 
 
@@ -836,8 +1218,8 @@ def plot_spatial_feature(
     subset_barcodes: Union[None, slice, Sequence[str]] = None,
     layer: Optional[str] = None,
     obsm: Optional[str] = None,
-    geom_style: Optional[Dict] = {},
-    annot_style: Optional[Dict] = {},
+    geom_style: Optional[Dict] = None,
+    annot_style: Optional[Dict] = None,
     alpha: float = 0.2,
     divergent: bool = False,
     color: Optional[str] = None,
@@ -855,7 +1237,90 @@ def plot_spatial_feature(
     rc_context: Optional[Dict[str, Any]] = None,
     show_symbol: bool = True,
     **kwargs,
-) -> Union[np.ndarray, Any]:
+) -> Union[np.ndarray, npt.NDArray[Axes]]:
+    """Plot spatial features.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    features : Union[str, Sequence[str]]
+        The features to plot. If an iterable, each feature will be plotted in a separate axis.
+    ncol : int, optional
+        The number of columns in the axes grid, by default 2.
+    barcode_geom : Optional[str], optional
+        The name of the geometry to use for the barcodes, by default ``None``.
+    barcode_graph_kwargs : Optional[Dict], optional
+        If not ``None``, draw a graph on each axis, by default ``None``.
+    annot_geom : Optional[str], optional
+        If not ``None``, draw the specified geometry, e.g. tissue segmentation, by default ``None``.
+    subset_barcodes : Union[None, slice, Sequence[str]], optional
+        The subset of barcodes to include in the plot, by default ``None``
+    layer : Optional[str], optional
+        The layer to use. If ``None``, use ``adata.X``, by default ``None``.
+    obsm : Optional[str], optional
+        The obsm to use. If `None`, use ``adata.obs``, by default None
+    geom_style : Optional[Dict], optional
+        Style dictionary to use when plotting barcode geometry as polygons, by default None.
+    annot_style : Optional[Dict], optional
+        Style dictionary to use when plotting the annotation geometry, by default {}
+    alpha : float, optional
+        _description_, by default 0.2
+    divergent : bool, optional
+        Whether to use a divergent colormap, by default False
+    color : Optional[str], optional
+        _description_, by default None
+    _ax : Union[None, Axes, Iterable[Axes]], optional
+        The axes to use. If not `None`, must match the number of plots created. Otherwise, the axes will be created, by default None
+    legend : bool, optional
+        Whether to add a legend to the figure, by default True
+    cmap : Optional[str], optional
+        The colormap to use for continuous values, by default "`Blues7`".
+    cat_cmap : Optional[str], optional
+        The colormap to use for categorical values, by default `None`.
+    div_cmap : str, optional
+        The colormap to use for continuous values when ``divergent`` is `True`, by default "roma".
+    subplot_kwargs : Optional[Dict], optional
+        Keyword arguments to pass to :func:`configure_subplots`, by default None
+    legend_kwargs : Optional[Dict], optional
+        Keyword arguments for creating the legend, by default None. Will be passed to :func:`geopandas.GeoDataFrame.plot`
+        if the supplied barcode geometry is a `Series` of polygons, else to :func:`vp.plt.scatter`.
+    dimension : str, optional
+        Describes what type of data to plot. If `"barcode"`, then the barcode geometries are used,
+        else if `"gene"`, gene geometries are used. Otherwise, the geometry dataframe used is
+        ``adata.uns["spatial"]["geometry"][dimension]``.
+        by default `"barcode"`.
+    image_kwargs : Optional[Dict], optional
+        If not `None`, show the tissue image behind the scattered points, by default `None`. The keys used from this dict are
+
+            * `"crop"`: `bool`, whether to crop the image by the positions of the scatter points.
+            * `"pad"`: `int`, the number of pixels to pad the cropped image by. Effictively enlarges the crop.
+
+    figtitle : Optional[str], optional
+        The title of the figure, by default None
+    feature_labels : Union[None, str, Sequence[Optional[str]]], optional
+        The labels to show on each subplot, by default None
+    rc_context : Optional[Dict[str, Any]], optional
+        Styling dict for overriding styles with :func:`matplotlib.pyplot.rc_context`, by default None
+    show_symbol : bool, optional
+        Show gene symbols, by default True
+
+    Returns
+    -------
+    Union[np.ndarray, npt.NDArray[Axes]]
+        The axis or axes used for plotting.
+
+    Raises
+    ------
+    KeyError
+        If the supplied `obsm` is not found in `adata.obsm`.
+    ValueError
+        If the supplied `features` are not found in `adata.var_names` and not in the dataframe used.
+    ValueError
+        If the supplied ``barcode_geom`` if not found in the geometry dataframe.
+    ValueError
+        If the supplied ``annot_geom`` if not found in the ``adata.uns["spatial"]["geom"]`` geometry dataframe.
+    """
     feat_ls = utils.listify(features)
 
     assert_basic_spatial_features(adata, dimension, errors="raise")
@@ -875,14 +1340,8 @@ def plot_spatial_feature(
     df = adata.obs if obsm is None else adata.obsm[obsm]
     df_repr = f"adata.obs" if obsm is None else f'adata.obsm["{obsm}"]'
 
-    feature_labels = (
-        feature_labels if feature_labels is not None else [None] * len(feat_ls)
-    )
-    feature_labels = (
-        [feature_labels]
-        if not isinstance(feature_labels, (tuple, list))
-        else feature_labels[:]
-    )
+    feature_labels = feature_labels if feature_labels is not None else [None] * len(feat_ls)
+    feature_labels = [feature_labels] if not isinstance(feature_labels, (tuple, list)) else feature_labels[:]
 
     for feature, label in zip(feat_ls, feature_labels):
         label = label if label is not None else feature
@@ -924,9 +1383,7 @@ def plot_spatial_feature(
     # Select the spots to work with
 
     barcode_selection = subset_barcodes if subset_barcodes is not None else slice(None)
-    gene_selection = (
-        slice(None) if not var_features else utils.make_unique(var_features)
-    )
+    gene_selection = slice(None) if not var_features else utils.make_unique(var_features)
 
     if dimension == "barcode":
         geo = adata.obsm["geometry"].loc[barcode_selection].copy()
@@ -1001,9 +1458,7 @@ def plot_spatial_feature(
     _rc_context.update(rc_context or {})
     if _ax is None:
         with plt.rc_context(_rc_context):
-            fig, axs = configure_subplots(
-                nplots=n_features, ncol=ncol, **_subplot_kwargs
-            )
+            fig, axs = configure_subplots(nplots=n_features, ncol=ncol, **_subplot_kwargs)
         # plt.subplots_adjust(wspace = 1/ncols +  0.2)
     else:
         if isinstance(_ax, Axes):
@@ -1020,6 +1475,8 @@ def plot_spatial_feature(
         kwargs.setdefault("markersize", kwargs.pop("s", None))
 
     # iterate over features to plot
+
+    _geom_style = geom_style or {}
 
     for _ax, (feature, label) in zip(axs.flat, labeled_features):
         legend_kwargs_ = deepcopy(legend_kwargs or {})
@@ -1058,9 +1515,7 @@ def plot_spatial_feature(
                 x = geo.centroid.x
                 y = geo.centroid.y
                 pad = _image_kwargs.pop("pad", 5)
-                x_min, y_min = np.maximum(
-                    np.floor([x.min(), y.min()]).astype(int) - pad, 0
-                )
+                x_min, y_min = np.maximum(np.floor([x.min(), y.min()]).astype(int) - pad, 0)
                 x_max, y_max = np.ceil([x.max(), y.max()]).astype(int) + pad
                 extent = (x_min, x_max, y_min, y_max)
             _ax = imshow(adata, None, _ax, extent=extent)
@@ -1089,17 +1544,14 @@ def plot_spatial_feature(
                 vmax=vmax,
                 legend_kwds=legend_kwargs_,
                 **extra_kwargs,
-                **geom_style,
+                **_geom_style,
                 **kwargs,
             )
 
             # This would only happen for categorical data
             if legend and not _legend:
                 cmap_colors = plt.get_cmap(curr_cmap).colors
-                legend_dict = {
-                    lab: color
-                    for lab, color in zip(sorted(np.unique(values)), cmap_colors)
-                }
+                legend_dict = {lab: color for lab, color in zip(sorted(np.unique(values)), cmap_colors)}
                 for key, color in legend_dict.items():
                     _ax.scatter([], [], label=key, color=color)
                 _ax.legend(
@@ -1136,9 +1588,7 @@ def plot_spatial_feature(
                 plg = adata.uns["spatial"]["geom"][annot_geom]
                 gpd.GeoSeries(plg).plot(**annot_kwargs)
             else:
-                raise ValueError(
-                    f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']"
-                )
+                raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
 
     if figtitle is not None:
         fig.suptitle(figtitle, x=0, ha="left", va="bottom")
@@ -1146,9 +1596,7 @@ def plot_spatial_feature(
     return axs
 
 
-def assert_basic_spatial_features(
-    adata, dimension="barcode", errors: str = "raise"
-) -> Tuple[bool, str]:
+def assert_basic_spatial_features(adata, dimension="barcode", errors: str = "raise") -> Tuple[bool, str]:
     ret = True
     errors_to_raise = []
     get_geom_prompt = "Consider run voyagerpy.spatial.get_geom(adata) first."
@@ -1177,10 +1625,7 @@ def assert_basic_spatial_features(
         return False, error_msg
 
     if adata.obs.geometry.name not in adata.obs:
-        error_msg = (
-            f'"{adata.obs.geometry.name}" must be a column in adata.obs. '
-            + get_geom_prompt
-        )
+        error_msg = f'"{adata.obs.geometry.name}" must be a column in adata.obs. ' + get_geom_prompt
         if errors == "raise":
             raise KeyError(error_msg)
         return False, error_msg
@@ -1202,6 +1647,44 @@ def draw_graph(
     geom: Optional[str] = None,
     **kwargs,
 ):
+    """Draw a networkx graph on an axes.
+
+    This function plots the edges of the graph.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    graph_key : str, optional
+        The name of the graph to draw. Must exist in ..., by default `None`.
+    ax : Optional[Axes], optional
+        The axes to use for plotting. If `None`, a new Axes object will be created, by default `None`.
+    width : float, optional
+        The width of the edges, by default `0.4`.
+    subset : Optional[Sequence[str]], optional
+        A subset of points to draw, by default `None`.
+    geom : Optional[str], optional
+        The geometry to use for the node positions, by default `None`.
+
+    Returns
+    -------
+    Axes
+        The axes used for plotting.
+
+    Raises
+    ------
+    ImportError
+        If ``networkx`` is not installed.
+
+    Note
+    ----
+    This function requires ``networkx`` to be installed.
+
+    Note
+    ----
+    This function currently only supports visium graphs. Support for other graphs will be added in the future.
+    In the meantime, you can use ``networkx`` directly to plot other graphs.
+    """
     if ax is None:
         fig, ax = configure_subplots(1, 1, squeeze=True)
 
@@ -1232,7 +1715,30 @@ def draw_graph(
     return ax
 
 
-def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs):
+def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[str]], **kwargs) -> npt.NDArray[Axes]:
+    """Plot local results from the adata.obsm.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    obsm : str
+        The obsm key to use.
+    features : Union[str, Sequence[str]]
+        The features to plot.
+    **kwargs
+        Keyword arguments to pass to :func:`plot_spatial_feature`.
+
+    Returns
+    -------
+    npt.NDArray[Axes]
+        The axes used for plotting.
+
+    Raises
+    ------
+    KeyError
+        If ``obsm`` is not found in ``adata.obsm``.
+    """
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
 
@@ -1247,9 +1753,7 @@ def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[s
         "axes.spines.right": True,
     }
 
-    axs = plot_spatial_feature(
-        adata, features=features, obsm=obsm, rc_context=rc_context, **kwargs
-    )
+    axs = plot_spatial_feature(adata, features=features, obsm=obsm, rc_context=rc_context, **kwargs)
     return axs
 
 
@@ -1258,7 +1762,34 @@ def spatial_reduced_dim(
     dimred: str,
     ncomponents: Union[int, Sequence[int]],
     **kwargs,
-):
+) -> npt.NDArray[Axes]:
+    """Plot spatially reduced dimensions.
+
+    This function plots the values of the spatially reduced dimensions for barcodes using :func:`vp.plt.plot_spatial_feature`.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    dimred : str
+        The name of the dimension reduction to use.
+    ncomponents : Union[int, Sequence[int]]
+        The number of components to plot. Each component will be plotted on a separate axes. If
+        a sequence of integers is provided, each integer will be used as the index of the component to plot.
+        If int, the first ``ncomponents`` components will be plotted.
+
+    Returns
+    -------
+    npt.NDArray[Axes]
+        The axes used for plotting.
+
+    Raises
+    ------
+    TypeError
+        If ``ncomponents`` is not an integer or a sequence of integers.
+    ValueError
+        If ``dimred`` is not found in ``adata.obsm``.
+    """
     adata = adata.copy()
     if isinstance(ncomponents, (list, tuple, range)):
         dims = list(ncomponents)
@@ -1343,7 +1874,27 @@ def subplots_single_colorbar(
     cax_width: float = 0.2,
     cax_space: float = 0.4,
     **kwargs,
-):
+) -> Tuple[Figure, npt.NDArray[Axes], Axes]:
+    """Create a figure with subplots and a single colorbar.
+
+    The figure will contain ``nplot`` subplots, arranged in ``ncol`` columns. The colorbar will be placed on the right.
+
+    Parameters
+    ----------
+    nplot : int, optional
+        The number of subplots to create, by default 1
+    ncol : int, optional
+        The number of columns in the grid, by default 1
+    cax_width : float, optional
+        The width of the colorbar axis, by default 0.2
+    cax_space : float, optional
+        The space between the colorbar and the main grid, by default 0.4
+
+    Returns
+    -------
+    Tuple[Figure, npt.NDArray[Axes], Axes]
+        The matplotlib figure, the axes, and the colorbar axes.
+    """
     ncol = min(ncol or 2, nplot)
     nrow = int(np.ceil(nplot / ncol))
 
@@ -1372,9 +1923,7 @@ def subplots_single_colorbar(
     if has_layout:
         ax_width = plot_width / ncol
         width_ratios = [ax_width] * ncol + [cax_width]
-        main_spec = fig.add_gridspec(
-            nrow, ncol + 1, wspace=wspace, hspace=hspace, width_ratios=width_ratios
-        )
+        main_spec = fig.add_gridspec(nrow, ncol + 1, wspace=wspace, hspace=hspace, width_ratios=width_ratios)
         cax_spec = main_spec[:, -1]
     else:
         gridspec_kw = dict(
@@ -1427,10 +1976,36 @@ def plot_dim_loadings(
     show_symbol: bool = True,
     varm: str = "PCs",
     **kwargs,
-):
-    components = (
-        list(range(components)) if isinstance(components, int) else list(components)
-    )
+) -> npt.NDArray[Axes]:
+    """Plot the loadings of a dimensionality reduction method.
+
+    Each component is plotted on a separate axis. The top and bottom ``n_loadings/2`` are shown for each component.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    components : Union[int, Sequence[int]]
+        The components to plot. If int, plot the first ``components`` components. If Sequence[int], plot the components in the sequence.
+    ncol : int, optional
+        The number of columns in the axes grid, by default 2
+    n_loadings : int, optional
+        The number of loadings to show for each component, by default 10
+    show_symbol : bool, optional
+        Whether to show the gene symbol, by default True
+    varm : str, optional
+        The key in ``adata.varm`` to use for the loadings, by default "PCs".
+    **kwargs
+        Currently used for configuring the subplots. The keys used are ``figsize``, ``sharex``, and ``layout``.
+
+
+    Returns
+    -------
+    npt.NDArray[Axes]
+        _description_
+    """
+
+    components = list(range(components)) if isinstance(components, int) else list(components)
     dat = adata.varm[varm][:, components]
     nplots = len(components)
 
@@ -1478,9 +2053,26 @@ def plot_dim_loadings(
     return axs
 
 
-def elbow_plot(
-    adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Optional[Axes] = None
-):
+def elbow_plot(adata: AnnData, ndims: int = 20, reduction: str = "pca", ax: Optional[Axes] = None) -> Axes:
+    """Create an elbow plot for a dimensionality reduction method.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    ndims : int, optional
+        The number of dimensions to show, by default 20
+    reduction : str, optional
+        The name of the dimensionality reduction, by default "pca". Must exist in ``adata.uns`` and have a ``"variance_ratio"`` key.
+        See the output of :func:`scanpy.pp.pca` for more information.
+    ax : Optional[Axes], optional
+        The axis to plot on, by default `None`. If `None`, create a new figure and axis.
+
+    Returns
+    -------
+    Axes
+        The axis containing the plot.
+    """
     if ax is None:
         fig, ax = plt.subplots()
     var_ratio = adata.uns[reduction]["variance_ratio"][:ndims]
@@ -1508,7 +2100,35 @@ def plot_pca(
     legend_kwargs: Optional[Dict[str, Any]] = None,
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **kwargs,
-):
+) -> npt.NDArray[Axes]:
+    """Create a PCA plot of the fist ``ndim`` dimensions.
+
+    Each component is plotted againts the other components. The plots on the diagonals
+    represent the density of the points. The color of each point is determined by the ``color_by`` parameter.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    ndim : int, optional
+        The number of components to plot, by default 5
+    cmap : Optional[str], optional
+        The colormap to use, by default None
+    color_by : str, optional
+        The column name in ``adata.obs`` to color the points by, by default "cluster"
+    obsm : str, optional
+        The obsm to use for plotting the dimension, by default "X_pca"
+    legend_kwargs : Optional[Dict[str, Any]], optional
+        The keywords to use for the legend, by default None
+    subplot_kwargs : Optional[Dict[str, Any]], optional
+        The keywords to use for :func:`subplots_single_colorbar`, by default None
+
+    Returns
+    -------
+    npt.NDArray[Axes]
+        The axes containing the plots.
+    """
+
     data = adata.obsm[obsm]
     rc_context = {"axes.edgecolor": "#00000050", "axes.grid.which": "both"}
     _subplot_kwargs = dict(
@@ -1545,9 +2165,7 @@ def plot_pca(
     for row in range(ndim):
         if ndim > 1:
             scatters_in_row = [ax for i, ax in enumerate(axs[row, :]) if i != row]
-            scatters_in_row[0].get_shared_y_axes().join(
-                scatters_in_row[0], *scatters_in_row
-            )
+            scatters_in_row[0].get_shared_y_axes().join(scatters_in_row[0], *scatters_in_row)
             axs[1, row].get_shared_x_axes().join(axs[1, row], *axs[1:, row])
 
         for col in range(ndim):
@@ -1563,9 +2181,7 @@ def plot_pca(
 
         axs[0, row].set_xlabel(f"PC{row} ({var_expl[row]:d}%)")
         axs[0, row].xaxis.set_label_position("top")
-        axs[row, -1].set_ylabel(
-            f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15
-        )
+        axs[row, -1].set_ylabel(f"PC{row} ({var_expl[row]:d}%)", rotation=270, labelpad=15)
         axs[row, -1].yaxis.set_label_position("right")
 
         density = gaussian_kde(data[:, row])
@@ -1573,11 +2189,7 @@ def plot_pca(
         axs[row, row].plot(xs, density(xs), c="k", linewidth=1)
 
     if ndim > 1:
-        legend_elements = (
-            axs.flat[1]
-            .collections[0]
-            .legend_elements(num=_legend_kwargs.pop("num", None))
-        )
+        legend_elements = axs.flat[1].collections[0].legend_elements(num=_legend_kwargs.pop("num", None))
         # cax.legend(*legend_elements, loc="center", title=colorby, frameon=False, num=None)
         cax.legend(*legend_elements, **_legend_kwargs)
     else:
@@ -1597,6 +2209,45 @@ def contour_plot(
     linewidths: Optional[float] = 1,
     origin: Optional[str] = None,
 ) -> Axes:
+    """Create a contour plot.
+
+    Creates contours from the data in ``x`` and ``y``. If ``data`` is not ``None``, then ``x`` and ``y`` can be column names in ``data``.
+    Otherwise, ``x`` and ``y`` are assumed to be numpy arrays or pandas Series.
+
+    This function is a wrapper around :func:`matplotlib.axes.Axes.contour`. For more information on the parameters, see the documentation.
+
+    Parameters
+    ----------
+    ax : Axes
+        The axes to plot on.
+    x : Union[str, np.ndarray, Series]
+        The data to plot on the x-axis. If `str`, then ``x`` is assumed to be a column name in ``data``.
+    y : Union[str, np.ndarray, Series]
+        The data to plot on the y-axis. If `str`, then ``y`` is assumed to be a column name in ``data``.
+    data : Any, optional
+        Must be a mappable with the keys supplied by ``x`` and ``y`` if they are of type `str`, by default None
+    shape : Tuple[int, int], optional
+        The shape of the grid the contours are computed for, by default (100, 100). The larger the shape, the finer the contours.
+    levels : int, optional
+        The number of levels to use for the contours, by default 7
+    colors : Union[str, Sequence[str]], optional
+        The color(s) to use for the contours, by default "cyan". If a sequence, then the length must be equal to ``levels``.
+    linewidths : Optional[float], optional
+        The width of the contour lines, by default 1
+    origin : Optional[str], optional
+        The origin of the coordinate system, by default None.
+
+    Returns
+    -------
+    Axes
+        The axes with the contour plot.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` or ``y`` are of type `str` and ``data`` is `None`.
+    """
+
     if data is not None:
         xdat = data[x] if isinstance(x, str) else x[:]
         ydat = data[y] if isinstance(y, str) else y[:]
@@ -1620,9 +2271,7 @@ def contour_plot(
     kernel = gaussian_kde(points)
     Z = np.reshape(kernel(positions), X.shape)
 
-    ax.contour(
-        X, Y, Z, levels=levels, colors=colors, linewidths=linewidths, origin=origin
-    )
+    ax.contour(X, Y, Z, levels=levels, colors=colors, linewidths=linewidths, origin=origin)
 
     return ax
 
@@ -1643,6 +2292,50 @@ def moran_plot(
     layer: Optional[str] = None,
     **scatter_kwargs,
 ) -> Axes:
+    """Create a Moran scatter plot.
+
+    The feature ``feature`` is plotted on the x-axis, with its lagged values on the y-axis.
+    The lagged values are computed by using the weighted graph given by ``graph_name``.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    feature : Union[str, Sequence]
+        The feature to plot. If a sequence, each feature is plotted in a separate subplot.
+    graph_name : Union[None, str, np.ndarray], optional
+        The name of the graph in ..., by default None
+    color_by : Optional[str], optional
+        Color the points by this column, by default None
+    xlim : Optional[Tuple[float, float]], optional
+        The limits of the x-axis. If `None`, these are computed automatically, by default None
+    ylim : Optional[Tuple[float, float]], optional
+        The limits of the y-axis. If `None`, these are computed automatically, by default None
+    ax : Optional[Axes], optional
+        The axes to plot on. If `None`, a new Axes will be created, by default None
+    contour_kwargs : Optional[Dict[str, Any]], optional
+        Keyword arguments to pass to :func:`vp.plt.contour_plot`, by default None
+    show_symbol : bool, optional
+        If `True` and feature is a gene, show the symbol on the axis labels, by default True
+    ncol : int, optional
+        The number of columns in the axes grid, by default 2
+    legend : bool, optional
+        Whether to show a legend, by default True
+    subplot_kwargs : Optional[Dict[str, Any]], optional
+        Keyword arguments to pass to :func:`vp.plt.subplots_single_colorbar`, by default None
+    layer : Optional[str], optional
+        If not `None`, use this layer for gene expression, by default None
+
+    Returns
+    -------
+    Axes
+        The axes with the plot.
+
+    Raises
+    ------
+    ValueError
+        If ``ax`` is supplied and does not have the correct shape.
+    """
     adata = adata.copy()
 
     features = [feature] if isinstance(feature, str) else feature
@@ -1676,9 +2369,7 @@ def moran_plot(
     for i_plot, (feature, ax) in enumerate(zip(features, axs.flat)):
         lagged_feature = f"lagged_{feature}"
         if lagged_feature not in adata.obs:
-            spatial.compute_spatial_lag(
-                adata, feature, graph_name=graph_name, inplace=True
-            )
+            spatial.compute_spatial_lag(adata, feature, graph_name=graph_name, inplace=True)
 
         rc_context = {
             "axes.grid": True,
@@ -1704,9 +2395,7 @@ def moran_plot(
             i_feature = adata.var_names.get_loc(feature)
             adata.obs[feature] = X[:, i_feature]
             if show_symbol:
-                symbol = adata.var.at[
-                    feature, adata.uns["config"]["secondary_var_names"]
-                ]
+                symbol = adata.var.at[feature, adata.uns["config"]["secondary_var_names"]]
                 labels["x"] = symbol
                 labels["y"] = f"Spatially lagged {symbol}"
 
@@ -1746,7 +2435,42 @@ def plot_moran_mc(
     ax: Optional[Axes] = None,
     legend_title: str = "feature",
     **kwargs,
-):
+) -> Axes:
+    """Plots simulated Moran's I values for a feature or features.
+
+    The simulated values of Moran's I are plotted individually for each feature, with the true Moran's I value
+    plotted as a vertical line in the same color as the simulated values.
+
+    The ``graph_name`` parameter is used to retrieve the Moran's I values from the ``adata.uns`` dictionary. The
+    function ``vp.spatial.moran`` must have been called previously with the same ``graph_name`` parameter and .
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    feature : Union[str, Sequence[str]]
+        The feature or features to plot.
+    graph_name : Optional[str], optional
+        The graph name used when computing Moran's I for the feature, by default None
+    cmap : Optional[str], optional
+        The colormap to use, by default None
+    ax : Optional[Axes], optional
+        The Axes to draw on. If `None` then a new Axes is created, by default None
+    legend_title : str, optional
+        The title of the legend, by default `"feature"`.
+    **kwargs
+        Keyword arguments to pass to :func:`vp.plt.configure_subplots`. May also include ``"linewidth"``.
+
+    Returns
+    -------
+    Axes
+        The axes drawn on.
+
+    Raises
+    ------
+    KeyError
+        If "moran" or "moran_mc" is not in ``adata.uns["spatial"]``.
+    """
     linewidth = kwargs.pop("linewidth", None)
     _kwargs = dict(figsize=None)
     _kwargs.update(kwargs)
@@ -1782,9 +2506,7 @@ def plot_moran_mc(
         (p,) = ax.plot(xs, kernel(xs), label=label, linewidth=linewidth)
         ax.axvline(I, color=p.get_c(), linewidth=linewidth)
 
-    ax.legend(
-        loc="center left", bbox_to_anchor=(1.04, 0.5), title=legend_title, frameon=False
-    )
+    ax.legend(loc="center left", bbox_to_anchor=(1.04, 0.5), title=legend_title, frameon=False)
 
     return ax
 
@@ -1805,6 +2527,53 @@ def plot_barcode_histogram(
     subplot_kwargs: Optional[Dict[str, Any]] = None,
     **hist_kwargs,
 ) -> npt.NDArray[Axes]:
+    """Create a histogram of the number of barcodes per feature.
+
+    .. deprecated:: 0.1.1
+        ``figsize`` will be removed in a future version. Use `subplot_kwargs` instead.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    feature : Union[str, Sequence[str]]
+        The feature or features to plot. The feature must be present in the dataframe of choice.
+    color_by : Optional[str], optional
+        The column name to color the plots by, by default None
+    figsize : Optional[Tuple[float, float]], optional
+        The size of the figure, by default None
+    ncol : int, optional
+        The number of columns in the axes grid, by default 1
+    cmap : Optional[str], optional
+        The colormap to use, by default None
+    bins : int, optional
+        The number of bins to use in the histogram, by default 100
+    log : bool, optional
+        Use log-scale, by default True
+    stacked : bool, optional
+        Create a stacked histogram, by default False
+    histtype : str, optional
+        The type of histogram to use, by default "step". See :func:`matplotlib.pyplot.hist` for more information.
+        Additionally, ``"line"`` is supported, which creates a line plot through the histogram bins.
+    obsm : Optional[str], optional
+        If not `None`, use this obsm as the dataframe to plot, otherwise use ``adata.obs``, by default `None`.
+    label : Optional[Sequence[str]], optional
+        The labels to show on the x-axis of each subplot. Must be `None` or be a list of `str` have the length of the number of features, by default `None`.
+    subplot_kwargs : Optional[Dict[str, Any]], optional
+        Keyword arguments supplied to :func:`subplots_single_colorbar`, by default None
+
+    Returns
+    -------
+    npt.NDArray[Axes]
+        The axes drawn on.
+
+    Raises
+    ------
+    KeyError
+        If ``obsm`` is not in ``adata.obsm``.
+    ValueError
+        If the number of labels does not match the number of features.
+    """
     features: List[str] = utils.listify(feature)  # type: ignore
     nplot = len(features)
     ncol = min(ncol, nplot)
@@ -1914,30 +2683,64 @@ def plot_barcode_histogram(
 
 
 def plot_correlogram(
-    adata,
-    graph_name=None,
-    metric="moran",
-    order=None,
+    adata: AnnData,
+    graph_name: Optional[str] = None,
+    metric: str = "moran",
+    order: Union[None, Tuple[Optional[int], ...], List[int]] = None,
     show_symbol: bool = True,
-    ax=None,
-    features=None,
-    cmap=None,
-):
+    ax: Optional[Axes] = None,
+    features: Optional[List[str]] = None,
+    cmap: Optional[str] = None,
+) -> Axes:
+    """Plot a correlogram of spatial autocorrelation.
+
+    All features are plotted in the same Axes. The features are indices in the correlogram dataframe.
+    The correlogram dataframe must exist and accessed by ``adata.uns["spatial"][metric]["correlogram"]``.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+    graph_name : Optional[str], optional
+        The name of the graph used for computing the correlogram. If `None`, use the default graph, by default None
+    metric : str, optional
+        The name of the spatial autocorrelation metric to use, by default "moran"
+    order : Union[None, Tuple[Optional[int], ...], List[int]], optional
+        Reorder the columns is desired, by default `None`.
+        If `tuple`, a :func:`slice` is created from the tuple and applied to the columns of the dataframe.
+    show_symbol : bool, optional
+        Show the gene symbol in the legend instead of its id, by default True
+    ax : Optional[Axes], optional
+        _description_, by default None
+    features : Optional[List[str]], optional
+        The features to include in the correlogram. If `None`, use all features available, by default None
+    cmap : Optional[str], optional
+        The colormap to use, by default None
+
+    Returns
+    -------
+    Axes
+        The axes used for plotting.
+
+    Raises
+    ------
+    KeyError
+        If `graph_name` is not found in `adata.uns["spatial"][metric]["correlogram']`.
+
+    See Also
+    --------
+    :func:`voyagerpy.spatial.compute_correlogram`
+    """
+
     if ax is None:
         fig, ax = plt.subplots()
     ax.set_prop_cycle("color", plt.get_cmap(cmap).colors)
     if graph_name is None:
         graph_name = spatial.get_default_graph(adata)
 
-    corr_dict = (
-        adata.uns.setdefault("spatial", {})
-        .setdefault(metric, {})
-        .setdefault("correlogram", {})
-    )
+    corr_dict = adata.uns.setdefault("spatial", {}).setdefault(metric, {}).setdefault("correlogram", {})
     if graph_name not in corr_dict:
-        raise KeyError(
-            f"Graph {graph_name} not found in adata.uns['spatial']['{metric}']['correlogram']"
-        )
+        raise KeyError(f"Graph {graph_name} not found in adata.uns['spatial']['{metric}']['correlogram']")
 
     df = corr_dict[graph_name]
     # df = adata.uns["spatial"][metric]["correlogram"][graph_name]
@@ -2078,9 +2881,7 @@ def plot_features_histogram(
             else:
                 _hist_kwargs.pop("ec", None)
                 _hist_kwargs.pop("edgecolor", None)
-                counts, bin_edges = np.histogram(
-                    adata.var[feat].dropna(inplace=False).values, bins=bins
-                )
+                counts, bin_edges = np.histogram(adata.var[feat].dropna(inplace=False).values, bins=bins)
                 centers = np.diff(bin_edges) / 2 + bin_edges[:-1]
                 rects = ax.plot(centers, counts, **_hist_kwargs)
 
@@ -2101,14 +2902,40 @@ def plot_features_histogram(
 
 
 def add_markers(
-    df,
-    feat,
+    df: DataFrame,
+    feat: str,
     markers: Union[None, str, Sequence[str]],
     ax: Axes,
     cmap: Optional[str] = None,
     label_col: Optional[str] = None,
     legend: bool = True,
-):
+) -> Axes:
+    """Add vertical lines to a plot for a given feature.
+
+
+
+    Parameters
+    ----------
+    df : DataFrame
+        The dataframe containing the feature values.
+    feat : str
+        The feature to plot.
+    markers : Union[None, str, Sequence[str]]
+        The markers to plot. These must be in the index of the dataframe.
+    ax : Axes
+        The axes to plot on.
+    cmap : Optional[str], optional
+        The colormap to use for the different markers, by default None
+    label_col : Optional[str], optional
+        Column in `df`. Its value for each marker is used as a suffix for the legend label, by default None
+    legend : bool, optional
+        Whether to show the legend, by default True
+
+    Returns
+    -------
+    Axes
+        The axes with the markers added.
+    """
     if markers is not None:
         marker_list = [markers] if isinstance(markers, str) else markers[:]
         colors = plt.get_cmap(cmap)
@@ -2132,7 +2959,38 @@ def plot_fitline(
     data: Any = None,
     xlim: Optional[Tuple[Optional[float], Optional[float]]] = None,
     ylim: Optional[Tuple[Optional[float], Optional[float]]] = None,
-):
+) -> Axes:
+    """Fit a linear model to the data and plot the fit line.
+
+    The line is fit through the points given by `x` and `y` with the alternative hypothesis given by `alternative`.
+    The line is then plotted on the given axes, with limits given by `xlim` and `ylim`. If either `x` or `y` are strings,
+    they are assumed to be column names in `data`. Before the line is fit, any NaN values are removed from the data without
+    alterring the original data.
+
+    Parameters
+    ----------
+    x : Union[str, Series, np.ndarray]
+        The column name or data to use for the x-axis.
+    y : Union[str, Series, np.ndarray]
+        The column name or data to use for the y-axis.
+    alternative : str, optional
+        The alternative hypothesis to use in :func:`linregress`, by default "two-sided"
+    ax : Optional[Axes], optional
+        The axes to plot on, by default None
+    color : Optional[str], optional
+        The color of the line. Can be `None` or matplotlib-style color string, by default None
+    data : Any, optional
+        Mappable, must have `x` and `y` as keys if they are strings, by default None
+    xlim : Optional[Tuple[Optional[float], Optional[float]]], optional
+        The limit on the x-axis, by default None
+    ylim : Optional[Tuple[Optional[float], Optional[float]]], optional
+        The limit on the y-axis, by default None
+
+    Returns
+    -------
+    Axes
+        The axes with the fit line added.
+    """
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -2181,7 +3039,67 @@ def scatter(
     is_categorical: Optional[bool] = None,
     aspect: Union[None, float, str] = None,
     **scatter_kwargs,
-):
+) -> Axes:
+    """Create a scatter plot of `x` vs `y`.
+
+    This function wraps :func:`matplotlib.pyplot.scatter` and adds a few features. If fitline_kwargs is not None,
+    a linear model is fit to the data and the fit line is plotted. If contour_kwargs is not None, a contour plot is
+    added to the axes. If `color_by` is not None, the points are colored by the values in `color_by`. To pass keyword arguments
+    to matplotlib ``scatter`` function, use `scatter_kwargs`.
+
+    If the dtype of the data in `color_by` is categorical, or if `is_categorical` is `True`, the data is interpreted
+    as categorical, resulting in a legend being shown if `legend` is True.
+    Otherwise, it is interpreted as continuous, resulting in a colorbar being shown if `legend` is `True`.
+
+    Parameters
+    ----------
+    x : str
+        The column name in `data` to use for the x-axis. Can also be array-like/
+    y : str
+        The column name in `data` to use for the y-axis. Can also be array-like.
+    color_by : Optional[str], optional
+        The column name in `data` to use for coloring the points, by default None. Can also be array-like.
+    ax : Optional[Axes], optional
+        The axes to plot on, by default None
+    cmap : Optional[str], optional
+        The colormap to use, by default None
+    legend : bool, optional
+        Whether to show a legend or not, by default True. Depending on the data, either a legend or a colorbar is shown.
+    legend_kwargs : Optional[Dict[str, Any]], optional
+        Additional keyword arguments for the creation of the legend/colorbar, by default None.
+    data : Optional[DataFrame], optional
+        Mappable, with `x`, `y`, and `color_by` as keys if they are strings, by default None.
+    labels : Optional[Dict[str, Any]], optional
+        The labels to use for the axis, by default None. The keys used are:
+
+        - `xlabel`: The label for the x-axis.
+        - `ylabel`: The label for the y-axis.
+        - `title`: The title of the plot.
+    rc_context : Optional[Dict[str, Any]], optional
+        Additional styling using matplotlib's :func:`matplotlib.plt.rc_context`, by default None.
+    fitline_kwargs : Optional[Dict[str, Any]], optional
+        Keyword arguments to pass to :func:`plot_fitline`, by default None. If not `None`,
+        plot a fitted line through the data. An empty dict results in the default arguments being used.
+    contour_kwargs : Optional[Dict[str, Any]], optional
+        Keyword arduments to pass to :func:`contour_plot`, by default None. If not `None`,
+        plot a contour plot of the data. An empty dict results in the default arguments being used.
+    figsize : Optional[Tuple[float, float]], optional
+        If ax is None, create a figure with figsize `figsize`, by default None
+    is_categorical : Optional[bool], optional
+        Force the interpretation of the color data to be categorical, by default None
+    aspect : Union[None, float, str], optional
+        Set the aspect of the axes, by default None
+
+    Returns
+    -------
+    Axes
+        The axes with the scatter plot added.
+
+    Raises
+    ------
+    ValueError
+        `data` is None and any of `x`, `y`, or `color_by` is a string.
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
@@ -2207,9 +3125,7 @@ def scatter(
 
     xdat, xstr = (data[x], x) if isinstance(x, str) else (x, None)
     ydat, ystr = (data[y], y) if isinstance(y, str) else (y, None)
-    color_dat, color_str = (
-        (data[color_by], color_by) if isinstance(color_by, str) else (color_by, None)
-    )
+    color_dat, color_str = (data[color_by], color_by) if isinstance(color_by, str) else (color_by, None)
 
     del color_by, x, y
 
