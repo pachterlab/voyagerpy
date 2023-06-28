@@ -108,6 +108,7 @@ def find_visium_graph(
     geom: Optional[str] = None,
     row_normalize: bool = True,
     inplace: bool = True,
+    force: bool = False,
 ) -> nx.Graph:
     """Find Visium graph from AnnData object.
 
@@ -123,6 +124,8 @@ def find_visium_graph(
         Whether to row normalize the graph, by default True
     inplace : bool, optional
         Whether to store graph in `adata.obsp`, by default True
+    force: bool, optional
+        Whether to force recomputation of graph, by default False
 
     Returns
     -------
@@ -130,8 +133,7 @@ def find_visium_graph(
         NetworkX graph object.
     """
 
-    visium_graph = compute_visium_graph(adata, graph_key, inplace=inplace, force=False)
-
+    visium_graph = compute_visium_graph(adata, graph_key, inplace=inplace, force=force)
     if row_normalize is True:
         visium_graph = utils.normalize_csr(visium_graph, byrow=True)
 
@@ -157,7 +159,7 @@ def find_visium_graph(
     else:
         points = geo[geom].centroid
 
-    geo_subset = pd.DataFrame({"x": points.x, "y": points.y}, index=geo.index)[subset]
+    geo_subset = pd.DataFrame({"x": points.x, "y": points.y}, index=geo.index).loc[subset]
     pos_dict = dict(zip(geo_subset.index, geo_subset[["x", "y"]].values))
 
     nx.set_node_attributes(G, pos_dict, "pos")
