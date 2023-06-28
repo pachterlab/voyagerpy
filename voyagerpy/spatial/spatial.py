@@ -38,19 +38,23 @@ from voyagerpy import utils as utl
 
 # create spatial functions with shapely
 def get_approx_tissue_boundary(adata: AnnData, size: str = "hires", paddingx: int = 0, paddingy: int = 0) -> Tuple[int, int, int, int]:
-    """\
-Compute approx tissue. Get the approximate tissue boundary from an image in the AnnData object. Hello.
+    """Compute approx tissue. Get the approximate tissue boundary from an image in the AnnData object.
 
-:param adata: The AnnData object to get the tissue boundary from
-:type adata: AnnData
-:param size: The image resolution for, defaults to "hires"
-:type size: str
-:param paddingx: Horizontal paddding for cropping the image, defaults to 0
-:type paddingx: int, optional
-:param paddingy: Vertical padding for cropping the image, defaults to 0
-:type paddingy: int, optional
-:return: The top, bottom, left, and right coordinates of the tissue boundary, in pixels
-:rtype: Tuple[int, int, int, int]
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    size : str, optional
+        The image resolution to use, by default "hires"
+    paddingx : int, optional
+        Horizontal padding for cropping the image, by default 0.
+    paddingy : int, optional
+        The vertical padding from cropping the image, by default 0
+
+    Returns
+    -------
+    Tuple[int, int, int, int]
+        The top, bottom, left, and right coordinates of the tissue boundary, in pixels.
     """
 
     if size == "hires":
@@ -72,22 +76,25 @@ Compute approx tissue. Get the approximate tissue boundary from an image in the 
 
 
 Contour = Any
-# %%
 
 
 ## write a docstring for this function
 def get_tissue_contour_score(cntr: Contour, adata: AnnData, size: str = "hires") -> float:
-    """\
-Get the score of a contour. This function takes a contour and returns a score for how well it fits the tissue.
+    """Get the score of a contour. This function takes a contour and returns a score for how well it fits the tissue.
 
-:param cntr: The contour to score, represented as a list of points from a cv2 findContours function
-:type cntr: Contour
-:param adata: AnnData object describing the dataset
-:type adata: AnnData
-:param size: ``"hires"`` or ``"lowres"``, the resolution of the image to use, defaults to ``"hires"``
-:type size: str
-:return: Score of the contour of how well it fits the tissue.
-:rtype: float
+    Parameters
+    ----------
+    cntr : Contour
+        The contour to score, represented as a list of points from a cv2 findContours function.
+    adata : AnnData
+        Annotated data matrix.
+    size : {"hires", "lowres"}, optional
+        The resolution of the image to use, by default "hires"
+
+    Returns
+    -------
+    float
+        Score of the contour of how well it fits the tissue.
     """
     scl = utl.get_scale(adata, res=size)
 
@@ -122,20 +129,23 @@ Get the score of a contour. This function takes a contour and returns a score fo
 
 
 def detect_tissue_threshold(adata: AnnData, size: str = "hires", low: int = 200, high: int = 255) -> Tuple[int, Optional[Contour]]:
-    """\
-Detect the tissue boundary using a thresholding method. The contours are 
-evaluated from the image in ``adata.uns["spatial"]["img"][size]``
+    """Detect the tissue boundary using a thresholding method. The contours are evaluated from the image in ``adata.uns["spatial"]["img"][size]``
 
-:param adata: The AnnData object to get the tissue boundary from.
-:type adata: AnnData
-:param size: The resolution of the image to use for tissue detection, defaults to "hires"
-:type size: str, optional
-:param low: The minimum threshold value, defaults to 200
-:type low: int, optional
-:param high: The maximum threshold value, defaults to 255
-:type high: int, optional
-:return: The threshold value and the contour of the tissue boundary
-:rtype: Tuple[int, Any]
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    size : {"hires", "lowres"}, optional
+        The resolution of the image to use for tissue detction, by default "hires"
+    low : int, optional
+        The minimum threshold values, by default 200
+    high : int, optional
+        The maximum threshold value, by default 255
+
+    Returns
+    -------
+    Tuple[int, Optional[Contour]]
+        The threshold value and the contour of the tissue boundary.
     """
     bgr_img = cvtColor(adata.uns["spatial"]["img"][size], COLOR_RGB2BGR)
     bgr_img = (bgr_img * 255).astype("uint8")  # type: ignore
@@ -194,22 +204,25 @@ def get_tissue_boundary(
     inplace: bool = False,
     # detect_threshold: bool = False,
 ) -> Polygon:
-    """\
-Detect the tissue boundary. This function computes the tissue boundary from the image in ``adata.uns["spatial"]["img"][size]``
+    """Detect the tissue boundary. This function computes the tissue boundary from the image in ``adata.uns["spatial"]["img"][size]``
 
-:param adata: _description_
-:type adata: AnnData
-:param threshold_low: _description_, defaults to None
-:type threshold_low: Optional[int], optional
-:param size: _description_, defaults to "hires"
-:type size: Optional[str], optional
-:param strictness: _description_, defaults to None
-:type strictness: Optional[int], optional
-:param inplace: _description_, defaults to False
-:type inplace: bool, optional
-:raises ValueError: _description_
-:return: _description_
-:rtype: Polygon
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix
+    threshold_low : Optional[int], optional
+        The minimum threshold by default None
+    size : {"hires", "lowres"}, optional
+        The resolution of the image to use, by default "hires"
+    strictness : Optional[int], optional
+        Not used.
+    inplace : bool, optional
+        Not used.
+
+    Returns
+    -------
+    Polygon
+        Polygon of the tissue boundary.
     """
 
     if size not in (None, "lowres", "hires"):
@@ -307,27 +320,35 @@ def set_geometry(
     dim: Union[str, Literal["barcode", "gene"]] = "barcode",
     inplace: bool = True,
 ) -> AnnData:
-    """\
-Set the geometry of the AnnData object. This function sets the geometry of the AnnData object in ``adata.obsm["geometry"]``, which is a ``gpd.GeoDataFrame``.
-If the geometry dataframe does not exist, it will be created. If values is not None, it will be set as the geometry values. 
+    """Set the geometry of the AnnData object. This function sets the geometry of the AnnData object in ``adata.obsm["geometry"]``, which is a ``gpd.GeoDataFrame``.
+    If the geometry dataframe does not exist, it will be created. If values is not None, it will be set as the geometry values.
 
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix
+    geom : str
+        The name of the geometry column to set. If the column does not exist, it will be created and populated with ``values``.
+    values : Optional[gpd.GeoSeries], optional
+        The geometry series to populate the `geom` column with, by default None. Must not be `None` if the column `geom` does not exist.
+    index : Optional[pd.Index], optional
+        The index to associate with `values`. If `None`, will use the geometry dataframe's indexing, by default None`.
+    dim : Union[str, Literal[&quot;barcode&quot;, &quot;gene&quot;]], optional
+        The type of geometry to set, by default "barcode". If "barcode", will set the geometry of the barcodes. If "gene", will set the geometry of the genes.
+        Otherwise, the geometry is assumed to be annotation geometry, residing in `adata.uns["spatial"]["geometry][dim]`. Defaults to "barcode".
+    inplace : bool, optional
+        Whether to modify `adata` inplace. If `False`, a copy is made, by default `True`.
 
-:param adata: The AnnData object to set the geometry of.
-:type adata: AnnData
-:param geom: The name of the geometry column to set. If the column does not exist, it will be created and populated with ``values``.
-:type geom: str
-:param values: The geometry series to populate the ``geom`` column with, defaults to None. Must be supplied if the ``geom`` column does not exist.
-:type values: Optional[gpd.GeoSeries], optional
-:param index: The index to associate with the ``values``. If ``None``, will use the geometry dataframe's indexind, defaults to `None`
-:type index: Optional[pd.Index], optional
-:param dim: The type of geometry to set, defaults to "barcode"
-:type dim: Union[str, Literal[&quot;barcode&quot;, &quot;gene&quot;]], optional
-:param inplace: Whether to copy the AnnData object or modify it inplace, defaults to True
-:type inplace: bool, optional
-:raises ValueError: If ``geom`` is not a column in the geometry dataframe and ``values`` is ``None``.
-:return: Updated AnnData object. The geometry dataframe contains a column with the name supplied by ``geom`` and set as the default geometry. \
-If ``values`` is not ``None``, the values will be set as the geometry values.
-:rtype: AnnData
+    Returns
+    -------
+    AnnData
+        The updated AnnData object. If `inplace` is `True`, returns a copy. This object will have
+        `geom` column in the respective geometry dataframe set as its geometry.
+
+    Raises
+    ------
+    ValueError
+        If `values` is `None` and `geom` does not exist.
     """
     if not inplace:
         adata = adata.copy()
@@ -369,25 +390,33 @@ def to_points(
     scale: float = 1,
     radius: Optional[float] = None,
 ) -> gpd.GeoSeries:
-    """\
-Create a GeoSeries from x and y coordinates. If radius is not None, will create a circle with the given radius around each point.
-Otherwise, will create a point at each x,y coordinate.
+    """Create a GeoSeries from x and y coordinates. If radius is not None, will create a circle with the given radius around each point.
+    Otherwise, will create a point at each x,y coordinate.
 
-:param x: The x coordinates of the points. If ``str``, will use ``data[x]``.
-:type x: Union[str, pd.Series, np.ndarray]
-:param y: The y coordinates of the points. If ``str``, will use ``data[y]``.
-:type y: Union[str, pd.Series, np.ndarray]
-:param data: The dataframe to get ``x`` and ``y`` from if they are of type ``str``, defaults to None
-:type data: Union[gpd.GeoDataFrame, pd.DataFrame, None], optional
-:param scale: The scale to convert the coordinates to pixel coordinates, defaults to 1
-:type scale: float, optional
-:param radius: If supplied, the radius of the circle at each coordinate, defaults to None
-:type radius: Optional[float], optional
-:raises ValueError: If ``data`` is ``None`` and either ``x`` or ``y`` is of type ``str``.
-:raises KeyError: If either ``x`` or ``y`` is of type ``str`` and the key does not exist in ``data``.
-:return: GeoSeries of points at the given coordinates. If radius is not ``None``, will be a circle (Polygon) with the given radius.
-:rtype: gpd.GeoSeries
+    Parameters
+    ----------
+    x : Union[str, pd.Series, np.ndarray]
+        The x coordinates of the points. If ``str``, will use ``data[x]``.
+    y : Union[str, pd.Series, np.ndarray]
+        The y coordinates of the points. If ``str``, will use ``data[y]``.
+    data : Union[gpd.GeoDataFrame, pd.DataFrame, None], optional
+        The dataframe to get `x` and `y` from if the are `str`, by default None
+    scale : float, optional
+        The scale to use for converting the coordinates to pixel coordinates, by default 1
+    radius : Optional[float], optional
+        If supplied, the radius of the circle at each coordinate, by default None
+
+    Returns
+    -------
+    gpd.GeoSeries
+        Geoseries of points at the given coordinates. If `radius` is not `None`, each coordinate will be a circle of type Polycon with the given radius.
+
+    Raises
+    ------
+    ValueError
+        If `data` is `None`, and `x` or `y` is `str`.
     """
+
     if data is None and (isinstance(x, str) or isinstance(y, str)):
         raise ValueError("data must not be None if either x or y is str")
     xdat = data[x] if isinstance(x, str) else x
@@ -400,18 +429,23 @@ Otherwise, will create a point at each x,y coordinate.
 
 
 def get_visium_spots(adata: AnnData, with_radius: bool = False, res: Optional[str] = None) -> gpd.GeoSeries:
-    """\
-Return a GeoSeries of the spots in the Visium slide. If ``with_radius`` is ``True``, will return circular polygons with the radius of the spot diameter, otherwise will return points.
+    """Return a GeoSeries of the spots in the Visium slide. If ``with_radius`` is ``True``, will return circular polygons with the radius of the spot diameter, otherwise will return points.
 
-:param adata: _description_
-:type adata: AnnData
-:param with_radius: _description_, defaults to False
-:type with_radius: bool, optional
-:param res: _description_, defaults to None
-:type res: Optional[str], optional
-:return: _description_
-:rtype: gpd.GeoSeries
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    with_radius : bool, optional
+        Whether to create Polygons with radius `radius`. If `False`, the dtype of the returned GeoSeries will be Point, by default False
+    res : Optional[str], optional
+        The resolution to use for the coordinate system. If `None`, this will be determined automatically, by default None
+
+    Returns
+    -------
+    gpd.GeoSeries
+        Points or Polygons of the spots in the Visium slide.
     """
+
     scale = utl.get_scale(adata, res=res)
     scale_dict = adata.uns["spatial"].get("scale", {})
     spot_diam = scale_dict.get("spot_diameter_fullres")
@@ -430,21 +464,27 @@ def get_geom(
     inplace: bool = False,
     res: Optional[str] = None,
 ) -> AnnData:
-    """\
-Get the tissue polygons and tissue boundary from the sample image.
-If they don't exist, they will be computed.
+    """Get the tissue polygons and tissue boundary from the sample image. If they don't exist, they will be computed.
 
-:param adata: The AnnData object to get the geometry from.
-:type adata: AnnData
-:param threshold: The threshold for computing the tissue segmentation, defaults to None
-:type threshold: Optional[int], optional
-:param inplace: Whether to copy the AnnData object or not, defaults to False
-:type inplace: bool, optional
-:param res: The resolution of the image to use for tissue segmentation, defaults to None
-:type res: Optional[str], optional
-:return: The updated AnnData object
-:rtype: AnnData
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    threshold : Optional[int], optional
+        The threshold for computind the tissue segmentation, by default None
+    inplace : bool, optional
+        If `True`, update the AnnData object inplace, otherwise return a copy, by default False
+    res : Optional[str], optional
+        The resolution of the image to use for tissue segmentation. If `None`, determine the resolution automatically, by default None
+
+    Returns
+    -------
+    AnnData
+        The updated or copied AnnData object. The geometry dataframe will contain the columns `"tissue_poly"` and `"tissue_boundary"`,
+        representing the polygon and its boundary for the tissue. The geometry dataframe is accessed at
+        `adata.uns["spatial"]["geom"]`.
     """
+
     if not inplace:
         adata = adata.copy()
 
@@ -497,21 +537,25 @@ def get_spot_coords(
     as_df: bool = False,
     res: Optional[str] = None,
 ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]:
-    """\
-Get the spot coordinates in the image.
+    """Get the spot coordinates in the image.
 
-:param adata: The AnnData object to get the spot coordinates from.
-:type adata: AnnData
-:param subset: Subset of observations which to get the spot coordinates from, defaults to None
-:type subset: Union[None, pd.Series, slice], optional
-:param as_tuple: Whether to return the coordinates as a tuple of arrays, defaults to True
-:type as_tuple: bool, optional
-:param as_df: Whether to return a dataframe with the coordinates , defaults to False
-:type as_df: bool, optional
-:param res: Which resolution to scale the coordinates for, defaults to None
-:type res: Optional[str], optional
-:return: The x and y coordinates of the spots from the AnnData object, as a tuple, dataframe or Nx2 array.
-:rtype: Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]
+    Parameters
+    ----------
+    adata : AnnData
+        Annontated data matrix.
+    subset : Union[None, pd.Series, slice], optional
+        Subset of observations to get the spot coordinates from, by default `None`.
+    as_tuple : bool, optional
+        If `True`, return the coordinates as a tuple of arrays (x, y), by default True
+    as_df : bool, optional
+        If `True`, return the the coordinates as a dataframe, by default `False`.
+    res : Optional[str], optional
+        The resolution to scale the coordinates for. If `None`, this is determined automatically , by default `None`.
+
+    Returns
+    -------
+    Union[np.ndarray, Tuple[np.ndarray, np.ndarray], pd.DataFrame]
+        The coordinates of the selected spots, as a tuple, dataframe, or Nx2 array.
     """
     h_sc = utl.get_scale(adata, res)
     cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
@@ -537,12 +581,32 @@ Get the spot coordinates in the image.
 
 
 def cancel_transforms(adata: AnnData) -> None:
-    """\
-Cancel unapplied transforms.
+    """Cancel unapplied image transforms.
 
-:param adata: The AnnData object to cancel the transforms for.
-:type adata: AnnData
+    These transforms will be lost.
+
+    Parameters
+    ----------
+    adata : AnnData
+        The annotated data matrix.
+
+    See Also
+    --------
+    :py:func:`apply_transforms`
+    :py:func:`rollback_transforms`
+    :py:func:`mirror_img`
+    :py:func:`rotate_img90`
+
+    Examples
+    --------
+
+    >>> import voyagerpy as vp
+    ... adata = ...
+    ... vp.spatial.rotate_img90(adata, k=2, apply=False)
+    ... vp.spatial.cancel_transforms(adata)
+    # The mirror transform is now lost. Coordinates and image are back to original.
     """
+
     spatial_dict = adata.uns["spatial"]
     transforms = spatial_dict.get("transform", ([], []))
     pxl_coord_cols = ["pxl_col_in_fullres_tmp", "pxl_row_in_fullres_tmp"]
@@ -553,11 +617,33 @@ Cancel unapplied transforms.
 
 
 def apply_transforms(adata: AnnData) -> None:
-    """Apply unapplied transforms.
+    """Apply unapplied image transforms.
 
-    :param adata: The AnnData object to apply the transforms for.
-    :type adata: AnnData
+    This changes the image and coordinates in the AnnData object and removes any temporary transformations.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+
+    Examples
+    --------
+    >>> import voyagerpy as vp
+        adata = ...
+        vp.spatial.rotate_img90(adata, k=2, apply=False)
+        vp.spatial.mirror_img(adata, k=2, apply=False)
+        # The transforms are still temporary and not applied.
+        vp.spatial.apply_transforms(adata)
+        # The transforms are now applied, with image and coordinates rotated first, then mirrored.
+
+    See Also
+    --------
+    :py:func:`cancel_transforms`
+    :py:func:`rollback_transforms`
+    :py:func:`mirror_img`
+    :py:func:`rotate_img90`
     """
+
     spatial_dict = adata.uns["spatial"]
     transforms = spatial_dict.get("transform", ([], []))
     pxl_coord_cols = ["pxl_col_in_fullres", "pxl_row_in_fullres"]
@@ -577,18 +663,26 @@ def apply_transforms(adata: AnnData) -> None:
 
 
 def _rotate_coordinate_system(img: np.ndarray, coords: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
-    """\
-Rotate the coordinate system. Rotates the image and the coordinates by 90 degrees k times.
+    """Rotate the coordinate system.
 
-:param img: The image to rotate.
-:type img: np.ndarray
-:param coords: The coordinates to rotate.
-:type coords: np.ndarray
-:param k: The number of times to rotate the image and coordinates by 90 degrees.
-:type k: int
-:return: The rotated image and coordinates.
-:rtype: Tuple[np.ndarray, np.ndarray]
+    Rotates the image and the coordinates clockwise by 90 degrees `k` times.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        The image to rotate.
+    coords : np.ndarray
+        The coordinates to rotate.
+    k : int
+        How many times to rotate the image and coordinates by 90 degrees clockwise.
+        If negative, rotates counter-clockwise.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        The rotated image and coordinates.
     """
+
     rotation_mats = rotation_mats = [
         np.array([[1, 0], [0, 1]]),
         np.array([[0, -1], [1, 0]]),
@@ -612,17 +706,23 @@ Rotate the coordinate system. Rotates the image and the coordinates by 90 degree
 
 
 def _mirror_coordinate_system(img: np.ndarray, coords: np.ndarray, axis: int) -> Tuple[np.ndarray, np.ndarray]:
-    """\
-Mirror the coordinate system. Mirrors the image and the coordinates along the given axis.`
+    """Mirror the coordinate system.
 
-:param img: The image to mirror.
-:type img: np.ndarray
-:param coords: The coordinates to mirror.
-:type coords: np.ndarray
-:param axis: Which axis to use for mirroring.
-:type axis: int
-:return: The mirrored image and coordinates.
-:rtype: Tuple[np.ndarray, np.ndarray]
+    Mirrors the image and the coordinates along the given axis.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        The image to mirror.
+    coords : np.ndarray
+        The coordinates to mirror.
+    axis : int
+        The axis to mirror along.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        The mirrored image and coordinates.
     """
     n_rows, n_cols = img.shape[:2]
 
@@ -638,17 +738,40 @@ Mirror the coordinate system. Mirrors the image and the coordinates along the gi
 
 
 def get_transformation_function(which: str) -> Callable[[AnnData, bool, Optional[int], Optional[int]], Dict[str, np.ndarray]]:
+    """Get a transformation function for mirroring or rotating the image and coordinates.
+
+    Parameters
+    ----------
+    which : {"rotate", "mirror"}
+        Which function to get.
+
+    Returns
+    -------
+    Callable[[AnnData, bool, Optional[int], Optional[int]], Dict[str, np.ndarray]]
+        The transformation function.
+    """
+
     def mirror_param_eval(k: Optional[int] = None, axis: Optional[int] = None) -> int:
         """Evaluate the mirror parameters.
 
-        :param k: Rotation parameter - not used, defaults to None
-        :type k: Optional[int], optional
-        :param axis: The axis to mirror along, defaults to None
-        :type axis: Optional[int], optional
-        :raises ValueError: If axis not in [None, 0, 1]
-        :return: The axis. If axis is None, returns 0.
-        :rtype: int
+        Parameters
+        ----------
+        k : Optional[int], optional
+            Rotation parameter - not used, by default `None`.
+        axis : Optional[int], optional
+            The axis to mirror along, by default `None`.
+
+        Returns
+        -------
+        int
+            The axis to use. If axis is None, returns 0. Otherwise, returns axis from the input.
+
+        Raises
+        ------
+        ValueError
+            If `axis` not in [None, 0, 1].
         """
+
         axis = axis or 0
         if axis not in range(2):
             raise ValueError("Invalid mirror axis, must be either 0 or 1")
@@ -657,13 +780,19 @@ def get_transformation_function(which: str) -> Callable[[AnnData, bool, Optional
     def rotate_param_eval(k: Optional[int] = None, axis: Optional[int] = None) -> int:
         """Evaluate the rotation parameters.
 
-        :param k: The number of 90-degree rotatons, defaults to None
-        :type k: Optional[int], optional
-        :param axis: Mirror axis - not used, defaults to None
-        :type axis: Optional[int], optional
-        :return: k modulo 4. If k is None, returns 1.
-        :rtype: int
+        Parameters
+        ----------
+        k : Optional[int], optional
+            The number of 90-degree rotations, by default None
+        axis : Optional[int], optional
+            Mirror axis - not used, by default None
+
+        Returns
+        -------
+        int
+            k modulo 4. If k is None, returns 1.
         """
+
         k = k or 1
         return k % 4
 
@@ -682,6 +811,24 @@ def get_transformation_function(which: str) -> Callable[[AnnData, bool, Optional
         k: Optional[int] = None,
         axis: Optional[int] = None,
     ) -> Dict[str, np.ndarray]:
+        """Perform the transformation.
+
+        Parameters
+        ----------
+        adata : AnnData
+            The annotated data matrix.
+        apply : bool, optional
+            Apply the transformation. If `False`, store the temporary transformation, by default `True`.
+        k : Optional[int], optional
+            The number of times to rotate the image, if rotation is selected, by default `None`.
+        axis : Optional[int], optional
+            The axis to mirror along, if mirroring is selected, by default `None`.
+
+        Returns
+        -------
+        Dict[str, np.ndarray]
+            _description_
+        """
         """The actual function performing the transformation.
 
         :param adata: The AnnData object to transform.
