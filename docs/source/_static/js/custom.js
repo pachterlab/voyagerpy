@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+function remove_rendered_html_class() {
 	// Get all elements with the class name "rendered_html"
 	var elements = document.getElementsByClassName("rendered_html");
 
@@ -9,4 +9,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	elementsArray.forEach(function (element) {
 		element.classList.remove("rendered_html");
 	});
-});
+}
+
+document.addEventListener("DOMContentLoaded", remove_rendered_html_class);
