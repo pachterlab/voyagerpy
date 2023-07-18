@@ -1,6 +1,6 @@
 ipykernel
 nbsphinx
 git+https://github.com/pmelsted/voyagerpy.git@master
-"scanpy[leiden]"
+scanpy[leiden]
 sphinx-copybutton
-
+pydata-sphinx-theme
