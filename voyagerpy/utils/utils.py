@@ -248,30 +248,39 @@ def log_norm_counts(
     pseudocount: int = 1,
     zero_to_zero: bool = True,
 ) -> Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]:
-    """\
-Compute log-normalized counts. If ``adata`` is of type AnnData and ``layer`` is not ``None``, the layer is used instead of ``adata.X``.
-Otherwise, ``adata`` is assumed to be a sparse matrix or a dense matrix. All rows are normalized to sum to :math:`\\bar{N}`, then log-transformed,
-where :math:`\\bar{N}` is the mean of the total counts across all cells. If `zero_to_zero` is `True`, then zeros in the input matrix will map to zeros in the output matrix.
-If pseudocount is not 1 and zero_to_zero is False, will add pseudocount to all values before log-transforming. This makes the matrix dense in an intermediate step
-and may take a long time with large memory footprint.
+    """Compute log-normalized counts.
 
-:param adata: The matrix or AnnData object to normalize.
-:type adata: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix, AnnData]
-:param layer: If not None, normalize this layer, defaults to None
-:type layer: Optional[str], optional
-:param inplace: Whether to normalize the matrix in-place, defaults to False
-:type inplace: bool, optional
-:param base: The logarithm base to use, defaults to 2. If None, use natural logarithm. If False, do not log-transform.
-:type base: Union[None, int, bool], optional
-:param pseudocount: Pseudocounts to use. If 1, compute log1p, defaults to 1
-:type pseudocount: int, optional
-:param zero_to_zero: If True, zeros in the input matrix will map to zeros in the output matrix, defaults to True
-:type zero_to_zero: bool, optional
-:raises TypeError: if adata is not AnnData, np.ndarray, sp.csr_matrix, or scipy.sparse.csc_matrix
-:return: The log-normalized counts
-:rtype: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]
+    If ``adata`` is of type AnnData and ``layer`` is not ``None``, the layer is used instead of ``adata.X``.
+    Otherwise, ``adata`` is assumed to be a sparse matrix or a dense matrix. All rows are normalized to sum to :math:`\\bar{N}`, then log-transformed,
+    where :math:`\\bar{N}` is the mean of the total counts across all cells. If `zero_to_zero` is `True`, then zeros in the input matrix will map to zeros in the output matrix.
+    If pseudocount is not 1 and zero_to_zero is False, will add pseudocount to all values before log-transforming. This makes the matrix dense in an intermediate step
+    and may take a long time with large memory footprint.
+
+    Parameters
+    ----------
+    adata : Union[np.ndarray, sp.csr_matrix, sp.csr_matrix, AnnData]
+        Annotation data matrix, array, or sparse matrix to normalize.
+    layer : Optional[str], optional
+        If adata is an AnnData object, use this layer to normalize. If None, ``adata.X`` is used, by default None.
+    inplace : bool, optional
+        Normalize the object in-place, by default False
+    base : Union[None, int, bool], optional
+        The base of the logarithm to use, by default 2. If None, use natural logarithm. If False, do not log-transform.
+    pseudocount : int, optional
+        Pseudocounts to use. If 1, computes log1p, by default 1.
+    zero_to_zero : bool, optional
+        If True, zeros in the input matrix will map to zeros in the output, regardless of the pseudocount, by default True.
+
+    Returns
+    -------
+    Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]
+        The log-normalized counts matrix or AnnData object. If an AnnData object is passed, the selected layer or adata.X is normalized.
+
+    Raises
+    ------
+    TypeError
+        If adata is not an AnnData object, array, or sparse matrix.
     """
-
     # Roughly equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
     # sc.pp.normalize_total(adata, target_sum=target_sum)
@@ -297,7 +306,7 @@ and may take a long time with large memory footprint.
         elif sp.isspmatrix_csc(X):
             X.data /= cell_sums[X.indices]
 
-        # Add pseudocount
+        # Add pseudocount - 1 since we actually use log1p
         if pseudocount != 1:
             if zero_to_zero:
                 X.data += pseudocount - 1

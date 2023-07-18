@@ -79,7 +79,7 @@ def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=1
     return a_start, b_start, n_start
 
 
-def inverse_density_weights(x, adjust=1):
+def inverse_density_weights(x: np.ndarray, adjust: int = 1):
     """\
     Calculate inverse density weights for data x.
 
@@ -88,7 +88,7 @@ def inverse_density_weights(x, adjust=1):
     x : ndarray
         Array of points, in this case means.
     adjust : int, optional
-        DESCRIPTION. The default is 1.
+        Currently not used. The default is 1.
 
     Raises
     ------
@@ -334,7 +334,14 @@ def get_mean_var(X: Union[np.ndarray, sparse.csr_matrix, sparse.csc_matrix], axi
 
 
 def model_gene_var(
-    adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None, layer: Optional[str] = None, ddof: int = 1
+    adata: AnnData,
+    block=None,
+    design=None,
+    subset_row=None,
+    subset_fit=None,
+    gene_names=None,
+    layer: Optional[str] = None,
+    ddof: int = 1,
 ) -> pd.DataFrame:
     """Return the modelled gene variance.
 

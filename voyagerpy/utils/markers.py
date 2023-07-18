@@ -146,6 +146,27 @@ def get_statistics(adata: AnnData, clust1: str, clust2=None, test: str = "mw", a
 def get_p_clusters(
     adata: AnnData, clust: Union[str, int], skip_precalc: bool = False, pval_type: str = "all", cluster: str = "cluster"
 ) -> Union[DataFrame, ndarray]:
+    """Get the p values for a given cluster.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotation data matrix.
+    clust : Union[str, int]
+        The cluster to test against all other clusters.
+    skip_precalc : bool, optional
+        Skip pre calculations, by default False
+    pval_type : str, optional
+        The p-value type, by default "all"
+    cluster : str, optional
+        The column name containing the clusters, by default "cluster"
+
+    Returns
+    -------
+    Union[DataFrame, ndarray]
+        Dataframe of p-values for each gene, or array of p-values for each gene.
+    """
+    # TODO: Add better documentation.
     # rows = adata.X.shape[0]
     pval_arrs = []
     # nr_clust = adata.obs["cluster"].cat.codes
