@@ -1172,6 +1172,8 @@ def plot_expression_violin(
 def plot_features_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     """Plot gene features in a 2D histogram.
 
+    This is a wrapper around :py:func:`plot_bin2d`.
+
     Parameters
     ----------
     adata : AnnData
@@ -1183,12 +1185,18 @@ def plot_features_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     -------
     Axes
         The Axes drawn on.
+    
+    See Also
+    --------
+    plot_bin2d
     """
     return plot_bin2d(adata.var, *args, **kwargs)
 
 
 def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     """Plot barcode features in a 2D histogram.
+
+    This is a wrapper around :py:func:`plot_bin2d`.
 
     Parameters
     ----------
@@ -1199,6 +1207,10 @@ def plot_barcodes_bin2d(adata: AnnData, *args, **kwargs) -> Axes:
     -------
     Axes
         The Axes drawn on.
+    
+    See Also
+    --------
+    plot_bin2d
     """
     return plot_bin2d(adata.obs, *args, **kwargs)
 
@@ -1781,6 +1793,10 @@ def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[s
     ------
     KeyError
         If ``obsm`` is not found in ``adata.obsm``.
+
+    See Also
+    --------
+    :py:func:plot_spatial_feature
     """
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
@@ -1808,7 +1824,7 @@ def spatial_reduced_dim(
 ) -> npt.NDArray[Axes]:
     """Plot spatially reduced dimensions.
 
-    This function plots the values of the spatially reduced dimensions for barcodes using :func:`vp.plt.plot_spatial_feature`.
+    This function plots the values of the spatially reduced dimensions for barcodes using :py:func:`plot_spatial_feature`.
 
     Parameters
     ----------
@@ -1832,6 +1848,10 @@ def spatial_reduced_dim(
         If ``ncomponents`` is not an integer or a sequence of integers.
     ValueError
         If ``dimred`` is not found in ``adata.obsm``.
+
+    See Also
+    --------
+    :py:func:plot_spatial_feature
     """
     adata = adata.copy()
     if isinstance(ncomponents, (list, tuple, range)):
@@ -2512,7 +2532,7 @@ def plot_moran_mc(
     Raises
     ------
     KeyError
-        If "moran" or "moran_mc" is not in ``adata.uns["spatial"]``.
+        If either "moran" or "moran_mc" is not in ``adata.uns["spatial"]``. Both keys must exist.
     """
     linewidth = kwargs.pop("linewidth", None)
     _kwargs = dict(figsize=None)
