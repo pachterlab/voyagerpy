@@ -1204,7 +1204,7 @@ Compute LOSH for a feature. Local spatial heterogeneity (LOSH) is a measure of h
 :type feature: Union[str, Sequence[str]]
 :param graph_name: The neighborhood graph name, defaults to None.
 :type graph_name: Optional[str], optional
-:param inference: The inference method to pass to esda.LOSH constructor, defaults to None
+:param inference: The inference method to pass to ``esda.LOSH`` constructor, defaults to None
 :type inference: Union[None, Literal[&quot;permutation&quot;], Literal[&quot;chi, optional
 :param inplace: Whether to add the results to adata inplace or copy it, defaults to True
 :type inplace: bool, optional
@@ -1212,7 +1212,7 @@ Compute LOSH for a feature. Local spatial heterogeneity (LOSH) is a measure of h
 :type key_added: str, optional
 :param layer: If not None, use this layer for gene features, defaults to None
 :type layer: Optional[str], optional
-:raises ImportError: If esda is not installed.
+:raises ImportError: If ``esda`` is not installed.
 :return: The updated AnnData object. If inflace is False, returns a copy.
 :rtype: AnnData
     """

@@ -6,29 +6,29 @@ Spatial functions
 
 .. currentmodule:: voyagerpy.spatial
 
-Tissue stuff
-************
+Tissue segmentation
+*******************
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: generated/spatial/tissue/
 
-	get_approx_tissue_boundary
+    detect_tissue_threshold
+    get_approx_tissue_boundary
+    get_tissue_boundary
+    get_tissue_contour_score
 
-	get_tissue_contour_score
+Geometries
+**********
 
-	get_tissue_boundary
-	
-	detect_tissue_threshold
-	
-	set_geometry
-	
-	to_points
-	
-	get_visium_spots
-	
-	get_geom
-	
-	get_spot_coords
+.. autosummary::
+    :toctree: generated/spatial/geometry/
+    
+    get_geom
+    get_spot_coords
+    get_visium_spots
+    set_geometry
+    to_points
+    to_spatial_weights
 
 Image transformation
 ********************
@@ -37,7 +37,7 @@ These functions allow rotating and mirroring the tissue images.
 These functions perform the same transformations on the spot coordinates.
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: generated/spatial/transforms/
 
    apply_transforms
    cancel_transforms
@@ -45,15 +45,24 @@ These functions perform the same transformations on the spot coordinates.
    rollback_transforms
    rotate_img90
 
-
-Other stuff
-***********
+Metrics and neighbours
+**********************
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: generated/spatial/metrics/
 
-   to_spatial_weights
    compute_spatial_lag
-   moran
    local_moran
+   losh
+   moran
+
+Graphs
+******
+
+.. autosummary::
+   :toctree: generated/spatial/graphs/
+
    compute_correlogram
+   compute_higher_order_neighbors
+   get_default_graph
+   set_default_graph

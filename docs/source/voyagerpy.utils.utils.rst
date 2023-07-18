@@ -18,6 +18,7 @@ Utility functions
     add_per_gene_qcmetrics
     get_scale
     is_highres
+    is_lowres
     kurtosis
     log_norm_counts
     scale

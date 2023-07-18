@@ -2,12 +2,6 @@
 Marker genes
 ============
 
-.. .. automodule:: voyagerpy.utils.markers
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
-
-
 .. module:: voyagerpy.utils
 
 .. currentmodule:: voyagerpy.utils
