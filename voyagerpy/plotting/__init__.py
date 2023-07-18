@@ -29,14 +29,22 @@ from voyagerpy.plotting.plot import (
     spatial_reduced_dim,
 )
 
+# https://github.com/cran/RColorBrewer
+from .blues_colors import (
+    blues3,
+    blues4,
+    blues5,
+    blues6,
+    blues7,
+    blues8,
+    blues9,
+)
+
 # https://github.com/dtm2451/dittoSeq
 from .ditto_colors import ditto_colors
 
 # https://github.com/thomasp85/scico
 from .roma_colors import roma_colors
-
-# https://github.com/cran/RColorBrewer
-from .blues_colors import blues3, blues4, blues5, blues6, blues7, blues8, blues9
 
 
 def set_default_cmap(cmap_name: str) -> None:
