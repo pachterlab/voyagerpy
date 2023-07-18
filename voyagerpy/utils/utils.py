@@ -16,6 +16,25 @@ from anndata import AnnData
 
 
 def is_highres(adata: AnnData) -> bool:
+    """Determine whether the image data is high resolution.
+
+    This function returns `True` iff the image data contains high resolution.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annoted data matrix.
+
+    Returns
+    -------
+    bool
+        `True` if the image data contains a high resolution image, `False` if image data is low resolution and not high resolution.
+
+    Raises
+    ------
+    ValueError
+        If the image data is neither high resolution nor low resolution.
+    """
     if "hires" in adata.uns["spatial"]["img"]:
         return True
     if "lowres" in adata.uns["spatial"]["img"]:
@@ -24,6 +43,27 @@ def is_highres(adata: AnnData) -> bool:
 
 
 def is_lowres(adata: AnnData) -> bool:
+    """Determines whether the image data is low resolution.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annontated data matrix.
+
+    Returns
+    -------
+    bool
+        `True` if the image data contains a low resolution image, `False` if data is high resolution and not low resolution.
+
+    Raises
+    ------
+    ValueError
+        If the image data is neither high resolution nor low resolution.
+
+    See also
+    --------
+    :py:func:`is_highres`
+    """
     if "lowres" in adata.uns["spatial"]["img"]:
         return True
     if "hires" in adata.uns["spatial"]["img"]:
@@ -32,6 +72,18 @@ def is_lowres(adata: AnnData) -> bool:
 
 
 def make_unique(items: List) -> List:
+    """Stably remove duplicates from a list.
+
+    Parameters
+    ----------
+    items : List
+        The list to remove duplicates from.
+
+    Returns
+    -------
+    List
+        The list with duplicates removed in the same order as the input.
+    """
     items = items[:]
     for i in range(len(items) - 1, -1, -1):
         if items.count(items[i]) > 1:
@@ -40,6 +92,34 @@ def make_unique(items: List) -> List:
 
 
 def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
+    """Get the scale of the image data.
+
+    This function returns the scale of the requested image data if it exists.
+    If `res` is `None`, the scale of the low resolution is return if it exists, otherwise it returns the scale of the high resolution image if it exists.
+    If `res` is `"hi"` or `"hires"` and the object contains a high resolution image, the scale of the high resolution image data is returned.
+    If `res` is `"lo"` or `"lowres"` and the object contains a low resolution image, the scale of the low resolution image data is returned.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data matrix.
+    res : {None, "hi", "hires", "lo", "lowres"}, optional
+        The resolution to get the scale for, by default None
+
+    Returns
+    -------
+    float
+        The full-resolution to requested-resolution scale factor.
+
+    Raises
+    ------
+    ValueError
+        If the requested resolution is not one of `None`, `"hi"`, `"hires"`, `"lo"`, or `"lowres"`.
+    ValueError
+        If the requested resolution is not found within the image data
+    KeyError
+        If the requested resolution is found within the image data, but the scale factor is not found.
+    """
     if res not in [None, "hi", "hires", "lo", "lowres"]:
         raise ValueError(f"Unrecognized value {res} for res.")
 
@@ -60,6 +140,34 @@ def get_scale(adata: AnnData, res: Optional[str] = None) -> float:
 
 
 def add_per_gene_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
+    """Add per-gene QC metrics to the AnnData object.
+
+    This function computes the metrics sum and detected for each gene in the AnnData object.
+    The metrics are computed for the entire dataset and for each subset in `subsets`, in addition to
+    the percentage (:math:`\in [0, 100]`) of counts where the subset evaluates to `True`.
+
+    The metric `*sum` is the number of total counts for each gene.
+
+    The metric `*detected` is the number of cells in which each gene is detected.
+
+
+    Parameters
+    ----------
+    adata : AnnData
+        _description_
+    subsets : Dict[str, np.ndarray]
+        A dictionary of subsets to compute metrics for.
+        The keys are the names of the subsets, and the values are boolean arrays of shape `(n_cells,)` where `True` indicates that the cell is in the subset.
+    force : bool, optional
+        If `True`, compute all metrics. If `False`, computed metrics will not be recomputed, by default False
+
+    Returns
+    -------
+    None
+        The keys `"sum"` and `"detected"` are added to `adata.var` if they do not already exist.
+        For each subset `subset`, the keys
+        `f"subsets_{subset}_sum"`, `f"subsets_{subset}_detected"`, and `f"subsets_{subset}_percent"` are added to `adata.var` if they do not already exist.
+    """
     if "sum" not in adata.var.keys() or force:
         adata.var["sum"] = adata.X.sum(axis=0).T  # type: ignore
 
@@ -84,6 +192,32 @@ def add_per_gene_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force
 
 
 def add_per_cell_qcmetrics(adata: AnnData, subsets: Dict[str, np.ndarray], force: bool = False) -> None:
+    """Add per-cell QC metrics to the AnnData object.
+
+    This function computes the metrics sum and detected for each cell in the AnnData object.
+    The metrics are computed for the entire dataset and for each subset in `subsets`, in addition to
+    the percentage (:math:`\in [0, 100]`) of counts where the subset evaluates to `True`.
+
+    The metric `*sum` is the number of total counts for each cell.
+    The metric `*detected` is the number of genes detected in each cell.
+
+    Parameters
+    ----------
+    adata : AnnData
+        Annotation data matrix.
+    subsets : Dict[str, np.ndarray]
+        A dictionary of subsets to compute metrics for.
+        The keys are the names of the subsets, and the values are boolean arrays of shape `(n_cells,)` where `True` indicates that the cell is in the subset.
+    force : bool, optional
+        If `True`, compute all metrics. If `False`, computed metrics will not be recomputed, by default False
+
+    Returns
+    -------
+    None
+        The keys `"sum"` and `"detected"` are added to `adata.obs` if they do not already exist.
+        For each subset `subset`, the keys
+        `f"subsets_{subset}_sum"`, `f"subsets_{subset}_detected"`, and `f"subsets_{subset}_percent"` are added to `adata.obs` if they do not already exist.
+    """
     if "sum" not in adata.obs.keys() or force:
         adata.obs["sum"] = adata.X.sum(axis=1)  # type: ignore
 
@@ -114,30 +248,39 @@ def log_norm_counts(
     pseudocount: int = 1,
     zero_to_zero: bool = True,
 ) -> Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]:
-    """\
-Compute log-normalized counts. If ``adata`` is of type AnnData and ``layer`` is not ``None``, the layer is used instead of ``adata.X``.
-Otherwise, ``adata`` is assumed to be a sparse matrix or a dense matrix. All rows are normalized to sum to :math:`\\bar{N}`, then log-transformed,
-where :math:`\\bar{N}` is the mean of the total counts across all cells. If `zero_to_zero` is `True`, then zeros in the input matrix will map to zeros in the output matrix.
-If pseudocount is not 1 and zero_to_zero is False, will add pseudocount to all values before log-transforming. This makes the matrix dense in an intermediate step
-and may take a long time with large memory footprint.
+    """Compute log-normalized counts.
 
-:param adata: The matrix or AnnData object to normalize.
-:type adata: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix, AnnData]
-:param layer: If not None, normalize this layer, defaults to None
-:type layer: Optional[str], optional
-:param inplace: Whether to normalize the matrix in-place, defaults to False
-:type inplace: bool, optional
-:param base: The logarithm base to use, defaults to 2. If None, use natural logarithm. If False, do not log-transform.
-:type base: Union[None, int, bool], optional
-:param pseudocount: Pseudocounts to use. If 1, compute log1p, defaults to 1
-:type pseudocount: int, optional
-:param zero_to_zero: If True, zeros in the input matrix will map to zeros in the output matrix, defaults to True
-:type zero_to_zero: bool, optional
-:raises TypeError: if adata is not AnnData, np.ndarray, sp.csr_matrix, or scipy.sparse.csc_matrix
-:return: The log-normalized counts
-:rtype: Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]
+    If ``adata`` is of type AnnData and ``layer`` is not ``None``, the layer is used instead of ``adata.X``.
+    Otherwise, ``adata`` is assumed to be a sparse matrix or a dense matrix. All rows are normalized to sum to :math:`\\bar{N}`, then log-transformed,
+    where :math:`\\bar{N}` is the mean of the total counts across all cells. If `zero_to_zero` is `True`, then zeros in the input matrix will map to zeros in the output matrix.
+    If pseudocount is not 1 and zero_to_zero is False, will add pseudocount to all values before log-transforming. This makes the matrix dense in an intermediate step
+    and may take a long time with large memory footprint.
+
+    Parameters
+    ----------
+    adata : Union[np.ndarray, sp.csr_matrix, sp.csr_matrix, AnnData]
+        Annotation data matrix, array, or sparse matrix to normalize.
+    layer : Optional[str], optional
+        If adata is an AnnData object, use this layer to normalize. If None, ``adata.X`` is used, by default None.
+    inplace : bool, optional
+        Normalize the object in-place, by default False
+    base : Union[None, int, bool], optional
+        The base of the logarithm to use, by default 2. If None, use natural logarithm. If False, do not log-transform.
+    pseudocount : int, optional
+        Pseudocounts to use. If 1, computes log1p, by default 1.
+    zero_to_zero : bool, optional
+        If True, zeros in the input matrix will map to zeros in the output, regardless of the pseudocount, by default True.
+
+    Returns
+    -------
+    Union[np.ndarray, sp.csr_matrix, sp.csr_matrix]
+        The log-normalized counts matrix or AnnData object. If an AnnData object is passed, the selected layer or adata.X is normalized.
+
+    Raises
+    ------
+    TypeError
+        If adata is not an AnnData object, array, or sparse matrix.
     """
-
     # Roughly equivalent to:
     # target_sum = adata.X.sum(axis=1).mean()
     # sc.pp.normalize_total(adata, target_sum=target_sum)
@@ -163,7 +306,7 @@ and may take a long time with large memory footprint.
         elif sp.isspmatrix_csc(X):
             X.data /= cell_sums[X.indices]
 
-        # Add pseudocount
+        # Add pseudocount - 1 since we actually use log1p
         if pseudocount != 1:
             if zero_to_zero:
                 X.data += pseudocount - 1
@@ -201,7 +344,6 @@ def scale(
     center_before_scale: bool = True,
     ddof: int = 1,
 ) -> np.ndarray:
-
     if sp.issparse(X):  # or isinstance(X, np.matrix):
         A = X.todense()  # type: ignore
     elif isinstance(X, np.ndarray):

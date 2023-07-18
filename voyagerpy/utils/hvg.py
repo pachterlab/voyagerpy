@@ -67,7 +67,9 @@ def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=1
     hits = np.array([(x, y) for x in b_grid_pts for y in n_grid_pts], dtype=np.float64)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        possible_vals = np.apply_along_axis(lambda x: sum((_vars - (1.13 * x[0] * _means) / ((_means ** x[1]) + x[0] + 0.001)) ** 2), 1, hits)
+        possible_vals = np.apply_along_axis(
+            lambda x: sum((_vars - (1.13 * x[0] * _means) / ((_means ** x[1]) + x[0] + 0.001)) ** 2), 1, hits
+        )
 
     min_ind = np.argmin(possible_vals)
     b_start = np.log(hits[min_ind][0])
@@ -77,7 +79,7 @@ def get_parametric_start(_means, _vars, left_n=100, left_prop=0.1, grid_length=1
     return a_start, b_start, n_start
 
 
-def inverse_density_weights(x, adjust=1):
+def inverse_density_weights(x: np.ndarray, adjust: int = 1):
     """\
     Calculate inverse density weights for data x.
 
@@ -86,7 +88,7 @@ def inverse_density_weights(x, adjust=1):
     x : ndarray
         Array of points, in this case means.
     adjust : int, optional
-        DESCRIPTION. The default is 1.
+        Currently not used. The default is 1.
 
     Raises
     ------
@@ -266,9 +268,8 @@ def weighted_median(x, w):
     # return n
 
 
-def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None):
-    """\
-    Decompose the variance into technical and biological.
+def decompose_log_exprs(_means, _vars, fit_means, fit_vars, names=None) -> pd.DataFrame:
+    """Decompose the variance into technical and biological variance.
 
     Parameters
     ----------
@@ -333,16 +334,23 @@ def get_mean_var(X: Union[np.ndarray, sparse.csr_matrix, sparse.csc_matrix], axi
 
 
 def model_gene_var(
-    adata, block=None, design=None, subset_row=None, subset_fit=None, gene_names=None, layer: Optional[str] = None, ddof: int = 1
-):
-    """\
-    Return the modelled gene variance.
+    adata: AnnData,
+    block=None,
+    design=None,
+    subset_row=None,
+    subset_fit=None,
+    gene_names=None,
+    layer: Optional[str] = None,
+    ddof: int = 1,
+) -> pd.DataFrame:
+    """Return the modelled gene variance.
 
     Modelled on similar method in SCRAN package.
+
     Parameters
     ----------
     adata : AnnData
-        DESCRIPTION.
+        The annotated data matrix.
     block : None, optional
         Compatibility with R. The default is None.
     design : None, optional
@@ -359,6 +367,13 @@ def model_gene_var(
     collected : DataFrame
         Information on modelled variance into biological and technical.
 
+    Note
+    ----
+    The following parameters are not implemented:
+        - block
+        - design
+        - subset_row
+        - subset_fit
     """
 
     if isinstance(adata, AnnData):
@@ -440,5 +455,31 @@ def fit_trend_var(gene_mean, gene_var, min_mean=0.1, parametric=True, lowess=Fal
     return fit, std_dev
 
 
-def get_top_hvgs(stats, n=2000, stat="bio", var_threshold=0):
-    return np.array(stats.nlargest(n, "bio").index, dtype="str")
+def get_top_hvgs(stats: pd.DataFrame, n: int = 2000, stat: str = "bio", var_threshold: float = 0) -> np.ndarray:
+    """Get the `n` genes with the largest biological variance.
+
+    Parameters
+    ----------
+    stats : pd.DataFrame
+        The stats dataframe. Computed via `model_gene_var`.
+    n : int, optional
+        The number of genes to return, by default 2000
+    stat : str, optional
+        The statistic to use for getting the `n` largest values, by default "bio".
+    var_threshold : float, optional
+        The variance threshold to use. This parameter is not used, by default 0.
+
+    Returns
+    -------
+    np.ndarray
+        An array of gene names with the largest statistic specified.
+
+    Note
+    ----
+    The `var_threshold` parameter is not used. It is included for compatibility with the R implementation.
+
+    See also
+    --------
+    :py:func:`model_gene_var`
+    """
+    return np.array(stats.nlargest(n, stat).index, dtype="str")
