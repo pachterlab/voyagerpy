@@ -4,4 +4,4 @@ group:
     
   files:
     - source: examples/
-      dest: examples/
+      dest: docs/source/examples/
