@@ -42,22 +42,28 @@ jobs:
       - name: Build notebooks
         run: |
           pip install --upgrade pip
-          pip install git+https://github.com/pmelsted/voyagerpy.git@main
-          pip install jupyterlab "scanpy[leiden]"
-          mkdir rendered_notebooks
-          find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --execute --to html --output-dir rendered_notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}
-          find notebooks -type f -name "*.html" | cut -f2 -d'/' | cut -f1 -d'.' | xargs -I {} python notebooks/nb_strip.py --output _includes/notebooks/{}.html rendered_notebooks/{}.html
+          pip install -r docs/requirements.txt
+          # pip install git+https://github.com/pmelsted/voyagerpy.git@main
+          # pip install jupyterlab "scanpy[leiden]"
+          # mkdir rendered_notebooks
+          # find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --execute --to html --output-dir rendered_notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}
+          # find notebooks -type f -name "*.html" | cut -f2 -d'/' | cut -f1 -d'.' | xargs -I {} python notebooks/nb_strip.py --output _includes/notebooks/{}.html rendered_notebooks/{}.html
           # mv notebooks/*_files img/ 2>/dev/null
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
+          make -C docs html
+          touch .nojekyll
+          touch docs/.nojekyll
+          mv docs/_site/html _site
+#       - name: Setup Pages
+#         uses: actions/configure-pages@v3
+#       - name: Build with Jekyll
+#         uses: actions/jekyll-build-pages@v1
+#         with:
+#           source: ./
+#           destination: ./_site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
+        with:
+          path: _site
 
   # Deployment job
   deploy:
