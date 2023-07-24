@@ -53,7 +53,10 @@ jobs:
           # find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --execute --to html --output-dir rendered_notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}
           # find notebooks -type f -name "*.html" | cut -f2 -d'/' | cut -f1 -d'.' | xargs -I {} python notebooks/nb_strip.py --output _includes/notebooks/{}.html rendered_notebooks/{}.html
           # mv notebooks/*_files img/ 2>/dev/null
+          
+          $CONDA/bin/conda update -n base -c conda-forge conda
           $CONDA/bin/conda install -c conda-forge pandoc
+          ln -s $CONDA/bin/pandoc pandoc
           pandoc --version
           make -C docs html
           touch .nojekyll
