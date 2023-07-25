@@ -34,7 +34,7 @@ share/python-wheels/
 MANIFEST
 
 # Sphinx documentation
-docs/_build/
+docs/_site/
 docs/_static/
 docs/_templates/
 docs/source/generated/
