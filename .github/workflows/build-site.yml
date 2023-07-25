@@ -43,6 +43,16 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
+      - name: Install Pandoc
+        run: |
+          # Replace the URL with the latest version available if needed
+          PANDOC_VERSION="2.19.2"
+          curl -sSL https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-amd64.tar.gz | tar xvz
+          cp pandoc-${PANDOC_VERSION}/bin/pandoc /usr/local/bin
+          pandoc-${PANDOC_VERSION}/bin/pandoc --version
+          echo $PATH
+          ls /usr/local/bin/pandoc
+          pandoc --version
       - name: Build notebooks
         run: |
           pip install --upgrade pip
@@ -53,10 +63,6 @@ jobs:
           # find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --execute --to html --output-dir rendered_notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}
           # find notebooks -type f -name "*.html" | cut -f2 -d'/' | cut -f1 -d'.' | xargs -I {} python notebooks/nb_strip.py --output _includes/notebooks/{}.html rendered_notebooks/{}.html
           # mv notebooks/*_files img/ 2>/dev/null
-          
-          $CONDA/bin/conda update -n base -c conda-forge conda
-          $CONDA/bin/conda install -c conda-forge pandoc
-          ln -s $CONDA/bin/pandoc pandoc
           pandoc --version
           make -C docs html
           touch .nojekyll
