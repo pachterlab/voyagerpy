@@ -7,8 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "VoyagerPy"
-copyright = "2023, Pall Melsted, Sindri Emmanuel Antonsson, Petur Helgi Einarsson"
-author = "Pall Melsted, Sindri Emmanuel Antonsson, Petur Helgi Einarsson"
+copyright = "2023, Pall Melsted, Sindri Emmanuel Antonsson, Petur Helgi Einarsson, Ali Sina Booeshaghi"
+author = "Pall Melsted, Sindri Emmanuel Antonsson, Petur Helgi Einarsson, Ali Sina Booeshaghi"
 release = "0.1"
 version = "0.1.1"
 
