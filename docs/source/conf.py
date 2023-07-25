@@ -47,7 +47,7 @@ templates_path = ["_templates"]
 exclude_patterns = []
 
 # Change this to "auto" when this is fixed.
-nbsphinx_execute = "never"
+nbsphinx_execute = "auto"
 
 
 # -- Options for HTML output -------------------------------------------------
