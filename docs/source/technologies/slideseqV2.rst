@@ -1,3 +1,6 @@
+:orphan:
+:nosearch:
+
 ===============================================
 Slide-seqV2 Processing Workflows with VoyagerPy
 ===============================================

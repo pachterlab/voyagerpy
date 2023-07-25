@@ -2,8 +2,6 @@
 Marker genes
 ============
 
-.. module:: voyagerpy.utils
-
 .. currentmodule:: voyagerpy.utils
 
 .. autosummary::

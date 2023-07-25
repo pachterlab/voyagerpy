@@ -1,3 +1,6 @@
+:orphan:
+:nosearch:
+
 ==========================================
 Xenium Processing Workflows with VoyagerPy
 ==========================================

@@ -11,10 +11,5 @@ The functions in this module are used by the other modules in the package.
    voyagerpy.utils.markers
    voyagerpy.utils.utils
 
-.. Module contents
-.. ---------------
-
-.. .. automodule:: voyagerpy.utils
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
+.. module:: voyagerpy.utils
+   :synopsis: Various utility functions.

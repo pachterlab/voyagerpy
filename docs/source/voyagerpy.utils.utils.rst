@@ -2,13 +2,6 @@
 Utility functions
 =================
 
-.. .. automodule:: voyagerpy.utils.utils
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
-
-.. module:: voyagerpy.utils
-
 .. currentmodule:: voyagerpy.utils
 
 .. autosummary::

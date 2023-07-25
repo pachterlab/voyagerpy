@@ -1,3 +1,6 @@
+:orphan:
+:nosearch:
+
 =========================================
 CosMX Processing Workflows with VoyagerPy
 =========================================

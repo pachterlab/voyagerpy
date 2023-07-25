@@ -13,7 +13,7 @@
 The `Chromium Single Cell Multiome solution from 10x Genomics <https://www.10xgenomics.com/products/single-cell-multiome-atac-plus-gene-expression>`_ 
 allows researchers to simultaneously 
 interrogate chromatin accessibility and gene expression at the single cell level. Many of the workflow 
-objectives in the standalone :ref:`Single Cell ATAC <technologies/10xatac>` assay are mirrored in the multiome assay. Both assays 
+objectives in the standalone :ref:`Single Cell ATAC <10xatac>` assay are mirrored in the multiome assay. Both assays 
 require a nuclei suspension that is incubated in a solution that includes transposase. Nuclei and 
 fragmented DNA are partitioned into Gel Beads-in-emulsion (GEMs) where a pool of barcodes is used to 
 index the transposed DNA of each individual nucleus. In the multiome assay, gel beads include a poly(dT) 

@@ -1,3 +1,6 @@
+:orphan:
+:nosearch:
+
 ===========================================
 seqFISH Processing Workflows with VoyagerPy
 ===========================================

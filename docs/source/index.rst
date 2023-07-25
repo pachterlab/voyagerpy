@@ -13,11 +13,14 @@ VoyagerPy - From geospatial to spatial omics
 
 VoyagerPy is the Python implementation of the `Voyager package for R <https://pachterlab.github.io/voyager>`_. 
 It brings the tradition of geospatial statistics to spatial omics data analysis.
-This documentation will help you get started with VoyagerPy and learn how to use it. Tutorials are available at `<https://pmelsted.github.io/voyagerpy>`_.
-These tutorials aim to illustrate exploratory spatial data analysis and visualization with VoyagerPy.
+
+This documentation will help you get started with VoyagerPy and learn how to use it.
+The :ref:`technologies` section lists several different technologies for scRNA-seq data. There you can
+find notebooks for each technology.
+These notebooks aim to illustrate preprocessing of raw data, basic QC, exploratory spatial data analysis and visualization with VoyagerPy.
 They are designed to follow the tutorial vignettes for the R package Voyager.
 
-Please head to our :ref:`installation` page to get started.
+Please head to our :ref:`installation page <installation>` to get started with VoyagerPy.
 
 .. toctree::
    :maxdepth: 2
@@ -32,7 +35,6 @@ Please head to our :ref:`installation` page to get started.
 .. sidebar:: Indices and tables
 
    :ref:`genindex`
-
    :ref:`modindex`
 
    .. * :ref:`search`

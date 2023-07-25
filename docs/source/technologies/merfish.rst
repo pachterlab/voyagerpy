@@ -1,3 +1,6 @@
+:orphan:
+:nosearch:
+
 =========================================
 MERFISH Processing Workflows with Voyager
 =========================================

@@ -1,3 +1,6 @@
+:orphan:
+:nosearch:
+
 ===============================================
 PhenoCycler Processing Workflows with VoyagerPy
 ===============================================
