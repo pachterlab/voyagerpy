@@ -2560,7 +2560,11 @@ def plot_moran_mc(
 
     for feat, I in zip(features, Is):
         sim = moran_sim_dict[feat]["sim"]
-        label = adata.var.loc[feat, "symbol"]
+        # label = adata.var.loc[feat, "symbol"]  #! JRIch (commented out)
+        if feat in adata.var.index:  #! JRIch
+            label = adata.var.loc[feat, "symbol"]  #! JRIch
+        else:  #! JRIch
+            label = feat  #! JRIch
 
         x1 = min(minI, sim.min())
         x2 = max(maxI, sim.max())
