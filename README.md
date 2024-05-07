@@ -34,12 +34,12 @@ Some users may experince problems with installing GeoPandas, which VoyagerPy dep
 There is a VoyagerPy docker image which includes many dependencies for VoyagerPy, build on top of Python 3.9. To run the VoyagerPy docker image, please run the following:
 
 ```docker run -it josephrich98/voyagerpy:tagname /bin/bash```
-```source ~/venv_list/my_venv/bin/activate```
+```source ~/venv_list/voyagerpy_env/bin/activate```
 
 
 In order to run jupyter notebooks, forward ports and connect to jupyter with the following commands:
 ```docker run -it -p 8888:8888 josephrich98/voyagerpy:tagname /bin/bash```
-```source ~/venv_list/my_venv/bin/activate```
+```source ~/venv_list/voyagerpy_env/bin/activate```
 ```jupyter lab --ip 0.0.0.0 --port 8888 --no-browser --allow-root```
 
 ## Structure of VoyagerPy
