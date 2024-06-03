@@ -1,6 +1,6 @@
 group:
   repos: |
-    pmelsted/voyagerpy@gh-pages
+    pachterlab/voyagerpy@gh-pages
     
   files:
     - source: examples/

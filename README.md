@@ -11,11 +11,11 @@ To install the latest release of VoyagerPy, you can install it via `pip`:
 ### Clone the repo
 Clone this repo either using SSH:
 
-```git clone git@github.com:pmelsted/voyagerpy.git```
+```git clone git@github.com:pachterlab/voyagerpy.git```
 
 or HTTPS:
 
-```git clone https://github.com/pmelsted/voyagerpy.git```.
+```git clone https://github.com/pachterlab/voyagerpy.git```.
 
 To get the bleeding edge version, change your branch to `dev` by running
 

@@ -3,13 +3,13 @@ name = "voyagerpy"
 version = "0.1.1"
 description = "Python library for Voyager, the geo-spatialist R library."
 authors = [
-	"Pall Melsted <pmelsted@hi.is>",
+	"Pall Melsted <pachterlab@hi.is>",
 	"Sindri Emmanuel Antonsson <sea7@hi.is>", 
 	"Petur Helgi Einarsson <phe@hi.is>", 
 ]
 readme = "README.md"
-homepage = "https://pmelsted.github.io/voyagerpy"
-repository = "https://github.com/pmelsted/voyagerpy"
+homepage = "https://pachterlab.github.io/voyagerpy"
+repository = "https://github.com/pachterlab/voyagerpy"
 keywords = ["Single-Cell", "Spatial", "voyager"]
 license = "BSD-3-Clause"
 
@@ -40,7 +40,7 @@ watermark = {version = "2.4.2", optional = true}
 scikit-image = {version = "0.22.0", optional = true}
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/pmelsted/voyagerpy/issues"
+"Bug Tracker" = "https://github.com/pachterlab/voyagerpy/issues"
 
 [tool.poetry.extras]
 notebooks = ["scanpy", "leidenalg", "igraph", "gget", "watermark", "scikit-image"]

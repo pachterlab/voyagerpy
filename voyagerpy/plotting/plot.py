@@ -1636,6 +1636,9 @@ def plot_spatial_feature(
                 annot_kwargs.update(annot_style or {})
 
                 plg = adata.uns["spatial"]["geom"][annot_geom]
+
+                annot_kwargs.pop('s', None)
+
                 gpd.GeoSeries(plg).plot(**annot_kwargs)
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
