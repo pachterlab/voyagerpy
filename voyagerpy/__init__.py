@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from voyagerpy import plotting, spatial, utils
-from voyagerpy.read import read_10x_counts, read_10x_visium
+from voyagerpy.read import read_10x_counts, read_10x_visium, read_xenium
 
 __version__ = "0.1.1"
 
@@ -14,6 +14,7 @@ __all__ = [
     "plt",
     "read_10x_counts",
     "read_10x_visium",
+    "read_xenium",
     "spatial",
     "spt",
     "utils",

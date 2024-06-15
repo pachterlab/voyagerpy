@@ -13,6 +13,15 @@ from voyagerpy.utils.utils import (
     make_unique,
     normalize_csr,
     scale,
+    download_data,
+    get_physical_size,
+    box_microns_to_pixels,
+    load_image,
+    find_appropriate_image_resolution,
+    normalize_image,
+    load_3d_image,
+    adjust_polygon_coordinates,
+    run_knn
 )
 
 from voyagerpy.utils.hvg import get_top_hvgs, model_gene_var
@@ -36,4 +45,13 @@ __all__ = [
     "model_gene_var",
     "normalize_csr",
     "scale",
+    "download_data",
+    "get_physical_size",
+    "box_microns_to_pixels",
+    "load_image",
+    "find_appropriate_image_resolution",
+    "normalize_image",
+    "load_3d_image",
+    "adjust_polygon_coordinates",
+    "run_knn"
 ]

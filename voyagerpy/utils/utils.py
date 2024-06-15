@@ -419,3 +419,311 @@ def listify(
     nontype = type(None)
     size = size if size is not None else 1
     return [x] * size if isinstance(x, (int, float, str, nontype)) else list(x)
+
+
+import requests
+import tarfile
+
+
+def download_data(tar_path, url_reads, outs_dir = "."):
+    if not tar_path.exists():
+        res = requests.get(url_reads)
+        with tar_path.open('wb') as f:
+            f.write(res.content)
+
+        try:
+            with tarfile.open(tar_path, 'r') as tar:
+                tar.extractall(path=outs_dir)
+                print("Extraction completed successfully!")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+
+
+# Xenium
+import xml.etree.ElementTree as ET
+import tifffile
+from shapely.geometry import Polygon, MultiPolygon, box
+def get_physical_size(file_path, level):
+    """
+    Retrieve the physical size of pixels in an image at a specified resolution level.
+
+    Parameters:
+    file_path (str): Path to the TIFF image file.
+    level (int): Image resolution level.
+
+    Returns:
+    tuple: Physical size of the pixels (physical_size_x, physical_size_y) in microns.
+
+    This function reads the XML metadata from the TIFF file to retrieve the physical size of the pixels
+    (PhysicalSizeX and PhysicalSizeY) at the full resolution. If a resolution level other than 0 is specified,
+    it adjusts the physical size based on the downsampled image dimensions at the specified level.
+
+    Example usage:
+    physical_size_x, physical_size_y = get_physical_size('path/to/image.tiff', level=1)
+    """
+    # Open the TIFF file and read the XML metadata
+    with tifffile.TiffFile(file_path) as tif:
+        xml_metadata = tif.ome_metadata
+
+    # Parse the XML metadata
+    root = ET.fromstring(xml_metadata)
+
+    # Define the namespace
+    namespace = {'ome': 'http://www.openmicroscopy.org/Schemas/OME/2016-06'}
+
+    # Retrieve PhysicalSizeX and PhysicalSizeY values from the full resolution image
+    physical_size_x = float(root.find('.//ome:Pixels', namespace).get('PhysicalSizeX'))
+    physical_size_y = float(root.find('.//ome:Pixels', namespace).get('PhysicalSizeY'))
+
+    if level != 0:
+        pixel_dim_x = float(root.find('.//ome:Pixels', namespace).get('SizeX'))
+        pixel_dim_y = float(root.find('.//ome:Pixels', namespace).get('SizeY'))
+    
+        downsampled_img = tifffile.imread(file_path, is_ome=False, level=level)
+
+        physical_size_x = physical_size_x * (pixel_dim_x / downsampled_img.shape[1])
+        physical_size_y = physical_size_y * (pixel_dim_y / downsampled_img.shape[0])
+
+    return physical_size_x, physical_size_y
+
+def box_microns_to_pixels(bbox, file_path, level):
+    """
+    Convert bounding box coordinates from microns to pixels.
+
+    Parameters:
+    bbox (tuple): Bounding box specified as (xmin, ymin, xmax, ymax) in microns.
+    file_path (str): Path to the image file for calculating physical sizes.
+    level (int): Image resolution level.
+
+    Returns:
+    tuple: Bounding box coordinates in pixels (xmin, ymin, xmax, ymax).
+
+    This function converts the bounding box coordinates from microns to pixels
+    using the physical size of the image at the specified resolution level.
+    """
+    physical_size_x, physical_size_y = get_physical_size(file_path, level)
+
+    x_min, y_min, x_max, y_max = bbox
+
+    x_min = int(x_min / physical_size_x)
+    y_min = int(y_min / physical_size_y)
+    x_max = int(x_max / physical_size_x)
+    y_max = int(y_max / physical_size_y)
+
+    return x_min, y_min, x_max, y_max
+    
+def load_image(file_path, level=0, bbox = None, axis_units = "microns"):
+    """
+    Load an image at a specified resolution level, optionally cropping it to a bounding box.
+
+    Parameters:
+    file_path (str): Path to the image file.
+    level (int, optional): Image resolution level to load. Default is 0.
+    bbox (tuple, optional): Bounding box (xmin, ymin, xmax, ymax) to crop the image. Default is None.
+    axis_units (str, optional): Units for the bounding box coordinates, either 'microns' or 'pixels'. Default is 'microns'.
+
+    Returns:
+    numpy.ndarray: Loaded image, optionally cropped to the specified bounding box.
+
+    This function loads an image at the specified resolution level. If a bounding box is provided,
+    it crops the image to the specified region. The bounding box coordinates can be in microns or pixels.
+    """
+    img = tifffile.imread(file_path, is_ome=False, level=level)
+        
+    if bbox is not None:
+        if axis_units == "microns":
+            x_min, y_min, x_max, y_max = box_microns_to_pixels(bbox, file_path, level)
+        else:
+            x_min, y_min, x_max, y_max = bbox
+
+        img = img[y_min:y_max, x_min:x_max]
+
+    return img
+
+def find_appropriate_image_resolution(file_path, max_pixels=float('inf'), bbox = None, axis_units = "microns"):
+    """
+    Find the highest resolution level of an image that meets the maximum pixel size criteria.
+
+    Parameters:
+    file_path (str): Path to the image file.
+    max_pixels (int, optional): Maximum allowable number of pixels for the loaded image. Default is infinity.
+    bbox (tuple, optional): Bounding box (xmin, ymin, xmax, ymax) to crop the image. Default is None.
+    axis_units (str, optional): Units for the bounding box coordinates, either 'microns' or 'pixels'. Default is 'microns'.
+
+    Returns:
+    int: The highest resolution level that meets the maximum pixel size criteria.
+
+    Raises:
+    ValueError: If no resolution level meets the criteria.
+
+    This function iterates through the resolution levels of the image from highest to lowest.
+    It loads the image at each level and checks if the number of pixels is within the specified limit.
+    The highest resolution level that meets the criteria is returned.
+    """
+    best_level = None
+    
+    for level in reversed(range(8)):  # Reverse to iterate from highest to lowest resolution
+        img = load_image(file_path, level = level, bbox = bbox, axis_units = axis_units)
+        
+        if img.size <= max_pixels:
+            best_level = level
+        else:
+            break
+
+    if best_level is not None:
+        return best_level
+    
+    raise ValueError("No resolution level meets the criteria.")
+
+def normalize_image(image):
+    """
+    Normalize an image to the range 0-255.
+
+    Parameters:
+    image (numpy.ndarray): Input image array.
+
+    Returns:
+    numpy.ndarray: Normalized image array with values in the range 0-255.
+    
+    This function converts the input image to float, normalizes it to the range [0, 1],
+    and then scales it to [0, 255]. The final output is converted back to uint8.
+    """
+    img_float = image.astype(np.float32)
+    img_normalized = (img_float - np.min(img_float)) / (np.max(img_float) - np.min(img_float))
+    return (img_normalized * 255).astype(np.uint8)
+
+
+def load_3d_image(red_path, green_path, blue_path, level=0, bbox = None, axis_units = "microns", normalize = True):
+    """
+    Load and create a 3D RGB image from individual red, green, and blue channel images.
+
+    Parameters:
+    red_path (str): Path to the red channel image file.
+    green_path (str): Path to the green channel image file.
+    blue_path (str): Path to the blue channel image file.
+    level (int, optional): Image resolution level to load. Default is 0.
+    bbox (tuple, optional): Bounding box (xmin, ymin, xmax, ymax) to load a specific region of the image. Default is None.
+    axis_units (str, optional): Units for the image axis, either 'microns' or 'pixels'. Default is 'microns'.
+    normalize (bool, optional): If True, normalize the image channels. Default is True.
+
+    Returns:
+    numpy.ndarray: RGB image created by stacking the individual color channels.
+
+    This function loads the individual color channel images, optionally normalizes them,
+    and then combines them into a single RGB image.
+    """
+    red_channel = load_image(red_path, level=level, bbox = bbox, axis_units = axis_units)
+    green_channel = load_image(green_path, level=level, bbox = bbox, axis_units = axis_units)
+    blue_channel = load_image(blue_path, level=level, bbox = bbox, axis_units = axis_units)
+
+    if normalize:
+        blue_channel = normalize_image(blue_channel)
+        green_channel = normalize_image(green_channel)
+        red_channel = normalize_image(red_channel)
+
+    # Create an RGB image by stacking the normalized channels
+    rgb_image = np.zeros((blue_channel.shape[0], blue_channel.shape[1], 3), dtype=np.uint8)
+    rgb_image[..., 0] = red_channel      # Red channel
+    rgb_image[..., 1] = green_channel # Green channel
+    rgb_image[..., 2] = blue_channel     # Blue channel
+
+    return rgb_image
+
+def adjust_polygon_coordinates(geometry, x_offset=0, y_offset=0, physical_size_x=1, physical_size_y=1):
+    """
+    Adjust the coordinates of a polygon or multipolygon based on offsets and physical sizes.
+
+    Parameters:
+    geometry (Polygon or MultiPolygon): Input geometry to be adjusted.
+    x_offset (float, optional): Offset to subtract from x-coordinates. Default is 0.
+    y_offset (float, optional): Offset to subtract from y-coordinates. Default is 0.
+    physical_size_x (float, optional): Physical size of one unit in the x-direction. Default is 1.
+    physical_size_y (float, optional): Physical size of one unit in the y-direction. Default is 1.
+
+    Returns:
+    Polygon or MultiPolygon: Adjusted geometry with updated coordinates.
+
+    This function adjusts the coordinates of the input geometry by first subtracting the offsets,
+    then dividing by the physical size to convert to physical units. It handles both single polygons
+    and multipolygons.
+
+    Example usage:
+    adjusted_geometry = adjust_polygon_coordinates(polygon, x_offset=10, y_offset=20, physical_size_x=0.5, physical_size_y=0.5)
+    """
+    if isinstance(geometry, Polygon):
+        adjusted_coords = [(x - x_offset, y - y_offset) for x, y in geometry.exterior.coords]
+        adjusted_coords = [(x / physical_size_x, y / physical_size_y) for x, y in adjusted_coords]
+        adjusted_polygon = Polygon(adjusted_coords)
+        return adjusted_polygon
+    
+    elif isinstance(geometry, MultiPolygon):
+        adjusted_polygons = []
+        for polygon in geometry.geoms:
+            adjusted_coords = [(x - x_offset, y - y_offset) for x, y in polygon.exterior.coords]
+            adjusted_coords = [(x / physical_size_x, y / physical_size_y) for x, y in adjusted_coords]
+            adjusted_polygon = Polygon(adjusted_coords)
+            adjusted_polygons.append(adjusted_polygon)
+        return MultiPolygon(adjusted_polygons) 
+    
+    
+import numpy as np
+import scipy.sparse as sp
+from sklearn.neighbors import NearestNeighbors
+
+def run_knn(adata, adata_obs_x_name = 'x_centroid', adata_obs_y_name = 'y_centroid', n_neighbors = 5, weight_matrix_method = "binary"):
+    """
+    Compute the K-nearest neighbors (KNN) graph for spatial data stored in an AnnData object.
+
+    Parameters:
+    adata (AnnData): An AnnData object containing single-cell data.
+    adata_obs_x_name (str, optional): The name of the column in adata.obs for x-coordinates. Default is 'x_centroid'.
+    adata_obs_y_name (str, optional): The name of the column in adata.obs for y-coordinates. Default is 'y_centroid'.
+    n_neighbors (int, optional): Number of neighbors to use for KNN. Default is 5.
+    weight_matrix_method (str, optional): Method to compute weights for the KNN graph. Options are "binary" or "distance". Default is "binary".
+
+    Returns:
+    AnnData: The input AnnData object with the computed KNN graph stored in adata.obsp['knn_graph'].
+
+    The function computes the KNN graph using the specified coordinates from adata.obs.
+    The computed distances and indices are stored in adata.obs. The KNN graph is stored as a sparse matrix in adata.obsp['knn_graph'].
+
+    Example usage:
+    adata = run_knn(adata, adata_obs_x_name='x_centroid', adata_obs_y_name='y_centroid', n_neighbors=5, weight_matrix_method="binary")
+    """
+    points = np.vstack((adata.obs[adata_obs_x_name], adata.obs[adata_obs_y_name])).T
+
+    # Fit the nearest neighbors model
+    knn_model = NearestNeighbors(n_neighbors=n_neighbors, algorithm='auto', metric='euclidean')
+    knn_model.fit(points)
+
+    # Compute the KNN graph
+    distances, indices = knn_model.kneighbors(points)
+
+    distances_list = distances.tolist()
+    indices_list = indices.tolist()
+
+    # Optionally, store the results in the AnnData object
+    adata.obs['knn_distances'] = distances_list
+    adata.obs['knn_indices'] = indices_list
+
+    adata.obs['knn_distance_max'] = adata.obs['knn_distances'].apply(max)
+
+    n_samples = adata.X.shape[0]
+    rows = np.repeat(np.arange(n_samples), n_neighbors)
+    cols = indices.flatten()
+
+    if weight_matrix_method == "binary":
+        distances = (distances != 0).astype(int) / n_neighbors
+    elif weight_matrix_method == "distance":
+        distances = 1 / distances
+
+    flattened_distances = distances.flatten()
+
+    # Construct the sparse matrix in CSR format
+    knn_graph = sp.csr_matrix((flattened_distances, (rows, cols)), shape=(n_samples, n_samples))
+
+    # Store the sparse matrix in adata.obsp['knn_graph']
+    adata.obsp['knn_graph'] = knn_graph
+
+    return adata

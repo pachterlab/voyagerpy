@@ -226,3 +226,190 @@ def read_10x_visium(
     }
     adata.uns["metadata"] = metadata
     return adata
+
+
+
+from shapely.geometry import Polygon, MultiPolygon
+import pandas as pd
+import h5py
+import anndata as ad
+
+def create_polygon(group):
+    """
+    Create a Polygon from a group of vertices.
+
+    Parameters:
+    group (pd.DataFrame): A DataFrame containing the vertices of the polygon with columns 'vertex_x' and 'vertex_y'.
+
+    Returns:
+    Polygon: A Shapely Polygon object created from the provided vertices.
+
+    This function takes a group (typically a subset of a DataFrame grouped by some criteria)
+    and creates a Polygon by zipping together the 'vertex_x' and 'vertex_y' columns.
+
+    Example usage:
+    polygon = create_polygon(group)
+    """
+    return Polygon(zip(group['vertex_x'], group['vertex_y']))
+
+def create_multipolygon(group):
+    """
+    Create a MultiPolygon from a group of geometries.
+
+    Parameters:
+    group (pd.DataFrame): A DataFrame containing geometries in a column 'geometry' and corresponding cell IDs in 'cell_id'.
+
+    Returns:
+    pd.Series: A Series with a MultiPolygon object and unique cell IDs.
+
+    This function takes a group (typically a subset of a DataFrame grouped by some criteria)
+    and creates a MultiPolygon by combining the geometries in the 'geometry' column.
+    It also extracts the unique cell IDs from the 'cell_id' column.
+
+    Example usage:
+    multipolygon_series = create_multipolygon(group)
+    multipolygon = multipolygon_series['geometry']
+    cell_ids = multipolygon_series['cell_id']
+    """
+    multipolygon = MultiPolygon(group['geometry'].tolist())
+    cell_ids = group['cell_id'].unique()
+    return pd.Series({'geometry': multipolygon, 'cell_id': cell_ids})
+
+def combine_polygons(group):
+    """
+    Combine multiple geometries into a single MultiPolygon.
+
+    Parameters:
+    group (pd.DataFrame): A DataFrame containing geometries in a column 'geometry' and corresponding cell IDs in 'cell_id'.
+
+    Returns:
+    pd.Series: A Series with a combined MultiPolygon object and the first cell ID.
+
+    This function takes a group (typically a subset of a DataFrame grouped by some criteria)
+    and combines the geometries in the 'geometry' column into a single MultiPolygon.
+    It also extracts the first cell ID from the 'cell_id' column.
+
+    Example usage:
+    combined_polygon_series = combine_polygons(group)
+    combined_multipolygon = combined_polygon_series['geometry']
+    cell_id = combined_polygon_series['cell_id']
+    """
+    combined_multipolygon = MultiPolygon([geom for geom in group['geometry']])
+    return pd.Series({'geometry': combined_multipolygon, 'cell_id': group['cell_id'].iloc[0]})
+
+def read_xenium(data_folder):
+    """
+    Load and process Xenium spatial transcriptomics data from a specified folder.
+
+    Parameters:
+    data_folder (str): Path to the folder containing the Xenium data files.
+
+    Returns:
+    AnnData: An AnnData object containing the spatial transcriptomics data with cell and nucleus boundary information.
+
+    The function performs the following steps:
+    1. Reads the cell feature matrix from an HDF5 file and constructs a sparse matrix.
+    2. Creates DataFrames for observation (obs) and variable (var) data.
+    3. Reads additional cell information from a Parquet file and merges it with obs.
+    4. Reads cell boundary information from a Parquet file and constructs geometries.
+    5. Reads nucleus boundary information from a Parquet file, creates polygons, and combines them.
+    6. Merges the cell and nucleus geometries into the obs metadata.
+    7. Reads transcript information from a Parquet file and stores it in uns.
+    8. Sets the technology type in uns.
+
+    Example usage:
+    adata = read_xenium("/path/to/data_folder")
+    """
+    from scipy.sparse import csr_matrix
+    import geopandas as gpd
+
+
+    matrix_file = f"{data_folder}/cell_feature_matrix.h5"
+
+    # Open the HDF5 file
+    with h5py.File(matrix_file, "r") as f:
+        # Function to recursively print the structure of the HDF5 file
+        def print_structure(name, obj):
+            print(name)
+        
+        # Print the structure of the file
+        f.visititems(print_structure)
+
+        barcodes = f['matrix/barcodes'][:].astype(str)
+        data = f['matrix/data'][:]
+        feature_names = f['matrix/features/name'][:].astype(str)
+        feature_types = f['matrix/features/feature_type'][:].astype(str)
+        indices = f['matrix/indices'][:]
+        indptr = f['matrix/indptr'][:]
+        shape = f['matrix/shape'][:]
+
+        X = csr_matrix((data, indices, indptr), shape=(shape[1], shape[0]))
+
+        # Create DataFrames for obs and var
+        obs = pd.DataFrame(index=barcodes)
+        var = pd.DataFrame(index=feature_names)
+        var['feature_type'] = feature_types
+        
+        # Create AnnData object
+        adata = ad.AnnData(X=X, obs=obs, var=var)
+
+    cell_information_file = f"{data_folder}/cells.parquet"
+
+    cell_df = pd.read_parquet(cell_information_file)
+
+    cell_df.set_index('cell_id', inplace=True)
+
+    aligned_cell_df = cell_df.reindex(adata.obs.index)
+    adata.obs = adata.obs.join(aligned_cell_df)
+
+    cell_boundary_information_file = f"{data_folder}/cell_boundaries.parquet"
+
+    cell_boundaries_df = pd.read_parquet(cell_boundary_information_file)
+
+    polygons = cell_boundaries_df.groupby('cell_id').apply(lambda group: Polygon(zip(group['vertex_x'], group['vertex_y'])))
+
+    # Convert the Series of polygons to a GeoDataFrame
+    gdf = gpd.GeoDataFrame(polygons, columns=['geometry'])
+
+    adata.obsm['geometry'] = pd.DataFrame(index=gdf.index)
+
+    adata.obsm['geometry']['cellSeg'] = gdf
+
+    nucleus_boundary_information_file = f"{data_folder}/nucleus_boundaries.parquet"
+
+    nucleus_boundaries_df = pd.read_parquet(nucleus_boundary_information_file)
+
+    # Group by 'label_id' and 'cell_id' to create individual polygons
+    polygons_df = nucleus_boundaries_df.groupby(['label_id', 'cell_id']).apply(create_polygon).reset_index()
+
+    # Rename the resulting column for clarity
+    polygons_df = polygons_df.rename(columns={0: 'geometry'})
+
+    # Ensure 'cell_id' is of a hashable type (string)
+    polygons_df['cell_id'] = polygons_df['cell_id'].astype(str)
+
+    # Group by 'cell_id' and apply the combination function
+    combined_gdf = polygons_df.groupby('cell_id').apply(combine_polygons).reset_index(drop=True)
+
+    # Convert to GeoDataFrame
+    combined_gdf = gpd.GeoDataFrame(combined_gdf, geometry='geometry')
+    combined_gdf.rename(columns={'geometry': 'nucSeg'}, inplace=True)
+
+    merged_df = pd.merge(adata.obsm['geometry'].reset_index(), combined_gdf, on='cell_id', how='left', suffixes=('', '_combined'))
+
+    # Set the index back to the original index of adata.obsm['geometry']
+    merged_df.set_index('cell_id', inplace=True)
+
+    # Assign the merged DataFrame back to adata.obsm['geometry']
+    adata.obsm['geometry'] = merged_df
+
+
+    transcripts_information_file = f"{data_folder}/transcripts.parquet"
+
+    transcripts_df = pd.read_parquet(transcripts_information_file)
+
+    adata.uns['transcripts'] = transcripts_df
+
+    adata.uns['technology'] = "xenium"
+
+    return adata

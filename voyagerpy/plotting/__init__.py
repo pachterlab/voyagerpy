@@ -27,6 +27,14 @@ from voyagerpy.plotting.plot import (
     scatter,
     simple_violinplot,
     spatial_reduced_dim,
+    plot_2d_histogram,
+    plot_segmentation_geometries,
+    plot_xenium_image,
+    make_histograms,
+    plot_transcripts,
+    mean_vs_variance_plot,
+    create_spatial_lag_2d_histogram,
+    plot_gene_expression_spatial_xenium
 )
 
 # https://github.com/cran/RColorBrewer
@@ -87,4 +95,12 @@ __all__ = [
     "plot_fitline",
     "plot_local_result",
     "plot_moran_mc",
+    "plot_2d_histogram",
+    "plot_segmentation_geometries",
+    "plot_xenium_image",
+    "make_histograms",
+    "plot_transcripts",
+    "mean_vs_variance_plot",
+    "create_spatial_lag_2d_histogram",
+    "plot_gene_expression_spatial_xenium"
 ]
