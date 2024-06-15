@@ -1636,6 +1636,9 @@ def plot_spatial_feature(
                 annot_kwargs.update(annot_style or {})
 
                 plg = adata.uns["spatial"]["geom"][annot_geom]
+
+                annot_kwargs.pop('s', None)
+
                 gpd.GeoSeries(plg).plot(**annot_kwargs)
             else:
                 raise ValueError(f"Cannot find {annot_geom!r} data in adata.uns['spatial']['geom']")
@@ -1800,6 +1803,37 @@ def plot_local_result(adata: AnnData, obsm: str, features: Union[str, Sequence[s
     """
     if obsm not in adata.obsm:
         raise KeyError(f"`{obsm}` not found in adata.obsm.")
+    
+    if 'technology' in adata.uns:
+        if adata.uns['technology'] == 'xenium':
+            merged_df = adata.obsm['local_moran'].merge(adata.obs[['x_centroid', 'y_centroid']], left_index=True, right_index=True)
+
+            num_columns = adata.obsm['local_moran'].shape[1]
+
+            fig, axes = plt.subplots(1, num_columns, figsize=(15, 5))
+
+            if num_columns == 1:
+                axes = [axes]
+
+            for i, column in enumerate(adata.obsm['local_moran'].columns):
+                scatter = axes[i].scatter(
+                    merged_df['x_centroid'], 
+                    merged_df['y_centroid'], 
+                    c=merged_df[column], 
+                    cmap='viridis', 
+                    alpha=0.7
+                )
+                fig.colorbar(scatter, ax=axes[i], label=column)
+                axes[i].set_xlabel('X Centroid')
+                axes[i].set_ylabel('Y Centroid')
+                axes[i].set_title(f'Local Moran Statistics: {column}')
+
+            # Adjust layout
+            plt.tight_layout()
+            plt.show()
+
+            return axes
+    
 
     kwargs.setdefault("figtitle", obsm.replace("_", " ").capitalize())
 
@@ -2469,7 +2503,7 @@ def moran_plot(
             labels=labels,
             rc_context=rc_context,
             fitline_kwargs=dict(color="b"),
-            contour_kwargs={"colors": "cyan"},
+            # contour_kwargs={"colors": "cyan"},  #!!! JR - make this an option
             data=adata.obs,
             ax=ax,
             legend=legend and (i_plot == nplot - 1),
@@ -2560,7 +2594,11 @@ def plot_moran_mc(
 
     for feat, I in zip(features, Is):
         sim = moran_sim_dict[feat]["sim"]
-        label = adata.var.loc[feat, "symbol"]
+        # label = adata.var.loc[feat, "symbol"]  #! JRIch (commented out)
+        if feat in adata.var.index:  #! JRIch
+            label = adata.var.loc[feat, "symbol"]  #! JRIch
+        else:  #! JRIch
+            label = feat  #! JRIch
 
         x1 = min(minI, sim.min())
         x2 = max(maxI, sim.max())
@@ -3287,3 +3325,508 @@ def scatter(
     if aspect is not None:
         ax.set_aspect(aspect)
     return ax
+
+
+# Made for Xenium
+from shapely.geometry import Polygon, MultiPolygon, box
+def plot_2d_histogram(x, y, num_bins = 100, bin_shape = 'square'):
+    """
+    Plot a 2D histogram of given x and y coordinates.
+    
+    Parameters:
+    x (array-like): Array of x coordinates.
+    y (array-like): Array of y coordinates.
+    num_bins (int, optional): Number of bins for the histogram. Default is 100.
+    bin_shape (str, optional): Shape of the bins; either 'square' for square bins or 'hex' for hexagonal bins. Default is 'square'.
+    
+    Raises:
+    ValueError: If bin_shape is not 'square' or 'hex'.
+    
+    Example:
+    plot_2d_histogram(adata.obs['x_centroid'], adata.obs['y_centroid'], bin_shape='square')
+    plot_2d_histogram(adata.obs['x_centroid'], adata.obs['y_centroid'], bin_shape='hex')
+    """
+    plt.figure(figsize=(5, 5))
+
+    if bin_shape == 'square':
+        hist, xedges, yedges, im = plt.hist2d(x, y, bins=num_bins, cmap='viridis')
+    elif bin_shape == 'hex':
+        im = plt.hexbin(x, y, bins=num_bins, cmap='viridis')
+    else:
+        raise ValueError(f"Invalid bin shape: {bin_shape}")
+
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.colorbar(im, label='Number of Centroids')
+    plt.title('2D Histogram of Cell Centroids')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.xlim(min(x), max(x))
+    plt.ylim(min(y), max(y))
+    plt.gca().invert_yaxis()
+    plt.show()
+
+
+def plot_segmentation_geometries(seg_series, bbox = None):
+    """
+    Plot cell segmentation geometries.
+
+    Parameters:
+    seg_series (pd.Series or gpd.GeoSeries): Series of geometries to plot.
+    bbox (tuple, optional): Bounding box specified as (minx, miny, maxx, maxy).
+                            If provided, only geometries within this bounding box
+                            will be plotted, and the bounding box will be highlighted
+                            on the plot.
+
+    Example:
+    plot_segmentation_geometries(seg_series)
+    plot_segmentation_geometries(seg_series, bbox=(0, 0, 100, 100))
+
+    This function creates a plot of cell segmentation geometries, optionally 
+    highlighting a bounding box. The y-axis is inverted to match the common 
+    coordinate system used in imaging.
+
+    Parameters:
+    seg_series: Series of geometries to plot.
+    bbox: Tuple of (minx, miny, maxx, maxy) to specify a bounding box.
+          Only geometries within this bounding box will be plotted if provided.
+    
+    Returns:
+    None
+    """
+    gdf = gpd.GeoDataFrame(geometry=seg_series)
+
+    fig, ax = plt.subplots(figsize=(6,6))
+
+    if bbox:
+        bounding_box = box(*bbox)
+        gdf = gdf.intersection(bounding_box)
+        gdf = gdf[~gdf.is_empty]
+        bounding_box_gdf = gpd.GeoDataFrame(geometry=[bounding_box])
+        bounding_box_gdf.plot(ax=ax, edgecolor='r', facecolor='none')
+
+    gdf.plot(ax=ax, edgecolor='k', facecolor='none')
+
+    ax.set_title('Cell Segmentation Geometries')
+    ax.set_xlabel('X Coordinate')
+    ax.set_ylabel('Y Coordinate')
+    # plt.gca().invert_yaxis()
+    ax.invert_yaxis()
+    plt.show()
+
+
+# Xenium
+from shapely.geometry import Polygon, MultiPolygon, box
+import matplotlib.patches as patches
+import pandas as pd
+from matplotlib.colors import Normalize
+from matplotlib.ticker import LogLocator, NullFormatter
+from matplotlib.cm import ScalarMappable
+
+def plot_xenium_image(adata, image, ticks = "microns", image_file_path = None, image_level = None, bboxes = None, spacing_microns = 1000, geometries = None, global_cmap = None, title = "Composite RGB Image", color_polygons = False, highlighted_points = None):
+    """
+    Plot an image with various overlays such as highlighted points, bounding boxes, and geometries.
+
+    Parameters:
+    adata (AnnData): AnnData object containing single-cell data.
+    image (numpy.ndarray): Image array to be plotted.
+    ticks (str, optional): Units for the axis ticks, either 'microns' or 'pixels'. Default is 'microns'.
+    image_file_path (str, optional): Path to the image file for calculating physical sizes.
+    image_level (int, optional): Image level for calculating physical sizes.
+    bboxes (list of tuples, optional): List of bounding boxes to be overlaid on the image.
+    spacing_microns (int, optional): Spacing between ticks in microns. Default is 1000.
+    geometries (GeoSeries, optional): Geometries to be overlaid on the image.
+    global_cmap (str or Colormap, optional): Colormap for the image. Default is None.
+    title (str, optional): Title of the plot. Default is "Composite RGB Image".
+    color_polygons (bool or str, optional): If True, color polygons based on 'transcript_counts'. If a string, use that column from adata.obs for coloring. Default is False.
+    highlighted_points (list of tuples, optional): Points to be highlighted on the image as (x, y) coordinates.
+
+    This function plots an image with optional overlays including highlighted points, bounding boxes, and geometries.
+    The axis ticks can be in microns or pixels, and the y-axis is inverted to match common imaging coordinates.
+
+    Example usage:
+    plot_xenium_image(adata, image, ticks="microns", image_file_path="path/to/image", image_level=1, bboxes=[(0, 0, 100, 100)], geometries=geometries)
+
+    """
+    
+    fig, ax = plt.subplots(1)
+
+    if color_polygons:
+        image = np.zeros(image.shape, dtype=np.uint8)
+
+    ax.imshow(image, cmap=global_cmap)
+    ax.set_title(title)
+
+    if highlighted_points:
+        physical_size_x, physical_size_y = utils.get_physical_size(image_file_path, image_level)
+        adjusted_centroids = [(x / physical_size_x, y / physical_size_y) for x, y in highlighted_points]
+        for x, y in adjusted_centroids:
+            ax.plot(x, y, 'o', color='yellow', markersize = 2)
+
+    if ticks == "microns":
+        physical_size_x, physical_size_y = utils.get_physical_size(image_file_path, image_level)
+
+        # Calculate the number of ticks based on the spacing
+        num_xticks = int(image.shape[1] * physical_size_x // spacing_microns)
+        num_yticks = int(image.shape[0] * physical_size_y // spacing_microns)
+
+        # Calculate tick positions and labels in pixels and microns
+        xticks_positions = [int(i * spacing_microns / physical_size_x) for i in range(num_xticks + 1)]
+        xticks_labels = [i * spacing_microns for i in range(num_xticks + 1)]
+
+        yticks_positions = [int(i * spacing_microns / physical_size_y) for i in range(num_yticks + 1)]
+        yticks_labels = [i * spacing_microns for i in range(num_yticks + 1)]
+
+        ax.set_xticks(xticks_positions)
+        ax.set_xticklabels(xticks_labels)
+
+        ax.set_yticks(yticks_positions)
+        ax.set_yticklabels(yticks_labels)
+
+        ax.set_xlabel("X-axis (microns)")
+        ax.set_ylabel("Y-axis (microns)")
+    else:
+        ax.set_xlabel("X-axis (pixels)")
+        ax.set_ylabel("Y-axis (pixels)")
+
+    if bboxes:
+        for bbox in bboxes:
+            bbox_pixel = bbox
+            bbox = utils.box_microns_to_pixels(bbox, image_file_path, level = image_level)
+            x_min, y_min, x_max, y_max = bbox
+            bbox_polygon = box(x_min, y_min, x_max, y_max)  # Create a Shapely box
+            patch = patches.Polygon(np.array(bbox_polygon.exterior.coords), closed=True, edgecolor='r', facecolor='none')
+            ax.add_patch(patch)
+
+
+    if geometries is not None:
+        physical_size_x, physical_size_y = utils.get_physical_size(image_file_path, image_level)
+
+        if bboxes:
+            assert len(bboxes) == 1, "Only one bounding box is supported when plotting geometries."
+            for bbox in bboxes:
+                bbox_pixel_polygon = box(bbox_pixel[0], bbox_pixel[1], bbox_pixel[2], bbox_pixel[3])
+
+                filtered_geometries = geometries[geometries.apply(lambda geom: geom.intersects(bbox_pixel_polygon))]
+
+                adjusted_geometries = {key: utils.adjust_polygon_coordinates(polygon, bbox_pixel[0], bbox_pixel[1], physical_size_x, physical_size_y)
+                                    for key, polygon in filtered_geometries.items()}
+                
+                adjusted_geometries = pd.Series(adjusted_geometries)
+
+            edge_color = 'yellow' 
+            line_width = 0.5
+
+        else:   #* untested
+            adjusted_geometries = {key: utils.adjust_polygon_coordinates(polygon, 0, 0, physical_size_x, physical_size_y)
+                                for key, polygon in geometries.items()}
+            
+            adjusted_geometries = pd.Series(adjusted_geometries)
+            edge_color = 'none' 
+            line_width = 0
+
+        # experimental code if coloring by transcript count
+        if color_polygons:
+            if isinstance(color_polygons, bool):
+                color_polygons = 'transcript_counts'
+            adjusted_geometries_series = pd.Series(adjusted_geometries)
+            geom_transcript_counts = adjusted_geometries_series.index.to_frame().join(adata.obs[[color_polygons]], how='inner')[color_polygons]
+
+            norm = Normalize(vmin=geom_transcript_counts.min(), vmax=geom_transcript_counts.max())
+            cmap = plt.get_cmap('viridis')
+            sm = ScalarMappable(norm=norm, cmap=cmap)
+
+            for key, geometry in adjusted_geometries.items():
+                if isinstance(geometry, Polygon):
+                    count = geom_transcript_counts.loc[key]
+                    color = sm.to_rgba(count)
+                    patch = patches.Polygon(np.array(geometry.exterior.coords), closed=True, fill=True, edgecolor=edge_color, facecolor=color, linewidth=line_width)
+                    ax.add_patch(patch)
+            plt.colorbar(sm, ax=ax, label='Transcript Counts')
+
+        else:
+            for geometry in adjusted_geometries:
+                if isinstance(geometry, Polygon):
+                    patch = patches.Polygon(np.array(geometry.exterior.coords), closed=True, fill=False, edgecolor=edge_color, linewidth=line_width)
+                    ax.add_patch(patch)
+
+                elif isinstance(geometry, MultiPolygon):
+                    # Iterate through each polygon in the MultiPolygon and add each as a patch
+                    for poly in geometry.geoms:
+                        patch = patches.Polygon(np.array(poly.exterior.coords), closed=True, fill=False, edgecolor=edge_color, linewidth=line_width)
+                        ax.add_patch(patch)
+
+    ax.invert_yaxis()
+    plt.show()
+
+
+import matplotlib.pyplot as plt
+def make_histograms(adata, count_names):
+    """
+    Create and plot histograms for specified count names in an AnnData object.
+
+    Parameters:
+    adata (AnnData): An AnnData object containing single-cell data.
+    count_names (list of str): A list of strings representing the column names in adata.obs for which histograms will be plotted.
+
+    This function creates a grid of histograms for each specified count name in the AnnData object. The histograms are arranged
+    in a grid with two columns. The number of rows is determined based on the number of count names. If the number of count names
+    is odd, the last subplot is removed to avoid displaying an empty plot.
+
+    Each histogram is displayed with a logarithmic y-axis to show the frequency distribution more clearly. The plots are labeled
+    with appropriate titles and axis labels.
+
+    Example usage:
+    count_names = ['count1', 'count2', 'count3', 'count4', 'count5']
+    make_histograms(adata, count_names)
+
+    """
+    n = len(count_names)
+    num_rows = (n + 1) // 2  # Calculate number of rows needed
+    
+    fig, axs = plt.subplots(num_rows, 2, figsize=(12, 4 * num_rows))  # Adjust figure size based on number of rows
+    axs = axs.flatten()
+
+    # Iterate over the count names and axes to plot the histograms
+    for ax, feature_type, in zip(axs, count_names):
+        ax.hist(adata.obs[feature_type], bins=30, edgecolor='black')  # Adjust the number of bins as needed
+        ax.set_yscale('log')  # Set the y-axis to a logarithmic scale
+        ax.set_title(f'Histogram of {feature_type}')
+        ax.set_xlabel(feature_type)
+        ax.set_ylabel('Frequency (log scale)')
+        ax.grid(True)
+
+    if n % 2 != 0:
+        fig.delaxes(axs[-1])
+
+    plt.tight_layout()  # Adjust layout to prevent overlap
+    plt.show()
+
+def plot_transcripts(transcripts_df, grid_size = 50, negative_control = False):
+    """
+    Plot the density of transcripts in a spatial grid.
+
+    Parameters:
+    transcripts_df (pd.DataFrame): DataFrame containing transcript data with columns 'x_location', 'y_location', and 'feature_name'.
+    grid_size (int, optional): The size of the grid cells. Default is 50.
+    negative_control (bool, optional): If True, only plots transcripts that are either 'Unassigned' or 'NegControl'. Default is False.
+
+    The function creates a 2D histogram (heatmap) showing the density of transcripts in a spatial grid.
+    If negative_control is True, it filters the transcripts to include only those labeled as 'Unassigned' or 'NegControl'.
+    
+    Example usage:
+    plot_transcripts(transcripts_df, grid_size=50, negative_control=False)
+
+    """
+    # Create bins for x and y coordinates
+    x_bins = np.arange(transcripts_df['x_location'].min(), transcripts_df['x_location'].max() + grid_size, grid_size)
+    y_bins = np.arange(transcripts_df['y_location'].min(), transcripts_df['y_location'].max() + grid_size, grid_size)
+
+    if negative_control:
+        transcripts_df = transcripts_df.loc[transcripts_df['feature_name'].str.contains('Unassigned', na=False) | transcripts_df['feature_name'].str.contains('NegControl', na=False)]
+
+    # Digitize the coordinates to assign them to grid spots
+    transcripts_df['x_bin'] = np.digitize(transcripts_df['x_location'], x_bins) - 1
+    transcripts_df['y_bin'] = np.digitize(transcripts_df['y_location'], y_bins) - 1
+
+    # Count the number of transcripts in each grid spot
+    density = transcripts_df.groupby(['x_bin', 'y_bin']).size().unstack(fill_value=0)
+
+    # Plot the density
+    plt.figure(figsize=(5, 4))
+    plt.imshow(density.T, cmap='hot', origin='lower', extent=[x_bins.min(), x_bins.max(), y_bins.min(), y_bins.max()])
+    plt.colorbar(label='Transcript Density')
+    plt.xlabel('X Location')
+    plt.ylabel('Y Location')
+    plt.title('Transcript Density in Grid Spots')
+    plt.gca().invert_yaxis()
+    plt.show()
+
+def mean_vs_variance_plot(adata):
+    """
+    Create a scatter plot of the mean versus variance for gene expression and other features in an AnnData object.
+
+    Parameters:
+    adata (AnnData): An AnnData object containing single-cell data.
+
+    Returns:
+    None
+
+    This function creates a scatter plot of the mean versus variance for gene expression and other features
+    in an AnnData object. The plot is logarithmically scaled on both axes, and includes a line y=x for reference.
+
+    The function performs the following steps:
+    1. Identifies gene expression and other features using masks.
+    2. Plots the mean versus variance for gene expression and other features.
+    3. Adds a reference line y=x.
+    4. Sets the axis scales to logarithmic.
+    5. Configures the major and minor ticks.
+    6. Sets the x and y limits to fit the data range.
+    7. Adds labels, a title, and a legend.
+
+    Example usage:
+    mean_vs_variance_plot(adata)
+    """
+    plt.figure(figsize=(4, 3))
+
+    gene_expression_mask = adata.var['feature_type'] == 'Gene Expression'
+    other_mask = ~gene_expression_mask
+
+    # Plot Gene Expression features
+    plt.scatter(adata.var['mean'][gene_expression_mask], adata.var['variance'][gene_expression_mask],
+                alpha=0.5, label='Gene Expression', color='blue')
+
+    # Plot Other features
+    plt.scatter(adata.var['mean'][other_mask], adata.var['variance'][other_mask],
+                alpha=0.5, label='Negative control', color='orange')
+
+    min_val = min(adata.var['mean'].min(), adata.var['variance'].min())
+    max_val = max(adata.var['mean'].max(), adata.var['variance'].max())
+    plt.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', label='y=x')
+
+    # Add labels and title
+    plt.xscale('log')
+    plt.yscale('log')
+    # plt.set_aspect('equal', adjustable='box')
+    plt.xlim(min_val, max_val)
+    plt.ylim(min_val, max_val)
+
+    ticks = np.logspace(np.floor(np.log10(min_val)), np.ceil(np.log10(max_val)), num=10)
+    plt.minorticks_on()
+
+    plt.gca().xaxis.set_major_locator(LogLocator(base=10.0))
+    plt.gca().xaxis.set_minor_locator(LogLocator(base=10.0, subs='auto', numticks=100))
+    plt.gca().xaxis.set_minor_formatter(NullFormatter())
+
+    plt.gca().yaxis.set_major_locator(LogLocator(base=10.0))
+    plt.gca().yaxis.set_minor_locator(LogLocator(base=10.0, subs='auto', numticks=100))
+    plt.gca().yaxis.set_minor_formatter(NullFormatter())
+
+    plt.gca().set_xlim([min_val, max_val])
+    plt.gca().set_ylim([min_val, max_val])
+
+    plt.xlabel('Mean')
+    plt.ylabel('Variance')
+    plt.title('Scatter Plot of Mean vs. Variance')
+    plt.legend()
+
+
+def create_spatial_lag_2d_histogram(adata, feature_name, graph_name):
+    """
+    Create a 2D histogram of a feature and its spatial lag from an AnnData object.
+
+    Parameters:
+    adata (AnnData): An AnnData object containing single-cell data.
+    feature_name (str): The name of the feature to plot.
+    graph_name (str): The name of the spatial graph used to compute the spatial lag.
+
+    Returns:
+    None
+
+    This function creates a 2D histogram of the specified feature and its spatial lag,
+    computed using a specified spatial graph. The spatial lag is calculated if it does not
+    already exist in the AnnData object. The plot includes a color bar, labels, and a fit line.
+
+    The function performs the following steps:
+    1. Extracts the feature values from adata.obs.
+    2. Computes the spatial lag of the feature if it does not already exist.
+    3. Creates a 2D histogram of the feature values and their spatial lag.
+    4. Adds a color bar to the plot.
+    5. Sets labels and title for the plot.
+    6. Adjusts the aspect ratio of the plot to be equal.
+    7. Sets x and y limits to fit the data range.
+    8. Adds vertical and horizontal lines at the mean values of the feature and its spatial lag.
+    9. Computes and plots a fit line.
+
+    Example usage:
+    create_spatial_lag_2d_histogram(adata, 'expression_level', 'knn_graph')
+    """
+    # Extract the data for the plot
+    x = adata.obs[feature_name]
+    y_name = f"lagged_{feature_name}"
+    if y_name not in adata.obs:
+        spatial.compute_spatial_lag(adata, feature_name, graph_name=graph_name, inplace=True)
+    y = adata.obs[y_name]
+
+    # Create the plot
+    plt.figure(figsize=(4,4))
+    hist = plt.hist2d(x, y, bins=50, cmap='viridis')
+
+    # Add color bar
+    plt.colorbar(hist[3], label=None)
+
+    # Set labels and title
+    plt.xlabel(feature_name)
+    plt.ylabel(y_name)
+    plt.title('2D Histogram of Features')
+
+    # Set the aspect ratio to be equal
+    plt.gca().set_aspect('equal', adjustable='box')
+
+    # Set x and y limits to fit the data range
+    plt.xlim([x.min(), x.max()])
+    plt.ylim([y.min(), y.max()])
+
+    plt.axvline(adata.obs[feature_name].mean(), linestyle="--", c="k", alpha=0.5)
+    plt.axhline(adata.obs[y_name].mean(), linestyle="--", c="k", alpha=0.5)
+
+    slope, intercept = np.polyfit(x, y, 1)
+    fit_line = slope * x + intercept
+
+    # Plot the fit line
+    plt.plot(x, fit_line, color='blue', label=f'Fit Line: y = {slope:.2f}x + {intercept:.2f}')
+    plt.legend()
+
+    # Show the plot
+    plt.show()
+
+
+def plot_gene_expression_spatial_xenium(adata, gene_names, adata_obs_x_name='x_centroid', adata_obs_y_name='y_centroid'):
+    """
+    Plot the spatial distribution of cells, colored by the expression of specified genes in a grid of panels.
+
+    Parameters:
+    adata (AnnData): An AnnData object containing single-cell data.
+    gene_names (list of str): A list of gene names to plot.
+    adata_obs_x_name (str, optional): The name of the column in adata.obs for x-coordinates. Default is 'x_centroid'.
+    adata_obs_y_name (str, optional): The name of the column in adata.obs for y-coordinates. Default is 'y_centroid'.
+
+    Returns:
+    None
+    """
+    n = len(gene_names)
+    num_rows = (n + 2) // 3  # Calculate number of rows needed
+
+    fig, axs = plt.subplots(num_rows, 3, figsize=(15, 5 * num_rows))
+    axs = axs.flatten()
+
+    # Iterate over the gene names and axes to plot the expression values
+    for ax, gene_name in zip(axs, gene_names):
+        # Ensure the gene is in the var index
+        if gene_name not in adata.var_names:
+            print(f"Gene {gene_name} not found in the AnnData object.")
+            continue
+
+        # Get the expression values for the gene
+        gene_expression = adata[:, gene_name].X
+        
+        # Convert sparse matrix to dense array if necessary
+        if sp.issparse(gene_expression):
+            gene_expression = gene_expression.toarray().flatten()
+        
+        # Get the x and y coordinates
+        x_coords = adata.obs[adata_obs_x_name]
+        y_coords = adata.obs[adata_obs_y_name]
+
+        # Plot the expression values in spatial coordinates
+        scatter = ax.scatter(x_coords, y_coords, c=gene_expression, cmap='viridis', alpha=0.7)
+        fig.colorbar(scatter, ax=ax, label=f'Expression of {gene_name}')
+        ax.set_xlabel('X Coordinate')
+        ax.set_ylabel('Y Coordinate')
+        ax.set_title(f'{gene_name} Expression')
+
+    # Hide any unused subplots if the number of genes is not a multiple of 3
+    for i in range(n, len(axs)):
+        fig.delaxes(axs[i])
+
+    plt.tight_layout()
+    plt.show()

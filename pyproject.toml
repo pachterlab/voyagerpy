@@ -3,18 +3,18 @@ name = "voyagerpy"
 version = "0.1.1"
 description = "Python library for Voyager, the geo-spatialist R library."
 authors = [
-	"Pall Melsted <pmelsted@hi.is>",
+	"Pall Melsted <pachterlab@hi.is>",
 	"Sindri Emmanuel Antonsson <sea7@hi.is>", 
 	"Petur Helgi Einarsson <phe@hi.is>", 
 ]
 readme = "README.md"
-homepage = "https://pmelsted.github.io/voyagerpy"
-repository = "https://github.com/pmelsted/voyagerpy"
+homepage = "https://pachterlab.github.io/voyagerpy"
+repository = "https://github.com/pachterlab/voyagerpy"
 keywords = ["Single-Cell", "Spatial", "voyager"]
 license = "BSD-3-Clause"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4"
+python = ">=3.9,<4"
 
 anndata = ">=0.8"
 esda = "^2.4.3"
@@ -32,15 +32,18 @@ scipy = {version=">=1.10", python=">=3.8,<3.12"}
 shapely = ">=1.7"
 statsmodels = ">=0.13"
 
-igraph = {version=">=0.10.4", optional = true}
-leidenalg = {version = "^0.9.1", optional = true}
+igraph = {version=">=0.9.*", optional = true}
+leidenalg = {version = "0.10.*", optional = true}
 scanpy = {version = "^1.9.3", optional = true}
+gget = {version = "0.28.*", optional = true}
+watermark = {version = "2.4.2", optional = true}
+scikit-image = {version = "0.22.0", optional = true}
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/pmelsted/voyagerpy/issues"
+"Bug Tracker" = "https://github.com/pachterlab/voyagerpy/issues"
 
 [tool.poetry.extras]
-notebooks = ["scanpy", "leidenalg", "igraph"]
+notebooks = ["scanpy", "leidenalg", "igraph", "gget", "watermark", "scikit-image"]
 
 [tool.black]
 line-length = 140

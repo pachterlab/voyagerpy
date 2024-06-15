@@ -57,7 +57,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r docs/requirements.txt
-          # pip install git+https://github.com/pmelsted/voyagerpy.git@main
+          # pip install git+https://github.com/pachterlab/voyagerpy.git@main
           # pip install jupyterlab "scanpy[leiden]"
           # mkdir rendered_notebooks
           # find . -name \*.ipynb -print | xargs -I {} jupyter nbconvert --execute --to html --output-dir rendered_notebooks --template lab --HTMLExporter.preprocessors="nbconvert.preprocessors.ExtractOutputPreprocessor" {}

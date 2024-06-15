@@ -11,11 +11,11 @@ To install the latest release of VoyagerPy, you can install it via `pip`:
 ### Clone the repo
 Clone this repo either using SSH:
 
-```git clone git@github.com:pmelsted/voyagerpy.git```
+```git clone git@github.com:pachterlab/voyagerpy.git```
 
 or HTTPS:
 
-```git clone https://github.com/pmelsted/voyagerpy.git```.
+```git clone https://github.com/pachterlab/voyagerpy.git```.
 
 To get the bleeding edge version, change your branch to `dev` by running
 
@@ -30,6 +30,17 @@ To install VoyagerPy, run
 ```pip install .```
 
 Some users may experince problems with installing GeoPandas, which VoyagerPy depends on. We refer to the [GeoPandas installation page](https://geopandas.org/en/stable/getting_started.html) if this is the case.
+
+There is a VoyagerPy docker image which includes many dependencies for VoyagerPy, build on top of Python 3.9. To run the VoyagerPy docker image, please run the following:
+
+```docker run -it josephrich98/voyagerpy:tagname /bin/bash```
+```source ~/venv_list/voyagerpy_env/bin/activate```
+
+
+In order to run jupyter notebooks, forward ports and connect to jupyter with the following commands:
+```docker run -it -p 8888:8888 josephrich98/voyagerpy:tagname /bin/bash```
+```source ~/venv_list/voyagerpy_env/bin/activate```
+```jupyter lab --ip 0.0.0.0 --port 8888 --no-browser --allow-root```
 
 ## Structure of VoyagerPy
 

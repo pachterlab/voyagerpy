@@ -993,49 +993,92 @@ Rollback all transformations. Use this function to cancel applied transformation
 
 # %%
 
+#!!! JR 
+import numpy as np
+import pandas as pd
+from scipy import sparse
+from typing import Optional
+import anndata as ad
 
-def to_spatial_weights(adata: AnnData, graph_name: Optional[str] = None) -> AnnData:
-    """\
-Convert a graph adjacency matrix to a spatial weights matrix.
+def to_spatial_weights(adata: ad.AnnData, graph_name: Optional[str] = None) -> ad.AnnData:
+    """Convert a graph adjacency matrix to a spatial weights matrix.
 
-:param adata: The AnnData object storing the graph
-:type adata: AnnData
-:param graph_name: The key in ``obsp`` storing the matrix, defaults to None. If None, the default graph is used.
-:type graph_name: Optional[str], optional
-:raises ImportError: If libpysal is not installed.
-:return: The updated AnnData object. The libpysal spatial weights matrix is stored in ``adata.uns["spatial"][graph_name]``.
-:rtype: AnnData
+    :param adata: The AnnData object storing the graph.
+    :type adata: AnnData
+    :param graph_name: The key in ``obsp`` storing the matrix, defaults to None. If None, the default graph is used.
+    :type graph_name: Optional[str], optional
+    :raises ImportError: If libpysal is not installed.
+    :return: The updated AnnData object. The libpysal spatial weights matrix is stored in ``adata.uns["spatial"][graph_name]``.
+    :rtype: AnnData
     """
     try:
         import libpysal
     except ImportError:
         raise ImportError("Spatial Weights require libpysal to be installed. Please install it with `pip install libpysal`.")
+    
+    if 'technology' in adata.uns:
+        if adata.uns['technology'] == 'xenium':
+            if graph_name is None:
+                graph_name = get_default_graph(adata)
+            
+            distances = adata.obsp[graph_name].copy()
 
-    distances = adata.obsp[graph_name or get_default_graph(adata)].copy()
-    if sparse.issparse(distances):
-        distances = distances.A
-    elif isinstance(distances, np.matrix):
-        distances = distances.A
+            if sparse.issparse(distances):
+                distances = distances.tocoo()  # Convert to COO format for efficient access
 
-    assert isinstance(distances, np.ndarray)
+            focal = distances.row
+            neighbors = distances.col
 
-    focal, neighbors = np.where(distances > 0)
-    idx = adata.obs_names
+            idx = adata.obs_names.to_list()
 
-    graph_df = pd.DataFrame(
-        {
-            "focal": idx[focal],
-            "neighbor": idx[neighbors],
-            "weight": distances[focal, neighbors],
-        }
-    )
-    W = libpysal.weights.W.from_adjlist(graph_df)
-    W.set_transform("r")
+            graph_df = pd.DataFrame(
+                {
+                    "focal": [idx[i] for i in focal],
+                    "neighbor": [idx[i] for i in neighbors],
+                    "weight": distances.data,
+                }
+            )
 
-    adata.uns.setdefault("spatial", {})
-    adata.uns["spatial"][graph_name] = W
-    return adata
+            W = libpysal.weights.W.from_adjlist(graph_df)
+            W.set_transform("r")
 
+            adata.uns.setdefault("spatial", {})
+            adata.uns["spatial"][graph_name] = W
+
+            return adata
+    
+    else:
+        distances = adata.obsp[graph_name or get_default_graph(adata)].copy()
+
+        if sparse.issparse(distances):
+            distances = distances.A
+        elif isinstance(distances, np.matrix):
+            distances = distances.A
+
+
+        assert isinstance(distances, np.ndarray)
+
+        focal, neighbors = np.where(distances > 0)  #* problematic line for Xenium - memory-intensive
+
+        idx = adata.obs_names
+
+        graph_df = pd.DataFrame(
+            {
+                "focal": idx[focal],
+                "neighbor": idx[neighbors],
+                "weight": distances[focal, neighbors],
+            }
+        )
+
+        W = libpysal.weights.W.from_adjlist(graph_df)
+        
+        W.set_transform("r")
+
+        adata.uns.setdefault("spatial", {})
+
+        adata.uns["spatial"][graph_name] = W
+
+        return adata
 
 def compute_spatial_lag(
     adata: AnnData,
@@ -1091,7 +1134,7 @@ Compute the spatial lag of a feature. The spatial lag is the weighted average of
 
     return adata
 
-
+import scipy.sparse as sp
 def moran(
     adata: AnnData,
     feature: Union[str, Sequence[str]],
@@ -1118,6 +1161,7 @@ Compute Moran's I.
 :raises ImportError: If esda is not installed
 :raises ValueError: If ``dim`` not in ``["obs", "var"]``.
     """
+
     try:
         import esda
     except ImportError:
